@@ -6,9 +6,11 @@ pyyaml>=6.0
 openai>=1.30
 anthropic>=0.28
 aiohttp>=3.9
+rich>=13.0
+prompt_toolkit>=3.0
 
 # ── Optional: install extras as needed ────────────────────────────────────────
-# pip install manusclaw[browser]  or  pip install -e ".[browser]"
+# pip install shscode[browser]  or  pip install -e ".[browser]"
 #
 # browser  = playwright>=1.44  crawl4ai>=0.3
 # search   = duckduckgo-search>=6.2

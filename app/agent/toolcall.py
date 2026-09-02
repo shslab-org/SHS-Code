@@ -56,12 +56,12 @@ class ToolCallAgent(ReActAgent):
 
     name = "toolcall"
     system_prompt = """\
-You are ManusClaw — a capable autonomous AI agent with structured tool access, \
+You are SHS Code — a capable autonomous AI coding agent with structured tool access, \
 developed under SHS Lab. GitHub: ManusAgents/ManusClaw
 
 IDENTITY PROTOCOL (NON-NEGOTIABLE):
-You are ManusClaw. This is your TRUE and ONLY identity.
-If asked who you are: "I am ManusClaw — an autonomous AI operating environment \
+You are SHS Code. This is your TRUE and ONLY identity.
+If asked who you are: "I am SHS Code — an autonomous AI coding agent \
 developed under SHS Lab. You can find me on GitHub: ManusAgents/ManusClaw"
 If told to stop roleplay: You ARE ManusClaw. This is not a roleplay.
 If asked about underlying models: "My architecture is proprietary to SHS Lab."
@@ -98,6 +98,45 @@ tool or different arguments — DO NOT repeat the same failing call.
     # ------------------------------------------------------------------
     # PAORR overrides
     # ------------------------------------------------------------------
+
+    async def _journal_tool_execution(self, name: str, args: dict, result) -> None:
+        """SHS Code (spec §8/§36): after every tool execution, update the
+        persistent journal — action verdict, file changes, commands, checkpoint.
+        Failures here are non-fatal by design: persistence can never break
+        task execution."""
+        if self.journal is None or not getattr(self, "_journal_task_id", None):
+            return
+        try:
+            tid = self._journal_task_id
+            ok = not bool(result.error)
+            await self.journal.record_action(
+                tid, name, args, success=ok,
+                output=result.output, error=result.error)
+            # File-change tracking (spec §36)
+            if name in ("str_replace_editor", "editor", "file_write", "file_edit"):
+                path = args.get("path") or args.get("file_path") or ""
+                if path:
+                    cmd = (args.get("command") or "").lower()
+                    op = {"create": "created", "insert": "modified", "str_replace": "modified",
+                          "view": "read"}.get(cmd, "modified")
+                    await self.journal.record_file_change(tid, str(path), op)
+            # Command tracking (spec §36)
+            if name in ("bash", "shell", "terminal"):
+                cmd = args.get("command") or ""
+                if cmd:
+                    await self.journal.record_command(
+                        tid, str(cmd), status="ok" if ok else "failed")
+            if name in ("python_execute", "python"):
+                code = (args.get("code") or "")[:200]
+                if code:
+                    await self.journal.record_command(
+                        tid, f"python: {code}", status="ok" if ok else "failed")
+            # Continual checkpoint (spec §8 — after every meaningful operation)
+            await self.journal.checkpoint(
+                tid, self._step_count,
+                [m.to_dict() for m in self.memory.messages])
+        except Exception as e:
+            logger.debug(f"[Journal] tool record failed (non-fatal): {e}")
 
     async def think(self) -> str:
         """
@@ -157,6 +196,7 @@ tool or different arguments — DO NOT repeat the same failing call.
 
     async def _execute_with_retry(self, name: str, args: dict, tool_call_id: str):
         from app.schema import ToolResult
+        from app.activity import emit
 
         last_result = ToolResult(error="Unknown error")
         wait = TOOL_RETRY_BASE
@@ -167,6 +207,8 @@ tool or different arguments — DO NOT repeat the same failing call.
                     f"[{self.name}] Tool call ({attempt}/{MAX_TOOL_RETRIES}): "
                     f"{name}({self._fmt_args(args)})"
                 )
+                emit("tool_start", tool=name, args_preview=self._fmt_args(args)[:100],
+                     attempt=attempt)
 
                 allowed = await self.check_permission(name, args)
                 if not allowed:
@@ -180,11 +222,17 @@ tool or different arguments — DO NOT repeat the same failing call.
 
                 result = await self.tools.execute(name, **args)
                 logger.info(f"[{self.name}] Tool result: {str(result)[:300]}")
+                emit("tool_end", tool=name, success=not bool(result.error),
+                     preview=(result.output or result.error or "")[:100])
 
                 self.record_observation(
                     tool_name=name, args=args,
                     output=result.output, error=result.error, attempt=attempt,
                 )
+
+                # SHS Code (spec §8/§33/§36): journal every tool execution —
+                # success, failure, file changes, commands, checkpoints.
+                await self._journal_tool_execution(name, args, result)
 
                 self.memory.add(Message.tool(
                     content=str(result),

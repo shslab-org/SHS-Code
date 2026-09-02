@@ -44,3 +44,6 @@ plan.md
 .pytest_cache/
 .coverage
 htmlcov/
+
+# SHS Code runtime state (never commit)
+workspace/

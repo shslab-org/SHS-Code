@@ -1,19 +1,47 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Version-5.1.1-ff69b4?style=for-the-badge&logo=github&logoColor=white" alt="Version">
+<img src="https://img.shields.io/badge/Version-SHS%20Code%201.0.0-ff69b4?style=for-the-badge&logo=github&logoColor=white" alt="Version">
 <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
 <img src="https://img.shields.io/badge/License-MIT-FFD700?style=for-the-badge&logo=opensourceinitiative&logoColor=black" alt="License">
-<img src="https://img.shields.io/badge/Status-Bug--Fix%20Patch-00C853?style=for-the-badge&logo=bugsnag&logoColor=white" alt="Status">
+<img src="https://img.shields.io/badge/Status-Persistent%20%7C%20Autonomous-00C853?style=for-the-badge&logo=bugsnag&logoColor=white" alt="Status">
 
 <br><br>
 
-# 🐾 M A N U S C L A W
+# ⌨️ S H S &nbsp; C O D E
 
-### **v5.1.1 — Enterprise-Grade Autonomous AI Agent Framework (Bug-Fix Patch)**
+### **Persistent Autonomous AI Coding Agent — SHS Lab**
 
-**A production-ready, self-reasoning AI agent framework with PAORR loop, DAG-based multi-agent orchestration, defense-in-depth security, 100+ LLM providers (cloud + offline/GGUF/HuggingFace), 13+ messaging channels, voice interaction, live canvas, SSH server, cron scheduler, and enterprise observability.**
+**SHS Code** (by Sazzad Hussain Shobuj, SHS Lab) is a persistent, model-independent, autonomous coding agent. It remembers across restarts, switches providers/models **without losing context**, journals every step of every task, checkpoints continuously, and resumes interrupted work automatically.
 
-> **v5.1.1** is a maintenance release that resolves 32 bugs discovered in v5.1.0 across the agent core, security layer, FastAPI server, cron scheduler, secrets redaction, and multi-agent role pipeline. See [CHANGELOG.md](CHANGELOG.md) for the full audit trail.
+> **Lineage:** SHS Code evolved from **ManusClaw v5.1.1** — its predecessor and original project foundation. Everything that worked in ManusClaw still works here.
+
+```text
+$ SHSCode
+███████╗██╗  ██╗███████╗  ██████╗ ██████╗ ██████╗ ██████╗
+██╔════╝██║  ██║██╔════╝ ██╔════╝██╔═══██╗██╔══██╗██╔══██╗
+███████╗███████║███████╗ ██║     ██║   ██║██████╔╝██████╔╝
+╚════██║██╔══██║╚════██║ ██║     ██║   ██║██╔══██║██╔═══╝
+███████║██║  ██║███████╗ ╚██████╗╚██████╔╝██║  ██║██║
+╚══════╝╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝
+SHS Code initialized.
+```
+
+**What makes SHS Code different:**
+
+| Capability | Meaning |
+|---|---|
+| 🧠 **Persistent memory** | SQLite long-term memory survives restarts, model switches, provider switches |
+| ⚡ **Live model switching** | `/model gpt-4o` → `/model claude-sonnet` — context, files, progress preserved |
+| 📓 **Task journal** | Every tool call, file change, command, error is journaled with checkpoints |
+| 🔁 **Interruption recovery** | Crash / Ctrl+C / terminal closed → `/resume` continues from the checkpoint |
+| ⏳ **Rolling-window rate limiter** | NVIDIA NIM (40 RPM default, configurable) paced by true timestamps — waits preserve all state |
+| 🛠️ **29 builtin skills** | + custom skills in `~/.manusclaw/skills`, enable/disable persisted |
+| 🔌 **Custom providers** | `/provider add my-nim openai-compat https://integrate.api.nvidia.com/v1 model key 40` |
+| 🔗 **Connectors** | GitHub/GitLab tokens feed real git-provider tools automatically |
+| 🩺 **`/doctor`** | Full diagnostics with actionable hints |
+| 🖥️ **Stable terminal** | Live activity feed (thinking / tools / rate-limit waits), no input flicker |
+
+**Everything below (PAORR loop, multi-agent DAG, 12+ channels, GGUF/offline, canvas, SSH, cron, 244 tests) is inherited from ManusClaw and still fully functional.**
 
 <p>
   <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows%20%7C%20Docker-informational?style=flat-square" alt="Platforms">
@@ -26,15 +54,58 @@
   &nbsp;•&nbsp;
   <img src="https://img.shields.io/badge/Tools-17%2B-00C853?style=flat-square" alt="Tools">
   &nbsp;•&nbsp;
-  <img src="https://img.shields.io/badge/Tests-212%20passed-brightgreen?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-244%20passed-brightgreen?style=flat-square" alt="Tests">
 </p>
 
 </div>
 
 ---
 
+## ⌨️ SHS Code Quickstart
+
+```bash
+# install (from repo root)
+./install.sh          # creates SHSCode + manusclaw commands
+# or: pip install -e .   →  SHSCode / shscode / manusclaw console scripts
+
+SHSCode               # start the persistent interactive shell
+```
+
+**Daily commands:**
+
+```text
+/status               # task, progress, provider, model, memory, rate limiter
+/model claude-sonnet  # switch model — context preserved, zero restart
+/provider my-nim      # switch to a custom provider (registry persisted)
+/remember I prefer TypeScript — persistent memory
+/memory               # view memories (SQLite, survives everything)
+/tasks  /task <id>    # task journal with files/commands/errors
+/resume               # continue interrupted task from checkpoint
+/doctor               # full diagnostics
+exit                  # clean exit — state saved, /resume next time
+```
+
+**NVIDIA NIM rate limiting (rolling window):**
+
+```toml
+# ~/.manusclaw/config.yaml
+llm:
+  provider: universal
+  base_url: "https://integrate.api.nvidia.com/v1"
+  api_key: "nvapi-..."
+  model: "meta/llama-3.1-70b-instruct"
+  rate_limit: { enabled: true, rpm: 40 }   # NIM default = 40; 4 RPM works too
+```
+
+Rate-limit waits use a **true rolling timestamp window** (4 RPM example: requests at 12:00:05/15/30/50 → the 5th waits only until 12:01:05, not a fixed 60s) and **never destroy task context** — conversation, tool results and progress all survive the wait.
+
+**Persistent state lives in `~/.manusclaw/`:** `state/journal.db` (task journal) · `state/checkpoints/` (atomic memory snapshots) · `.memory/long_term.db` (long-term memory) · `providers.json` (custom providers) · `connectors.json` (platform connectors) · `skills_state.json` (skill toggles).
+
+---
+
 ## Table of Contents
 
+- [SHS Code Quickstart](#️-shs-code-quickstart)
 - [What's New in v5.1](#-whats-new-in-v51)
 - [What's Fixed in v5.1.1](#-whats-fixed-in-v511)
 - [Overview](#-overview)

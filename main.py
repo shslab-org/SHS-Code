@@ -1,40 +1,31 @@
 #!/usr/bin/env python3
 """
-ManusClaw — main entry point.
-Runs the Manus agent on a single prompt to completion.
+SHS Code — main entry point.
+
+SHS Code is part of the SHS Lab ecosystem (Sazzad Hussain Shobuj).
+Lineage: evolved from ManusClaw, its predecessor and project foundation.
 
 Usage:
-    python main.py "Your task here"
-    python main.py  # interactive prompt
+    python main.py                # interactive SHS Code shell (the real REPL)
+    python main.py "Your task"    # single-shot mode
 """
-import asyncio
 import sys
 
-from app.agent.manus import Manus
-from app.logger import logger
 
+def _enter_shell() -> None:
+    """Route into the full interactive SHS Code shell (app.cli.main).
 
-async def main(prompt: str) -> None:
-    agent = Manus()
-    logger.info(f"Running Manus with prompt: {prompt[:80]}")
-    result = await agent.run(prompt)
-    print("\n" + "=" * 60)
-    print("FINAL OUTPUT:")
-    print("=" * 60)
-    print(result)
-    print("=" * 60)
+    FIX (audit bug #1): this used to run a single-shot prompt with a
+    hardcoded demo-task fallback on EOF. The REPL lived in app/cli.py but
+    was never reachable from the installed command. Now both paths work.
+    """
+    from app.cli import main as cli_main
+    cli_main()
 
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        user_prompt = " ".join(sys.argv[1:])
+        # Single-shot mode: python main.py "task..."
+        _enter_shell()  # cli.main() handles prompt args itself
     else:
-        try:
-            user_prompt = input("Enter your task: ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\nNo input provided. Using default task.")
-            user_prompt = ""
-        if not user_prompt:
-            user_prompt = "Print 'Hello from ManusClaw!' using Python."
-
-    asyncio.run(main(user_prompt))
+        _enter_shell()

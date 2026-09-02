@@ -91,19 +91,22 @@ fi
 
 # ── launcher script ──────────────────────────────────────────────────────────
 echo -e "${BOLD}[5/5] Creating launcher...${NC}"
-LAUNCHER="$INSTALL_DIR/.venv/bin/manusclaw"
+LAUNCHER="$INSTALL_DIR/.venv/bin/SHSCode"
 cat > "$LAUNCHER" << LAUNCHER
 #!/usr/bin/env bash
 source "$INSTALL_DIR/.venv/bin/activate"
 cd "$INSTALL_DIR"
-exec python main.py "\$@"
+exec python -m app.cli "\$@"
 LAUNCHER
 chmod +x "$LAUNCHER"
+# Legacy alias so existing users keep their muscle memory
+ln -sf "$LAUNCHER" "$INSTALL_DIR/.venv/bin/manusclaw"
 
 # Try to symlink to /usr/local/bin
 if [ -w "/usr/local/bin" ] || sudo -n true 2>/dev/null; then
-    sudo ln -sf "$LAUNCHER" "$BIN_LINK" 2>/dev/null || ln -sf "$LAUNCHER" "$HOME/.local/bin/manusclaw" 2>/dev/null || true
-    echo -e "  ${GREEN}✓ 'manusclaw' command available globally${NC}"
+    sudo ln -sf "$LAUNCHER" "$BIN_LINK" 2>/dev/null || ln -sf "$LAUNCHER" "$HOME/.local/bin/SHSCode" 2>/dev/null || true
+    sudo ln -sf "$LAUNCHER" "/usr/local/bin/manusclaw" 2>/dev/null || ln -sf "$LAUNCHER" "$HOME/.local/bin/manusclaw" 2>/dev/null || true
+    echo -e "  ${GREEN}✓ 'SHSCode' (and legacy 'manusclaw') command available globally${NC}"
 else
     echo -e "  ${YELLOW}Add to PATH manually:${NC}"
     echo "    export PATH=\"$INSTALL_DIR/.venv/bin:\$PATH\""
@@ -111,7 +114,7 @@ fi
 
 echo ""
 echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  ManusClaw installed successfully!"
+echo "  SHS Code installed successfully! (predecessor: ManusClaw)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo -e "  ${BOLD}Quick start:${NC}"

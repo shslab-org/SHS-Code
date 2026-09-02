@@ -11,6 +11,7 @@ Secret Redaction: optionally scrub keys from log output
 """
 
 import asyncio
+import json as _json
 import random
 import time
 from typing import Any, Optional
@@ -21,6 +22,8 @@ from app.logger import logger
 from app.schema import Message, Role, ToolCall, Function
 from app.llm.token_tracker import TokenBudget, TokenUsage
 from app.llm.credential_pool import CredentialPool, build_pool_from_config
+from app.llm.rate_limiter import detect_nim, get_limiter
+from app.activity import emit
 
 MAX_RETRIES     = 8
 RETRY_BASE_WAIT = 1.0
@@ -223,7 +226,23 @@ class UniversalClient:
             elapsed = asyncio.get_event_loop().time() - start_time
             logger.info(f"[UniversalClient] Response received after {elapsed:.1f}s (status={resp.status})")
             if resp.status == 429:
-                raise RateLimitError("Rate limited")
+                # SHS Code FIX: capture server Retry-After instead of discarding it.
+                retry_after: Optional[float] = None
+                try:
+                    ra = resp.headers.get("Retry-After") or resp.headers.get("retry-after")
+                    if ra:
+                        retry_after = float(ra)
+                except (TypeError, ValueError):
+                    retry_after = None
+                body_hint = ""
+                try:
+                    body_hint = (await resp.text())[:300]
+                except Exception:
+                    pass
+                err = RateLimitError(f"Rate limited. Retry-After={retry_after}")
+                err.retry_after = retry_after          # type: ignore[attr-defined]
+                err.body = body_hint                   # type: ignore[attr-defined]
+                raise err
             if resp.status == 400:
                 body = await resp.text()
                 if "context" in body.lower() or "token" in body.lower():
@@ -552,6 +571,117 @@ class LLM:
         self._pool: Optional[CredentialPool] = self._build_pool(cfg)
         self._max_retries = max(1, int(cfg.llm.max_retries or MAX_RETRIES))
         self._redact: bool = getattr(cfg, "redact_secrets", False)
+        self._provider = (cfg.llm.provider or "").lower()
+        self._model = cfg.llm.model or ""
+        self._base_url = cfg.llm.base_url or ""
+
+    # ------------------------------------------------------------------
+    # SHS Code — live provider/model switching WITHOUT losing context
+    # (spec §4, §17). Message history lives in agent ShortTermMemory, never
+    # here, so rebuilding the backend can never destroy conversation state.
+    # ------------------------------------------------------------------
+
+    async def cleanup_backend(self) -> None:
+        """Close the old backend's resources (aiohttp session leak fix)."""
+        try:
+            if hasattr(self._backend, "cleanup"):
+                await self._backend.cleanup()
+        except Exception:
+            pass
+
+    async def switch(self, provider: Optional[str] = None, model: Optional[str] = None,
+                     base_url: Optional[str] = ..., api_key: Optional[str] = ...,
+                     max_tokens: Optional[int] = None,
+                     temperature: Optional[float] = None) -> dict[str, Any]:
+        """Switch provider/model/base_url live. Rebuilds the backend and
+        credential pool; token budget and all caller-side state are preserved.
+        Args use `...` sentinel so omitted fields keep their current value."""
+        cfg = Config.get()
+        llmc = cfg.llm
+        if provider is not None and provider is not ...:
+            llmc.provider = provider.strip().lower()
+        if model is not None and model is not ...:
+            llmc.model = model.strip()
+        if base_url is not ... and base_url is not None:
+            llmc.base_url = base_url.strip()
+        if api_key is not ... and api_key is not None:
+            llmc.api_key = api_key.strip()
+        if max_tokens is not None:
+            llmc.max_tokens = max_tokens
+        if temperature is not None:
+            llmc.temperature = temperature
+
+        await self.cleanup_backend()
+        self._backend = self._build_backend(cfg)
+        self._pool = self._build_pool(cfg)
+        self._max_retries = max(1, int(llmc.max_retries or MAX_RETRIES))
+        self._provider = (llmc.provider or "").lower()
+        self._model = llmc.model or ""
+        self._base_url = llmc.base_url or ""
+
+        kind = "provider_switch" if provider else "model_switch"
+        emit(kind, provider=self._provider, model=self._model,
+             base_url=self._base_url)
+        logger.info(f"[LLM] {kind}: provider={self._provider} model={self._model}")
+        return {"provider": self._provider, "model": self._model,
+                "base_url": self._base_url, "token_budget": self.token_budget.max_tokens}
+
+    def switch_sync(self, **kwargs: Any) -> dict[str, Any]:
+        """Non-async switch for contexts without a loop (backend rebuild only).
+        Prefers the async version when an event loop is running."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop is not None:
+            # Already inside a loop — schedule the cleanup as a task-safe call
+            # by running the rebuild parts synchronously (cleanup is best-effort).
+            cfg = Config.get()
+            llmc = cfg.llm
+            if kwargs.get("provider") is not None:
+                llmc.provider = str(kwargs["provider"]).strip().lower()
+            if kwargs.get("model") is not None:
+                llmc.model = str(kwargs["model"]).strip()
+            if kwargs.get("base_url") is not ... and kwargs.get("base_url") is not None:
+                llmc.base_url = str(kwargs["base_url"]).strip()
+            if kwargs.get("api_key") is not ... and kwargs.get("api_key") is not None:
+                llmc.api_key = str(kwargs["api_key"]).strip()
+            self._backend = self._build_backend(cfg)
+            self._pool = self._build_pool(cfg)
+            self._provider = (llmc.provider or "").lower()
+            self._model = llmc.model or ""
+            self._base_url = llmc.base_url or ""
+            emit("model_switch", provider=self._provider, model=self._model)
+            return {"provider": self._provider, "model": self._model}
+        return asyncio.run(self.switch(**kwargs))
+
+    def backend_info(self) -> dict[str, Any]:
+        """Introspection for /status /models (masked, no secrets)."""
+        return {
+            "provider": self._provider,
+            "model": self._model,
+            "base_url": self._base_url,
+            "backend": type(self._backend).__name__,
+            "pool_size": len(self._pool.credentials) if self._pool else 0,
+            "token_budget": self.token_budget.max_tokens,
+            "token_used": getattr(self.token_budget, "total_used", 0),
+        }
+
+    # ------------------------------------------------------------------
+    # SHS Code — rolling-window rate limiting (spec §18/§19)
+    # ------------------------------------------------------------------
+
+    def _limiter(self) -> Optional[Any]:
+        cfg = Config.get()
+        rl = getattr(cfg.llm, "rate_limit", None)
+        if rl is None or not getattr(rl, "enabled", True):
+            return None
+        rpm = int(getattr(rl, "rpm", 0) or 0)
+        if rpm <= 0 and not detect_nim(self._base_url, self._provider):
+            # Unlimited and not NIM — no limiter needed.
+            if "nvidia" not in self._provider and "nim" not in self._provider:
+                return None
+        return get_limiter(self._provider, self._base_url, self._model, rpm=rpm or None)
 
     def _build_pool(self, cfg: Any) -> Optional[CredentialPool]:
         provider = (cfg.llm.provider or "").lower()
@@ -646,6 +776,20 @@ class LLM:
         is_deep_thinker = _is_long_thinking_model(model_name)
 
         for attempt in range(1, self._max_retries + 1):
+            # SHS Code (spec §18/§19): rolling-window rate limiting BEFORE the
+            # request. The wait happens with messages untouched — context,
+            # tool results and task state all survive (they live outside LLM).
+            limiter = self._limiter()
+            if limiter is not None:
+                emit("llm_start", provider=self._provider, model=self._model)
+                waited = await limiter.acquire()
+                if waited > 0:
+                    logger.info(
+                        f"[LLM] Rate limiter waited {waited:.1f}s for capacity "
+                        f"({limiter.provider} rpm={limiter.rpm}). Context preserved."
+                    )
+            else:
+                emit("llm_start", provider=self._provider, model=self._model)
             cred = await self._pool.get() if self._pool else None
             try:
                 api_key: Optional[str] = cred.api_key if cred else None
@@ -672,10 +816,19 @@ class LLM:
             except TokenLimitExceeded:
                 raise
 
-            except RateLimitError:
+            except RateLimitError as e:
                 if cred and self._pool:
                     await self._pool.mark_exhausted(cred)
-                logger.warning(f"[LLM] Rate limited (attempt {attempt}). Wait {wait:.1f}s...")
+                # SHS Code: honor server Retry-After when provided (spec §18)
+                retry_after = getattr(e, "retry_after", None)
+                if limiter is not None:
+                    limiter.on_rate_limit_response(retry_after)
+                if retry_after and retry_after > 0:
+                    wait = max(wait, min(float(retry_after), RETRY_MAX_WAIT))
+                logger.warning(
+                    f"[LLM] Rate limited (attempt {attempt}). Retry-After={retry_after}. "
+                    f"Waiting {wait:.1f}s — state preserved."
+                )
                 await asyncio.sleep(wait)
                 wait = min(wait * 2 + random.uniform(0, 1), RETRY_MAX_WAIT)
 

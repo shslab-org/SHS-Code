@@ -208,3 +208,18 @@ def get_current_trace_id() -> str:
 
 def get_current_agent() -> str:
     return _ctx_agent.get()
+
+
+def recent_lines(n: int = 20) -> list[str]:
+    """SHS Code: last n log lines from the newest log file (for /log)."""
+    import glob
+    try:
+        files = sorted(glob.glob(str(_LOG_DIR / "*.log")))
+        if not files:
+            return []
+        lines: list[str] = []
+        with open(files[-1], "r", encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+        return lines[-max(1, n):]
+    except Exception:
+        return []

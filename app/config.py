@@ -60,6 +60,13 @@ class LLMFallbackConfig(BaseModel):
     triggers:            list[str]     = Field(default_factory=lambda: ["rate_limit", "service_unavailable", "context_window", "quota"])
 
 
+class LLMRateLimitConfig(BaseModel):
+    """Rolling-window request pacing (spec §18/§19).
+    rpm=0 means unlimited EXCEPT auto-detected NVIDIA NIM endpoints (40 RPM default)."""
+    enabled: bool = True
+    rpm:     int  = 0
+
+
 class LLMConfig(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
@@ -75,6 +82,7 @@ class LLMConfig(BaseModel):
     extra_api_keys: list[str]      = Field(default_factory=list)
     streaming:      LLMStreamingConfig = Field(default_factory=LLMStreamingConfig)
     fallback:       LLMFallbackConfig  = Field(default_factory=LLMFallbackConfig)
+    rate_limit:     LLMRateLimitConfig = Field(default_factory=LLMRateLimitConfig)
 
     @model_validator(mode="after")
     def _coerce_provider(self) -> "LLMConfig":
@@ -286,6 +294,60 @@ class Config:
     def reset(cls) -> None:
         with cls._lock:
             cls._instance = None
+
+    # ------------------------------------------------------------------
+    # Persistence (SHS Code) — write active config so changes survive restart
+    # ------------------------------------------------------------------
+
+    def active_config_path(self) -> Path:
+        """Where /model, /provider, /mcp add etc. persist changes.
+        Profile dir if MANUSCLAW_PROFILE set, else ~/.manusclaw/config.yaml
+        (which takes precedence over ./config.toml on next load)."""
+        profile = os.getenv("MANUSCLAW_PROFILE", "").strip()
+        if profile:
+            pdir = _HOME / "profiles" / profile
+            pdir.mkdir(parents=True, exist_ok=True)
+            return pdir / "config.yaml"
+        _HOME.mkdir(parents=True, exist_ok=True)
+        return _HOME / "config.yaml"
+
+    def save_llm(self, persist: bool = True) -> Optional[Path]:
+        """Persist the current live LLM settings (provider/model/key/rate limit).
+        Returns the written path or None on failure. Secrets are written with
+        0600 perms; failures never raise into callers."""
+        try:
+            import yaml as __yaml
+            target = self.active_config_path()
+            data: dict = {}
+            if target.exists():
+                try:
+                    data = __yaml.safe_load(target.read_text(encoding="utf-8")) or {}
+                except Exception:
+                    data = {}
+            llm = self._data.llm
+            data.setdefault("llm", {})
+            data["llm"].update({
+                "provider": llm.provider,
+                "model": llm.model,
+                "base_url": llm.base_url,
+                "api_key": llm.api_key,
+                "max_tokens": llm.max_tokens,
+                "temperature": llm.temperature,
+                "timeout": llm.timeout,
+                "max_retries": llm.max_retries,
+                "rate_limit": {"enabled": llm.rate_limit.enabled, "rpm": llm.rate_limit.rpm},
+            })
+            if persist:
+                tmp = target.with_suffix(".tmp")
+                tmp.write_text(__yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+                try:
+                    os.chmod(tmp, 0o600)
+                except OSError:
+                    pass
+                os.replace(tmp, target)
+            return target
+        except Exception:
+            return None
 
     # ------------------------------------------------------------------
     # Internal loading

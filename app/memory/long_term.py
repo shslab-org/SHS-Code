@@ -133,6 +133,14 @@ class LongTermMemory:
     async def store_many(self, entries: list[str], meta: Optional[dict] = None) -> list[str]:
         return [await self.store(e, meta) for e in entries]
 
+    async def delete(self, entry_id: str) -> bool:
+        """Delete one entry (and its FTS row via trigger). Returns True if deleted."""
+        def _delete() -> bool:
+            cur = self._connect().execute("DELETE FROM entries WHERE id=?", (entry_id,))
+            self._connect().commit()
+            return cur.rowcount > 0
+        return await asyncio.to_thread(_delete)
+
     # ------------------------------------------------------------------
     # Retrieve
     # ------------------------------------------------------------------

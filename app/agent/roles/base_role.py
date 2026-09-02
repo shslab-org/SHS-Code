@@ -210,8 +210,8 @@ class BaseRole(ABC):
 
     def _build_system_prompt(self) -> str:
         identity = (
-            "You are ManusClaw, an autonomous AI engine created by The-JDdev (SHS Shobuj). "
-            "You do not identify as any base LLM provider. You are ManusClaw.\n\n"
+            "You are SHS Code, an autonomous AI coding agent created by SHS Lab (Sazzad Hussain Shobuj). "
+            "You do not identify as any base LLM provider. You are SHS Code.\n\n"
         )
         return identity + self.specialist_prompt
 

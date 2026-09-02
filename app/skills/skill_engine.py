@@ -136,6 +136,51 @@ class SkillEngine:
     def __init__(self) -> None:
         self._skills: dict[str, Skill] = {}
         self._loaded = False
+        # SHS Code (spec §15): enable/disable state persists across restarts.
+        self._disabled_path = _get_skills_dir().parent / "skills_state.json"
+        self._disabled: set[str] = self._load_disabled()
+
+    def _load_disabled(self) -> set[str]:
+        try:
+            if self._disabled_path.exists():
+                import json
+                data = json.loads(self._disabled_path.read_text(encoding="utf-8"))
+                return set(data.get("disabled", []))
+        except Exception:
+            pass
+        return set()
+
+    def _save_disabled(self) -> None:
+        try:
+            import json
+            self._disabled_path.parent.mkdir(parents=True, exist_ok=True)
+            self._disabled_path.write_text(
+                json.dumps({"disabled": sorted(self._disabled)}, indent=1),
+                encoding="utf-8")
+        except Exception:
+            pass
+
+    def is_disabled(self, name: str) -> bool:
+        return name in self._disabled
+
+    def set_disabled(self, name: str, disabled: bool) -> bool:
+        """Enable/disable a skill; persists to ~/.manusclaw/skills_state.json.
+        Returns False when the skill doesn't exist."""
+        self._ensure_loaded()
+        if name not in self._skills:
+            return False
+        if disabled:
+            self._disabled.add(name)
+        else:
+            self._disabled.discard(name)
+        self._save_disabled()
+        return True
+
+    def reload(self) -> None:
+        self._skills.clear()
+        self._loaded = False
+        self._disabled = self._load_disabled()
+        self._ensure_loaded()
 
     def _ensure_loaded(self) -> None:
         if self._loaded:
@@ -165,7 +210,8 @@ class SkillEngine:
 
     def list_skills(self) -> list[Skill]:
         self._ensure_loaded()
-        return [s for s in self._skills.values() if s.enabled]
+        return [s for s in self._skills.values()
+                if s.name not in self._disabled]
 
     def get(self, name: str) -> Optional[Skill]:
         self._ensure_loaded()
