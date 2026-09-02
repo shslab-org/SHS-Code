@@ -57,6 +57,7 @@ class Skill:
     platform: list[str] = field(default_factory=list)
     path: Optional[Path] = None
     enabled: bool = True
+    level: str = "builtin"      # Phase 2 (spec §35): builtin | user | project | installed
 
     def to_user_message(self) -> str:
         return (
@@ -187,7 +188,13 @@ class SkillEngine:
             return
         self._load_builtin()
         self._load_user()
+        self._load_project()
         self._loaded = True
+
+    # Phase 2 (spec §35): project-level skills live in the repo being worked on
+    @staticmethod
+    def _project_skills_dir() -> Path:
+        return Path.cwd() / ".shscode" / "skills"
 
     def _load_builtin(self) -> None:
         if not _BUILTIN_SKILLS_DIR.exists():
@@ -195,6 +202,7 @@ class SkillEngine:
         for p in _BUILTIN_SKILLS_DIR.rglob("*.md"):
             skill = _parse_skill_file(p)
             if skill and skill.enabled:
+                skill.level = "builtin"
                 self._skills[skill.name] = skill
         logger.debug(f"[SkillEngine] Loaded {len(self._skills)} built-in skills")
 
@@ -205,8 +213,90 @@ class SkillEngine:
         for p in skills_dir.rglob("*.md"):
             skill = _parse_skill_file(p)
             if skill and skill.enabled:
+                skill.level = "installed" if "/installed/" in str(p) else "user"
                 self._skills[skill.name] = skill
         logger.debug(f"[SkillEngine] Total skills: {len(self._skills)}")
+
+    def _load_project(self) -> None:
+        pdir = self._project_skills_dir()
+        if not pdir.exists():
+            return
+        for p in pdir.rglob("*.md"):
+            skill = _parse_skill_file(p)
+            if skill and skill.enabled:
+                skill.level = "project"
+                self._skills[skill.name] = skill
+        logger.debug(f"[SkillEngine] project skills from {pdir}")
+
+    # Phase 2 (spec §35): install from a local path or git URL; remove
+    def install(self, source: str, name: Optional[str] = None) -> Skill:
+        """Install a skill from a path (file/dir with .md files) or a git URL
+        into ~/.manusclaw/skills/installed/. Returns the installed skill."""
+        import shutil
+        import tempfile
+        dest_root = _get_skills_dir() / "installed"
+        dest_root.mkdir(parents=True, exist_ok=True)
+        src = Path(source).expanduser()
+        files: list[Path] = []
+        if source.rstrip("/").endswith(".git") or source.startswith(("git@", "https://", "http://")):
+            with tempfile.TemporaryDirectory() as td:
+                import subprocess
+                r = subprocess.run(["git", "clone", "--depth", "1", source, td],
+                                   capture_output=True, text=True, timeout=120)
+                if r.returncode != 0:
+                    raise ValueError(f"git clone failed: {r.stderr[:200]}")
+                files = sorted(Path(td).rglob("*.md"))[:40]
+                installed = []
+                for f in files:
+                    target = dest_root / f.name
+                    shutil.copy2(f, target)
+                    installed.append(self._install_one(target))
+                self.reload()
+                return installed[0] if installed else (_ for _ in ()).throw(
+                    ValueError("no .md skill files found in repo"))
+        if src.is_file() and src.suffix == ".md":
+            files = [src]
+        elif src.is_dir():
+            files = sorted(src.rglob("*.md"))[:40]
+        else:
+            raise ValueError(f"skill source not found: {source}")
+        first: Optional[Skill] = None
+        for f in files:
+            target = dest_root / (f"{name}.md" if name and len(files) == 1 else f.name)
+            shutil.copy2(f, target)
+            s = self._install_one(target)
+            first = first or s
+        self.reload()
+        if not first:
+            raise ValueError("no installable skill files found")
+        return first
+
+    def _install_one(self, target: Path) -> Skill:
+        skill = _parse_skill_file(target)
+        if not skill:
+            target.unlink(missing_ok=True)
+            raise ValueError(f"{target.name} is not a valid skill (needs YAML frontmatter)")
+        skill.level = "installed"
+        skill.path = target
+        self._skills[skill.name] = skill
+        logger.info(f"[SkillEngine] installed skill: {skill.name} <- {target}")
+        return skill
+
+    def remove(self, name: str) -> bool:
+        """Remove a user/project/installed skill (builtin skills are immutable)."""
+        self._ensure_loaded()
+        skill = self._skills.get(name)
+        if not skill or skill.level == "builtin":
+            return False
+        try:
+            if skill.path and skill.path.exists():
+                skill.path.unlink()
+            self._skills.pop(name, None)
+            self._disabled.discard(name)
+            self._save_disabled()
+            return True
+        except OSError:
+            return False
 
     def list_skills(self) -> list[Skill]:
         self._ensure_loaded()

@@ -143,6 +143,10 @@ class BaseAgent(ABC):
         self._skills_injected: bool = False
         # SHS Code (spec §6-§9): persistent task journal + checkpoints
         self._journal_task_id: Optional[str] = None
+        # SHS Code Phase 2 (spec §7): dependency-aware plan graph for this run
+        self._plan_graph = None
+        # SHS Code Phase 2 (spec §2): project intelligence injected once per project
+        self._project_context_injected: bool = False
         try:
             from app.state import Journal
             self.journal = Journal.get()
@@ -206,6 +210,11 @@ class BaseAgent(ABC):
         sys_content = MANUSCLAW_IDENTITY + "\n\n" + (self.system_prompt or "") + CORE_DIRECTIVES
         self.memory.add(Message.system(sys_content))
 
+        # SHS Code Phase 2 (spec §36/§37): active mode + custom profile change
+        # REAL execution behavior — prompt bias, step budget, verification level,
+        # plan depth. Persisted in ~/.manusclaw — survives restarts.
+        self._apply_mode_and_profile()
+
         # FIX: Inject relevant skills only once per agent lifetime, not on every run.
         # Re-injecting on every run pollutes the context window with duplicate skill messages.
         if not self._skills_injected:
@@ -255,6 +264,9 @@ class BaseAgent(ABC):
             except Exception as e:
                 logger.debug(f"[Journal] task_start failed (non-fatal): {e}")
 
+        # SHS Code Phase 2 (spec §2/§7): project intelligence + persisted plan
+        await self._inject_project_context(prompt)
+
         logger.info(
             f"Starting run task={self._task_history.task_id} "
             f"session={self._session_id} mode={mode_str} max_steps={self._max_steps}"
@@ -302,6 +314,9 @@ class BaseAgent(ABC):
                 if self._step_count > 1 and self._step_count % 5 == 0 and self._task_history:
                     ctx = self._task_history.context_summary()
                     self.memory.add_context_refresh(ctx)
+                    # SHS Code Phase 2 (spec §7/§41): plan progress awareness —
+                    # the model always sees the current DAG state, not a stale plan.
+                    await self._inject_plan_refresh()
 
                 result = await self.step()
                 if result:
@@ -344,9 +359,29 @@ class BaseAgent(ABC):
                     if self.state == AgentState.FINISHED:
                         await self.journal.task_complete(self._journal_task_id)
                     elif self.state == AgentState.ERROR:
-                        await self.journal.task_fail(
-                            self._journal_task_id,
-                            results[-1] if results else "unknown error")
+                        # SHS Code Phase 2 (spec §44/§47): classify the final
+                        # error — REQUIRES_USER marks the task BLOCKED (never lost)
+                        # instead of just "failed".
+                        final_err = results[-1] if results else "unknown error"
+                        blocked_by_user = False
+                        try:
+                            from app.recovery import diagnose, RetryStrategy
+                            diag = diagnose(final_err)
+                            if diag.strategy == RetryStrategy.REQUIRES_USER:
+                                blocked_by_user = True
+                                await self.journal.set_blocked(
+                                    self._journal_task_id,
+                                    reason=diag.render(),
+                                    completed=(f"{self._step_count} steps, "
+                                               f"{self._tool_call_count} tool calls"),
+                                    needed=final_err[:300],
+                                    next_action="resolve the user dependency, then /resume")
+                        except Exception:
+                            pass
+                        if not blocked_by_user:
+                            await self.journal.task_fail(
+                                self._journal_task_id,
+                                results[-1] if results else "unknown error")
                     else:
                         await self.journal.task_pause(self._journal_task_id)
                     await self.journal.checkpoint(
@@ -373,8 +408,114 @@ class BaseAgent(ABC):
         return "\n".join(results) if results else "(Agent completed with no text output.)"
 
     # ------------------------------------------------------------------
+    # Mode + profile (Phase 2, spec §36/§37)
+    # ------------------------------------------------------------------
+
+    def _apply_mode_and_profile(self) -> None:
+        """Inject the active agent-mode directive + custom-profile instructions,
+        and scale the step budget. Every mode/profile knob has a real effect."""
+        try:
+            from app.modes import get_mode_config
+            cfg = get_mode_config()
+            self._mode_cfg = cfg
+            self._max_steps = max(5, int(self._max_steps * cfg.get("max_steps_scale", 1.0)))
+            prompt = cfg.get("prompt", "")
+            if prompt:
+                self.memory.add(Message.system(prompt))
+        except Exception as e:
+            logger.debug(f"[Modes] apply skipped: {e}")
+            self._mode_cfg = {"plan": "llm", "verification_level": "standard"}
+        try:
+            from app.agent_profiles import effective_profile
+            prof = effective_profile()
+            self._profile = prof
+            if prof.get("system_instructions"):
+                self.memory.add(Message.system(
+                    "AGENT PROFILE: " + prof["name"] + "\n" +
+                    prof["system_instructions"]))
+            # force-inject profile skills
+            for sname in prof.get("skills") or []:
+                try:
+                    from app.skills.skill_engine import get_skill_engine
+                    skill = get_skill_engine().get(sname)
+                    if skill and not get_skill_engine().is_disabled(sname):
+                        self.memory.add(Message.user(skill.to_user_message()))
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.debug(f"[Profiles] apply skipped: {e}")
+            self._profile = {"verification_strategy": "standard"}
+
+    def _verification_level(self) -> str:
+        """Effective verification level: profile strategy overrides mode."""
+        prof = getattr(self, "_profile", {}) or {}
+        if prof.get("verification_strategy"):
+            return prof["verification_strategy"]
+        return (getattr(self, "_mode_cfg", {}) or {}).get("verification_level", "standard")
+
+    # ------------------------------------------------------------------
     # Skills
     # ------------------------------------------------------------------
+
+    async def _inject_project_context(self, prompt: str) -> None:
+        """SHS Code Phase 2 (spec §2/§7): one-time project intelligence + a
+        persisted dependency-aware plan. Both survive restarts (profile on
+        disk, DAG in journal.db). Failures are non-fatal by design — a
+        missing index must never block task execution."""
+        # 1) project intelligence summary (once per agent lifetime)
+        if not self._project_context_injected:
+            self._project_context_injected = True
+            try:
+                from app.intelligence import current_intelligence
+                from app.activity import emit
+                intel = current_intelligence()
+                emit("analyzing", project=intel.root.name)
+                summary = intel.summary()
+                self.memory.add(Message.system(
+                    "PROJECT INTELLIGENCE (auto-indexed, persistent cache):\n"
+                    + summary[:1600]
+                    + "\nUse this understanding: inspect before creating; search "
+                      "the symbol index before grepping; never recreate what "
+                      "already exists (verify it instead)."))
+            except Exception as e:
+                logger.debug(f"[Intel] context injection skipped: {e}")
+
+        # 2) plan graph (spec §7: persisted; updated, not lost, if task changes)
+        # Phase 2 (spec §36): mode controls plan depth — none|heuristic|llm
+        mode_plan = (getattr(self, "_mode_cfg", {}) or {}).get("plan", "llm")
+        if self.journal is not None and self._journal_task_id and mode_plan != "none":
+            try:
+                from app.planner import generate_plan
+                use_llm = (mode_plan == "llm")
+                self._plan_graph = await generate_plan(
+                    self.journal, self._journal_task_id, prompt,
+                    llm=getattr(self, "llm", None) if use_llm else None,
+                    use_llm=use_llm)
+                await self.journal.set_phase(self._journal_task_id, "planning")
+                plan_prompt = self._plan_graph.to_prompt()
+                if plan_prompt:
+                    self.memory.add(Message.system(
+                        "IMPLEMENTATION PLAN (dependency-aware, persisted — "
+                        "survives restarts and model switches). Complete steps "
+                        "in dependency order; never mark a step done before its "
+                        "dependencies or before verification.\n" + plan_prompt))
+                from app.activity import emit
+                emit("plan_created", nodes=len(self._plan_graph.nodes()))
+            except Exception as e:
+                logger.debug(f"[Planner] plan generation skipped: {e}")
+
+    async def _inject_plan_refresh(self) -> None:
+        """Periodic DAG refresh into context (spec §41: /plan-like awareness)."""
+        if self._plan_graph is None or self.journal is None or not self._journal_task_id:
+            return
+        try:
+            await self._plan_graph.load()
+            plan_prompt = self._plan_graph.to_prompt()
+            if plan_prompt:
+                self.memory.add(Message.system(
+                    "[PLAN STATUS REFRESH]\n" + plan_prompt))
+        except Exception as e:
+            logger.debug(f"[Planner] refresh skipped: {e}")
 
     async def _recall_long_term_memory(self, prompt: str) -> None:
         """SHS Code (spec §3/§35): recall persistent memories relevant to the

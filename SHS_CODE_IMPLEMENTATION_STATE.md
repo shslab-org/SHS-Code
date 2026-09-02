@@ -1,157 +1,192 @@
-# SHS Code Implementation State
+# SHS Code Phase 2 State
 
 ## Repository
 - Source: github.com/shslab-org/ManusClaw (working copy: /home/z/my-project/SHS-Code)
-- Language: Python 3.11+ (tested 3.12), package `app/`, 300+ files
-- Product: **SHS Code v1.0.0** (SHS Lab — Sazzad Hussain Shobuj)
-- Predecessor: ManusClaw v5.1.1 (fully preserved, `manusclaw` command alias kept)
+- Language: Python 3.11+ (tested 3.12), package `app/`, 340+ files
+- Product: **SHS Code v2.0.0** (SHS Lab — Sazzad Hussain Shobuj)
+- Phase 1 (v1.0.0, commit 63b726d) fully preserved — nothing rewritten, only extended
 
 ## Current Phase
-COMPLETE — all 24 phases implemented and verified. 244 tests passing.
+Phase 2 COMPLETE — Claude Code-level coding intelligence upgrade. 342 tests passing.
 
-## Completed
-- [x] Phase 1-2: Full repository audit (2 parallel deep audits + manual core reads)
-- [x] Phase 3: Existing bugs fixed (see Bugs Fixed)
-- [x] Phase 4: SHS Code branding + SHSCode CLI + ASCII banner + `exit` keyword
-- [x] Phase 5: Provider-independent state layer (app/state.py: Journal + StateStore, SQLite + atomic JSON)
-- [x] Phase 6: Memory system wired (LongTermMemory: recall at run start, store at run end, /memory /remember /forget + delete method)
-- [x] Phase 7: Task journal + checkpoints (every tool exec → record_action + file/command tracking + atomic checkpoint)
-- [x] Phase 8: Provider-independent context (messages live in agent memory, never in LLM layer)
-- [x] Phase 9: LLM.switch() live rebuild (model/provider/base_url/key; token budget object preserved)
-- [x] Phase 10: NVIDIA NIM rolling-window limiter (app/llm/rate_limiter.py; NIM auto-detect 40 RPM; Retry-After honored; blocked_until for 429 pressure; /status shows stats)
-- [x] Phase 11: Failure recovery (retry loop never mutates messages; RateLimitError carries retry_after; journal checkpoints survive crashes)
-- [x] Phase 12: Full command system (37 commands, all real — smoke tested)
-- [x] Phase 13-14: 29 builtin skills + enable/disable persisted (~/.manusclaw/skills_state.json) + /skill info|enable|disable|reload
-- [x] Phase 15: Custom providers (app/providers.py registry, ~/.manusclaw/providers.json, /provider add/remove/set-key/switch, masked display)
-- [x] Phase 16: MCP fixed (initialize handshake, notifications/initialized, stderr drain task, notification-skip in _rpc, /mcp add/remove/inspect)
-- [x] Phase 17: Connectors (app/connectors.py, ~/.manusclaw/connectors.json, masked display, git-provider token injection in BaseAgent init)
-- [x] Phase 18: Channels preserved (12 adapters, /channels introspection)
-- [x] Phase 19: Tool execution integration (journal wired into ToolCallAgent._execute_with_retry; ActivityBus emissions)
-- [x] Phase 20: Terminal UX (live activity feed via ActivityBus: thinking/tools/rate-limit/checkpoint lines; WordCompleter regex bug FIXED; Ctrl+C cancels run not shell; plain `exit`; SPAWN_TASK sentinel fixed; --no-color implemented)
-- [x] Phase 21: /doctor diagnostics (11 checks with actionable hints)
-- [x] Phase 22: Integration tests (32 new tests: rate limiter / model switch / journal recovery)
-- [x] Phase 23: Interruption recovery test (full cycle: run → checkpoint → crash → mark_interrupted → last_interrupted → /resume → context restored)
-- [x] Phase 24: Final verification (244 tests pass; REPL smoke tested end-to-end)
+## Architecture Audit
+Pre-audit of Phase 1 found 20 gaps (all listed in git history of this file);
+ALL closed in Phase 2. Phase 1 systems were EXTENDED, never replaced:
+Journal extended in place (schema migration adds columns/tables), ToolSelector
+gained persistent confidence, LLMMetrics-wired health added alongside.
+
+## Completed (Phase 2, by spec section)
+- [x] §2-§4  Project Intelligence Layer: app/intelligence/ — Python AST indexing,
+      JS/TS/Kotlin/Java/PHP/Go structural parsing, symbol+import tables,
+      semantic concept search (auth→login/jwt/token expansion), structural
+      (usages/callers/importers) search, filename/text/regex search
+- [x] §3     Persistent incremental cache: ~/.manusclaw/intel/<hash>/index.db,
+      mtime+size keyed — reindex ONLY changed files (verified: 2nd pass 0 changed,
+      partial refresh 1 file); post-edit incremental refresh wired into agent
+- [x] §6-§8  Task DAG: app/task_dag.py — task_nodes table, statuses
+      pending/ready/active/completed/failed/retryable/skipped/blocked,
+      dependency-enforced completion (refused until deps done), smart
+      prioritization (unlock-value > user priority > fewer failures > age),
+      persistence + reload, /plan rendering, plan-in-context injection
+- [x] §7     Smart planning: app/planner.py — LLM plan (validated+repaired JSON)
+      with heuristic fallback; plan persisted, MERGED not lost on task change
+- [x] §9     Work State 2.0: journal columns plan/phase/decisions/test_results/
+      recovery_actions/blocked_reason/verification (idempotent ALTER migration)
+- [x] §10-11 Exact resume: verify_resume_state() — filesystem vs checkpoint
+      comparison, claimed-but-missing detection, changed-since detection,
+      already-done detection (symbol index backed duplicate-work prevention);
+      wired into /resume output + injected into restored context
+- [x] §12    IDE-like editing: precise-edit guidance + post-edit index refresh
+- [x] §13    Review phase: automatic self-review prompt every 3 file edits
+- [x] §14-17 Verification engine + failure recovery: app/verification.py —
+      project-aware command selection (python/node/android/gradle/php/rust/go),
+      bounded execution, error extraction (pytest/TS/gradle/npm/php patterns),
+      DIAGNOSE→hypothesis→fix analysis; app/recovery.py — 12-class error
+      classification + strategy (RETRYABLE/WAIT_AND_RETRY/REQUIRES_FIX/
+      REQUIRES_USER/EXTERNAL_BLOCKER), retry-after extraction, repeated-failure
+      strategy change (§17)
+- [x] §18    Tool confidence persists ACROSS runs (~/.manusclaw/tool_confidence.json,
+      decayed 50% per run) — extends in-run ToolSelector scoring
+- [x] §19    Parallel tool execution: all-read-only batches run concurrently
+      (asyncio.gather), mutating ops stay strictly sequential
+- [x] §20-21 Provider health: app/provider_health.py — per-provider requests/
+      errors/rate-limit/latency-EMA/tokens/cost, 🟢🟡🔴 status, cooldown,
+      recommend_provider() routing hint; wired into LLM._call_with_retry
+- [x] §22    Model switching state preservation: verified end-to-end (E2E test 06)
+- [x] §23    Context compaction 2.0: app/compaction.py — structured extraction
+      (requirements/facts/decisions/files/changes/errors/tests/task-state/plan),
+      verbatim tail preserved; /compact→/compress upgraded
+- [x] §24    /usage: provider table (req/err/rate/latency/in/out/cost) + session
+      token usage
+- [x] §25-26 Multi-agent + subagent state: delegate tool records start/finish/
+      interruption in subagents table (journal.db); recovery on /resume
+- [x] §27    Sessions: switch/rename/archive/delete added (SessionDB extended,
+      archived sessions hidden from default list)
+- [x] §28    Project profiles: intelligence profile persisted
+      (~/.manusclaw/intel/<hash>/profile.json)
+- [x] §29    Environment intelligence: app/intelligence/environment.py — 50+ tool
+      detections with versions, /env, command_available() pre-check
+- [x] §31    Git intelligence 2.0: app/git_intel.py — full state (branch/dirty/
+      staged/untracked/diff/conflicts/merge/ahead-behind/history), commit
+      existence VERIFIED (never claimed), /git upgraded
+- [x] §32    GitHub workflow: git_providers + connectors preserved (Phase 1)
+- [x] §33    Smart rollback: app/git_intel.py SmartRollback — pre-edit snapshots
+      of agent-touched files (~/.manusclaw/rollback/<task>/), restore touches
+      ONLY snapshotted files; /rollback command
+- [x] §34    Dependency intelligence: dependency files/lockfile detection in profile
+- [x] §35    Skills 2.0: levels builtin/user/project/installed, /skill install
+      (path or git URL), create, remove; project skills from .shscode/skills/
+- [x] §36    Agent modes: app/modes.py — coding/debugging/reviewer/research/
+      autonomous/planning; each changes plan depth, verification level,
+      step budget, tool bias, injected directive; persisted (/mode)
+- [x] §37    Custom profiles: app/agent_profiles.py — system instructions +
+      skills + preferred tools + model pref + verification strategy,
+      5 builtin examples, CRUD + activation (/profile)
+- [x] §38    Secret isolation: mask in health errors, providers, connectors (Phase 1
+      secret_redaction preserved); E2E-verified
+- [x] §39-43 Observability: ActivityBus events for indexing/plan/verifying/
+      parallel/review/rollback/subagent/blocked; /status 2.0 (progress %, phase,
+      files, tests, verify verdict, blocked reason, next action, health line);
+      /doctor 2.0 (Phase 2 subsystem checks)
+- [x] §44-45 Error classification + retry intelligence: recovery.diagnose()
+      wired into tool retry loop (REQUIRES_USER → BLOCKED not fail; §47
+      human-dependency: journal.set_blocked with reason/needed/next_action)
+- [x] §46-47 Long-running autonomy + human-dependency detection
+- [x] §48    Agent handoff: this ledger + journal + checkpoints + plan (E2E verified)
+- [x] §49-55 TESTS: tests/test_integration_e2e.py — the 17-scenario suite +
+      model switch (§51) + provider failure (§52) + 4 RPM rate limit (§53) +
+      interruption (§54) + crash recovery (§55, atomic persistence verified) +
+      parallel tools + 400-file repo performance (index < 20s, incremental < 1s)
+- [x] §57-58 Terminal UX: new activity lines, stable input preserved (Phase 1 fix)
+- [x] §62-63 Documentation + this ledger
 
 ## In Progress
 (none)
 
-## Pending
-- [ ] git push to GitHub (needs credentials in this environment — local commits done)
-- [ ] Optional future: EventLog default tempdir (conversation subsystem — not used by main path), Alembic schema consolidation (documented, unused by runtime)
+## Files Created (Phase 2)
+- app/intelligence/{__init__,indexer,cache,search,project,environment,manager}.py
+- app/task_dag.py, app/planner.py, app/verification.py, app/recovery.py
+- app/git_intel.py, app/provider_health.py, app/compaction.py
+- app/modes.py, app/agent_profiles.py, app/subagents.py
+- app/tool/{code_search,project_intel,verify,task_dag_tool}.py
+- tests/{test_intelligence,test_task_dag,test_planner,test_verification,
+  test_phase2_systems,test_integration_e2e}.py
 
-## Files Modified
-- app/cli.py — FULL REWRITE (SHS Code shell, 37 commands, activity feed, resume, model switch)
-- app/llm/llm.py — rate limiter integration, Retry-After capture, LLM.switch()/switch_sync()/backend_info(), cleanup_backend
-- app/agent/base.py — journal wiring, LongTermMemory recall/store, connector injection, step checkpoints, SHS identity
-- app/agent/toolcall.py — _journal_tool_execution + activity emissions
-- app/agent/manus.py, react.py, toolcall.py, roles/base_role.py, identity_guard.py — identity rebrand
-- app/config.py — LLMRateLimitConfig, active_config_path(), save_llm() persistence
-- app/skills/skill_engine.py — is_disabled/set_disabled/reload (persisted)
-- app/memory/long_term.py — delete() method
-- app/mcp/client.py — initialize handshake, stderr drain, notification skip
-- app/logger.py — recent_lines()
-- main.py — routes to REPL (no more demo-task fallback)
-- pyproject.toml — shscode v1.0.0, SHSCode/shscode/manusclaw scripts, rich+prompt_toolkit deps
-- requirements.txt — rich, prompt_toolkit added
-- install.sh — SHSCode launcher + manusclaw alias → app.cli
-- README.md — SHS Code header + quickstart
+## Files Modified (Phase 2)
+- app/state.py — DAG table + Work State 2.0 columns + full JSON deserialization
+- app/agent/base.py — project-context + plan injection, mode/profile application,
+  plan refresh, blocked-on-user final verdict
+- app/agent/toolcall.py — parallel read-only batches, error classification gate,
+  pre-edit snapshots, post-edit index refresh, file-edit counter
+- app/agent/manus.py — 4 new tools wired, review phase, CODE INTELLIGENCE +
+  RECOVERY directives, delegate/task refs
+- app/llm/llm.py — provider health + usage recording in call path
+- app/cli.py — /plan /verify /project /env /usage /mode /profile /rollback +
+  /status 2.0 /doctor 2.0 /resume exact-verification /compress structured /
+  /git 2.0 /skills levels /skill install|create|remove /sessions extended +
+  activity feed events
+- app/skills/skill_engine.py — levels, project skills, install/remove
+- app/tool/selector.py — cross-run persisted confidence
+- app/tool/delegate.py — subagent state recording
+- app/db/session.py — rename/archive/delete + archived filtering
 
-## Files Created
-- app/activity.py (ActivityBus — live UX pub/sub)
-- app/llm/rate_limiter.py (RollingWindowRateLimiter + registry + NIM detect)
-- app/state.py (Journal + StateStore — persistent state layer)
-- app/connectors.py (ConnectorRegistry + mask_token + git-provider injection)
-- app/providers.py (ProviderRegistry + KNOWN_MODELS + provider_overlay)
-- app/doctor.py (11 diagnostic checks + formatter)
-- app/skills/builtin/ — 23 new skills (web-dev, android, python, js, ts, kotlin, java, c, cpp, csharp, php, sql, git, testing, debugging, linux, docs, ui-ux, api, db-eng, security, automation, browser-auto)
-- tests/test_rate_limiter.py, tests/test_model_switch.py, tests/test_journal_recovery.py (32 tests)
-- SHS_CODE_IMPLEMENTATION_STATE.md (this file)
+## Bugs Found & Fixed during Phase 2
+1. modes.py/agent_profiles.py had import-time path constants → call-time lazy
+   (test isolation + runtime home switching)
+2. intelligence INTEL_ROOT same issue → _intel_root()
+3. Journal.get_task/current_status didn't deserialize new JSON columns → fixed
+4. JS import regex missed default imports (import X from "y") → fixed
+5. Kotlin fun regex mis-captured receiver-less functions → fixed
+6. compaction decision regex missed "Decision:" (trailing \b after colon) → fixed
+7. provider_health recommend matched provider+model key only → provider-level
+8. verification emit() kind kwarg collision → renamed
+9. rate limiter fake-clock/real-clock mixing in tests → monotonic + short window
+10. ScriptedLLM planner probe consumed agent script → separate ask() path
 
-## Files Removed
-(none — preservation principle)
-
-## Existing Features Preserved
-- ALL agent classes (BaseAgent/ReActAgent/ToolCallAgent/Manus/MCPAgent/orchestrator/router/roles)
-- ALL 14 agent tools + ToolCollection + PermissionGate (BUILD auto-approve behavior unchanged)
-- SessionDB, TaskQueue, CronScheduler, EventLog, canvas, voice, sandbox, ssh, desktop, nodes
-- 12 messaging channel adapters + gateway + AgentRouter
-- GGUF/Ollama/HuggingFace offline routers + universal OpenAI-compat client
-- All 212 pre-existing tests still pass (244 total now)
-- `manusclaw` command, MANUSCLAW_HOME env, ~/.manusclaw data layout (zero data migration)
-
-## Bugs Found
-1. main.py ran a hardcoded demo task on EOF instead of exiting; REPL unreachable from installed command
-2. SPAWN_TASK sentinel never handled in CLI loop
-3. /model mutated config with NO effect (LLM backend built once)
-4. Retry-After header discarded in UniversalClient._post 429 path
-5. Naive fixed-60s rate limit wait (not rolling window)
-6. LongTermMemory fully built but never instantiated at runtime
-7. requirements.txt missing rich/prompt_toolkit (silent REPL degradation)
-8. MCP: no initialize handshake, undrained stderr (pipe deadlock risk), single-line response assumption
-9. WordCompleter pattern passed as str — crashes completer on every keystroke (input instability, spec §30)
-10. --no-color accepted but never implemented
-11. /branch could raise unhandled on missing session
-12. UniversalClient aiohttp session leak on rebuild (no cleanup path)
-13. pyproject "all" extra self-reference typo (`manusclawistral`)
-
-## Bugs Fixed
-ALL 13 above fixed (see Files Modified/Created). Also: rate limiter `blocked_until` bug found by test (unlimited limiter ignored Retry-After pressure) — fixed.
+## Tests Added
+- 98 new tests across 6 files (342 total: 244 Phase 1 preserved + 98 Phase 2)
 
 ## Tests Passed
-- tests/test_rate_limiter.py — 15 passed (rolling window semantics, NIM detection, registry, context preservation)
-- tests/test_model_switch.py — 8 passed (backend rebuild, budget preservation, agent context survives switch, custom provider overlay+masking)
-- tests/test_journal_recovery.py — 9 passed (lifecycle, failure journaling, atomic checkpoints, full interrupt→resume cycle, StateStore, connectors, skills toggles)
-- Full existing suite: 244 passed, 2 skipped, 0 failed
+342 passed, 2 skipped (pre-existing skips) — full suite green
 
-## Tests Failed
-(none)
-
-## Known Issues
-- git push pending credentials (local commits complete)
-- EventLog still defaults to tempdir when used via app/conversation (subsystem not on the main agent path; documented)
-- Alembic 001 schema remains disconnected from runtime (historical; SessionDB+Journal are the live stores)
-- Dead subsystems from ManusClaw (LiteLLMClient, View/Condenser stack, HookManager, security ensemble) intentionally PRESERVED per spec §46 — not removed; wiring them is future work if ever needed
-
-## Current Task
-FINAL — verification complete, ready for commit/push
-
-## Last Successful Action
-Full test suite green (244 passed); REPL smoke test (banner → /version → /status → /doctor → exit) clean
-
-## Last Failed Action
-(none)
-
-## Next Action
-git add -A && git commit && git push origin main (needs GitHub credentials in env; work is fully committed locally otherwise)
-
-## Architecture Decisions
-- PRESERVE all working ManusClaw systems; extend additively, never delete
-- Model switch = rebuild backend only; messages live in agent memory → context can never be destroyed by a switch (spec §4)
-- Rate limit wait happens inside LLM._call_with_retry before the request; messages untouched → context survives (spec §19)
-- Journal: SQLite (tasks + events) + atomic JSON checkpoints (os.replace, fsync) → crash-safe (spec §43)
-- Memory: SQLite FTS5 at workspace/.memory/long_term.db — provider-independent by construction
-- Config persistence: ~/.manusclaw/config.yaml (shadows ./config.toml on next load; profile-aware)
-- CLI: SHSCode (new) + manusclaw (legacy alias); both → app.cli:main
-- Data home unchanged (~/.manusclaw) → zero migration for existing users
-- ActivityBus: global pub/sub for live agent activity; UI failures can never propagate into the agent loop
+## Performance Findings
+- Own repo (337 files): full index 1.0s, incremental refresh ~0ms
+- 400-file synthetic repo: index < 1s, 2nd pass < 1s, symbol search < 0.5s
+- /verify fast on this repo: 0.5s (compileall)
 
 ## Provider State
-Built-in: mock, openai, anthropic, google/gemini, mistral, bedrock, universal (openai-compat: openrouter/lmstudio/groq/together/perplexity), ollama, gguf, huggingface/hf. Custom registry: ~/.manusclaw/providers.json via /provider add.
+MockLLM in test env; universal OpenAI-compat client + custom provider registry
++ health telemetry in production path (wired into _call_with_retry).
 
 ## Model State
-Default config: provider=mock, model=gpt-4o (safe first-run). Active model switchable live via /model, persisted via Config.save_llm().
+Model switch verified state-preserving (E2E test_06); LLM remains replaceable.
 
 ## Memory State
-LongTermMemory wired into BaseAgent: recall (top-4 FTS hits) injected at run start; goal+outcome stored at run end; /remember /forget manage entries.
+LongTermMemory recall/store preserved (Phase 1) + recalled into context.
 
-## Task State
-Journal wired: task_start on run, record_step per step, record_action per tool exec, file/command tracking, checkpoint after every tool + every step + at task end; task_complete only when the loop actually finished (spec §34 — no false completion).
+## Work State
+Journal + Task DAG + Work State 2.0 columns + subagents table, all persisted.
 
-## Recovery Instructions
-1. Read this file top-to-bottom (it is the handoff map — spec §49/§50)
-2. git log --oneline — see the implementation commits
-3. Check "Known Issues" + "Pending" above for remaining work
-4. Run: python -m pytest tests/ -o addopts="" — expect 244 passed
-5. Run: python -m app.cli — expect SHS Code banner + /help works
-6. All integration points are marked with "SHS Code (spec §…)" comments in code
+## Current Blockers
+(none)
+
+## Last Successful Action
+Full test suite green (342 passed); REPL smoke test of all new commands.
+
+## Last Failed Action
+(none outstanding)
+
+## Next Action
+Commit v2.0.0 + push to origin/main.
+
+## Architecture Decisions
+1. EXTEND, never replace: Journal schema migration (ALTER + CREATE IF NOT EXISTS)
+   instead of new state store — zero data migration, zero parallel systems.
+2. Deterministic intelligence: AST/regex/SQL-based symbol+semantic search — no
+   embedding model required; concept expansion covers "where is auth handled"
+   style queries with zero external dependencies.
+3. Read-only parallelism only: mutating operations never parallelize (spec §19).
+4. Error intelligence as a gate: classification decides retry vs fix vs user
+   BEFORE burning retries (spec §45), and REQUIRES_USER → task BLOCKED, never lost.
+5. Fake features forbidden: every command/tool has a real execution path; all
+   claims verified by the E2E suite on a real temp filesystem + git repo.

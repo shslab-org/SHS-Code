@@ -40,7 +40,7 @@ from typing import Optional
 # Version / branding
 # ──────────────────────────────────────────────────────────────────────────────
 
-VERSION = "1.0.0"           # SHS Code
+VERSION = "2.0.0"           # SHS Code Phase 2
 PREDECESSOR = "ManusClaw v5.1.1"
 
 SHS_BANNER = r"""
@@ -72,6 +72,9 @@ SLASH_COMMANDS = [
     "/config", "/context", "/checkpoint", "/history", "/files", "/search",
     "/git", "/doctor", "/log", "/debug", "/clear", "/new", "/bg",
     "/sessions", "/compress", "/branch", "/exit",
+    # Phase 2 (spec §40-§43, §28, §33, §36, §37)
+    "/plan", "/usage", "/project", "/env", "/mode", "/profile",
+    "/rollback", "/verify",
 ]
 
 
@@ -209,6 +212,32 @@ def _make_activity_printer(skin: dict, enabled: bool = True):
                 line = f"[{a}]⇄ provider switched → {data.get('provider', '')} {data.get('model', '')}[/][dim] context preserved[/]"
             elif kind == "memory_recall":
                 line = f"[dim]🧠 recalled {data.get('count', 0)} persistent memories[/]"
+            # ── Phase 2 (spec §58: user-facing activity) ──
+            elif kind == "analyzing":
+                line = f"[{a}]⏳ Analyzing repository…[/][dim] {data.get('project', '')}[/]"
+            elif kind == "indexing":
+                line = f"[{a}]🔍 Indexing project…[/][dim] {data.get('project', '')}[/]"
+            elif kind == "indexed":
+                line = (f"[dim]🔍 Indexed {data.get('files', 0):,} files, "
+                        f"{data.get('symbols', 0):,} symbols ({data.get('ms', 0)}ms, incremental)[/]")
+            elif kind == "plan_created":
+                line = f"[{a}]📋 Plan created: {data.get('nodes', 0)} tasks[/][dim] dependency-aware, persisted[/]"
+            elif kind == "verifying":
+                line = (f"[{a}]✓ Verifying…[/][dim] {data.get('level', '')} "
+                        f"{str(data.get('kinds') or '')[:40]}[/]")
+            elif kind == "parallel_tools":
+                line = (f"[{t}]⚡ parallel tools x{data.get('count', 0)}[/][dim] "
+                        f"{', '.join((data.get('tools') or [])[:4])}[/]")
+            elif kind == "review_phase":
+                line = f"[{a}]🔍 Code review phase[/][dim] after {data.get('file_edits', 0)} file edits[/]"
+            elif kind == "rollback_snapshot":
+                line = (f"[dim]🛟 rollback snapshot: {data.get('file', '')}[/]")
+            elif kind == "subagent_start":
+                line = f"[{t}]Spawn subagent {data.get('sub_id', '')}[/][dim] {data.get('role', '')}[/]"
+            elif kind == "subagent_end":
+                line = f"[{t}]Subagent {data.get('sub_id', '')} {data.get('status', '')}[/]"
+            elif kind == "blocked":
+                line = f"[{e}]⏸ Blocked: {str(data.get('reason', ''))[:80]}[/]"
             else:
                 return
             if console is not None:
@@ -371,9 +400,18 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             "    /clear             — clear screen\n"
             "    /new               — fresh session (memory persists on disk)\n"
             "    /bg <task>         — background queue   · /tasks to monitor\n"
-            "    /sessions …        — list|history|send|spawn\n"
-            "    /compress          — compress current session context\n"
+            "    /sessions …        — list|history|send|spawn|switch|rename|archive|delete\n"
+            "    /compress          — structured context compaction (state-preserving)\n"
             "    /branch            — branch current session\n"
+            "  Phase 2 — Intelligence & Autonomy\n"
+            "    /plan              — persisted dependency-aware plan + resume check\n"
+            "    /verify [level]    — project-aware build/test verification NOW\n"
+            "    /project [action]  — project intelligence: summary|architecture|entry|git|refresh\n"
+            "    /env               — development environment (tools, runtimes)\n"
+            "    /usage             — provider usage: requests, latency, tokens, cost\n"
+            "    /mode [name]       — agent modes: coding|debugging|reviewer|research|autonomous|planning\n"
+            "    /profile …         — custom agent profiles (list|use|create|remove|off)\n"
+            "    /rollback [task]   — snapshots + restore agent-changed files\n"
             "    /exit              — quit (or just type: exit)"
         )
 
@@ -393,10 +431,10 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
     if command == "/status":
         lines = ["SHS Code Status", "=" * 58]
         try:
-            import subprocess
-            r = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                               capture_output=True, text=True, timeout=8)
-            branch = r.stdout.strip() if r.returncode == 0 else "(not a git repo)"
+            from app.git_intel import GitIntelligence
+            gi = GitIntelligence()
+            gs = gi.state()
+            branch = gs.get("branch", "(not a git repo)") if gs.get("is_repo") else "(not a git repo)"
         except Exception:
             branch = "(git unavailable)"
         lines.append(f"Project:   {os.path.basename(os.getcwd())}  [{branch}]")
@@ -414,9 +452,27 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
                 if comp or pend:
                     lines.append(f"Progress:  {comp} done / {pend} pending "
                                  f"({j.progress_percent(t)}%)")
+                if t.get("phase"):
+                    lines.append(f"Phase:     {t.get('phase')}")
+                files = t.get("files_changed") or []
+                if files:
+                    lines.append(f"Files:     {len(files)} changed by this task")
+                tests = t.get("test_results") or []
+                if tests:
+                    tp = sum(1 for x in tests if x.get("passed"))
+                    tf = len(tests) - tp
+                    lines.append(f"Tests:     {tp} passed, {tf} failed")
+                verif = t.get("verification") or {}
+                if verif:
+                    mark = "✓" if verif.get("ok") else "✗"
+                    lines.append(f"Verify:    {mark} {(verif.get('summary') or '')[:60]}")
                 lines.append(f"Last ok:   {(t.get('last_success') or '-')[:70]}")
                 lines.append(f"Last err:  {(t.get('last_error') or '-')[:70]}")
+                if t.get("blocked_reason"):
+                    lines.append(f"BLOCKED:   {t.get('blocked_reason')[:70]}")
                 lines.append(f"Checkpoint: {_rel_ts(st.get('last_checkpoint_ts'))}")
+                if t.get("next_action"):
+                    lines.append(f"Next:      {str(t.get('next_action'))[:70]}")
             else:
                 lines.append("Task:      (none active)")
             bs = st.get("tasks_by_status") or {}
@@ -432,6 +488,16 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             from app.config import Config
             c = Config.get()
             lines.append(f"Provider:  {c.llm.provider}  Model: {c.llm.model}")
+        # provider health (Phase 2, spec §21)
+        try:
+            from app.provider_health import get_health
+            hs = list(get_health().stats().values())
+            if hs:
+                cur = hs[0]
+                lines.append(f"Health:    {cur['status']} success={cur['success_rate']} "
+                             f"latency={cur['latency_avg_s']}s req={cur['requests']}")
+        except Exception:
+            pass
         # rate limiter
         try:
             from app.llm.rate_limiter import all_stats
@@ -529,12 +595,25 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             if not tid:
                 rows = await j.list_tasks("paused")
                 tid = rows[0]["task_id"] if rows else None
+                if not tid:
+                    rows = await j.list_tasks("blocked")
+                    tid = rows[0]["task_id"] if rows else None
         if not tid:
-            return "No interrupted/paused task to resume. /tasks to list."
+            return "No interrupted/paused/blocked task to resume. /tasks to list."
         t = await j.get_task(tid)
         cp = await j.load_checkpoint(tid)
         if not t:
             return f"Task {tid} not found."
+        # SHS Code Phase 2 (spec §10 EXACT RESUME): verify stored state against
+        # the real filesystem + git BEFORE continuing — never trust a stale
+        # checkpoint blindly. Also detects already-done work (spec §11).
+        resume_report = ""
+        try:
+            from app.planner import verify_resume_state, render_resume_report
+            report = await verify_resume_state(j, tid)
+            resume_report = render_resume_report(report)
+        except Exception as e:
+            resume_report = f"(resume verification unavailable: {e})"
         from app.schema import Message
         restored = 0
         if cp and cp.get("memory"):
@@ -547,20 +626,43 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
         summary = (
             f"TASK RESUMED — continue from existing state, do NOT restart from zero.\n"
             f"Goal: {t.get('goal', '')}\nStatus was: {t.get('status')} | steps done: {t.get('step_count')}\n"
-            f"Progress: {pct}% ({comp}/{total} items)\n"
+            f"Progress: {pct}% ({comp}/{total} items) | phase: {t.get('phase') or '-'}\n"
             f"Last successful action: {t.get('last_success') or '-'}\n"
             f"Last failed action: {t.get('last_error') or '-'}\n"
-            f"Next action: inspect the filesystem before repeating any operation;\n"
-            f"completed work must not be redone."
+            f"\nEXACT-RESUME VERIFICATION (real state checked against the checkpoint):\n"
+            f"{resume_report[:1800]}\n"
+            f"\nRules: inspect the filesystem before repeating any operation;\n"
+            f"completed work must not be redone; verify claimed-but-missing work first."
         )
         agent.memory.add(Message.system(summary))
         await j.task_update(tid, status="in_progress")
         agent._journal_task_id = tid
+        # SHS Code Phase 2 (spec §26): recover subagent state for this task
+        try:
+            from app.subagents import mark_interrupted_subagents, list_subagents, render_subagents
+            await mark_interrupted_subagents(j, tid)
+            subs = await list_subagents(j, tid)
+            if subs:
+                agent.memory.add(Message.system(
+                    "SUBAGENT STATE (recovered):\n" + render_subagents(subs)[:1200]))
+        except Exception:
+            pass
+        # SHS Code Phase 2 (spec §22): the resumed plan graph rides along
+        try:
+            from app.task_dag import TaskGraph
+            g = await TaskGraph(j, tid).load()
+            if g.nodes():
+                agent._plan_graph = g
+                agent.memory.add(Message.system(
+                    "PLAN (restored, persisted):\n" + g.to_prompt()))
+        except Exception:
+            pass
         from app.schema import AgentState
         agent.state = AgentState.IDLE
         agent._step_count = 0
         return (f"Resumed task {tid}.\nGoal: {t.get('goal', '')[:60]}\n"
-                f"Progress: {pct}% | restored {restored} context messages.\n"
+                f"Progress: {pct}% | restored {restored} context messages.\n\n"
+                f"{resume_report[:1500]}\n\n"
                 f"Continue by describing the next step, or /continue to re-run the last prompt.")
 
     # ------------------------------------------------------------------ run control
@@ -756,14 +858,15 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
     if command == "/skills":
         try:
             from app.skills.skill_engine import get_skill_engine
-            skills = get_skill_engine().list_skills()
+            engine = get_skill_engine()
+            skills = engine.list_skills()
             if not skills:
                 return "No skills loaded."
-            lines = [f"{len(skills)} skill(s) loaded (builtin + ~/.manusclaw/skills):"]
+            lines = [f"{len(skills)} skill(s) loaded — levels: builtin · user · project · installed:"]
             for s in skills:
-                state = "OFF" if get_skill_engine().is_disabled(s.name) else "on"
-                lines.append(f"  {s.name} v{s.version} [{state}]: {s.description[:60]}")
-            lines.append("\n/skill info <name> · /skill enable|disable <name> · /skill reload")
+                state = "OFF" if engine.is_disabled(s.name) else "on"
+                lines.append(f"  [{s.level:<9}] {s.name} v{s.version} [{state}]: {s.description[:56]}")
+            lines.append("\n/skill info|enable|disable|install|create|remove|reload <name>")
             return "\n".join(lines)
         except Exception as e:
             return f"Skills error: {e}"
@@ -771,7 +874,10 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
     if command == "/skill":
         sub = arg.split(None, 1)
         if not sub:
-            return "Usage: /skill info|enable|disable|reload <name>"
+            return ("Usage: /skill info|enable|disable|reload <name>\n"
+                    "       /skill install <git-url|path> [name]\n"
+                    "       /skill create <name> <description>\n"
+                    "       /skill remove <name>")
         try:
             from app.skills.skill_engine import get_skill_engine
             engine = get_skill_engine()
@@ -779,6 +885,28 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             if action == "reload":
                 engine.reload()
                 return f"Skills reloaded: {len(engine.list_skills())} skill(s)."
+            if action == "install":
+                toks = (sub[1] if len(sub) > 1 else "").split()
+                if not toks:
+                    return "Usage: /skill install <git-url|path> [name]"
+                try:
+                    s = engine.install(toks[0], toks[1] if len(toks) > 1 else None)
+                    return f"Installed skill '{s.name}' (v{s.version}) into ~/.manusclaw/skills/installed/"
+                except Exception as e:
+                    return f"Install failed: {e}"
+            if action == "create":
+                toks = (sub[1] if len(sub) > 1 else "").split(None, 1)
+                if len(toks) < 2:
+                    return "Usage: /skill create <name> <description>"
+                name, desc = toks[0].strip(), toks[1].strip()
+                s = engine.create(name, desc, content=f"# {name}\n\n{desc}\n\n(Author this skill's guidance here — it is injected when relevant.)")
+                return f"Skill '{s.name}' created at {s.path} — edit the file to add real guidance."
+            if action == "remove":
+                name = (sub[1] or "").strip()
+                if not name:
+                    return "Usage: /skill remove <name>"
+                return (f"Removed skill '{name}'." if engine.remove(name)
+                        else f"Cannot remove '{name}' (not found or builtin).")
             if len(sub) < 2:
                 return f"Usage: /skill {action} <name>"
             name = sub[1].strip()
@@ -786,7 +914,8 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
                 s = engine.get(name)
                 if not s:
                     return f"No skill named {name}."
-                return f"{s.name} v{s.version}\n{s.description}\n\ntags: {', '.join(s.tags)}\n\n{s.content[:600]}"
+                return (f"{s.name} v{s.version} [{s.level}]\n{s.description}\n\n"
+                        f"tags: {', '.join(s.tags)}\npath: {s.path}\n\n{s.content[:600]}")
             if action == "enable":
                 return "Enabled " + name if engine.set_disabled(name, False) else f"No skill named {name}."
             if action == "disable":
@@ -1024,30 +1153,64 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
         return "\n".join(lines)
 
     if command == "/git":
-        import subprocess
+        # SHS Code Phase 2 (spec §31): full git intelligence
         try:
-            def _git(*a):
-                return subprocess.run(["git", *a], capture_output=True, text=True, timeout=10)
-            branch = _git("rev-parse", "--abbrev-ref", "HEAD")
-            if branch.returncode != 0:
-                return "Not inside a git repository."
-            st = _git("status", "--short")
-            log = _git("log", "--oneline", "-5")
-            lines = [f"Branch: {branch.stdout.strip()}",
-                     "Changes:" + ("" if st.stdout.strip() else " (clean)")]
-            lines += [f"  {l}" for l in st.stdout.strip().splitlines()[:15]]
-            lines.append("Recent commits:")
-            lines += [f"  {l}" for l in log.stdout.strip().splitlines()[:5]]
-            return "\n".join(lines)
+            from app.git_intel import GitIntelligence
+            return GitIntelligence().render()
         except Exception as e:
             return f"git error: {e}"
 
     if command == "/doctor":
         try:
             from app.doctor import run_doctor, format_doctor
-            return format_doctor(run_doctor())
+            base = format_doctor(run_doctor())
         except Exception as e:
-            return f"Doctor crashed: {e}"
+            base = f"Doctor crashed: {e}"
+        # SHS Code Phase 2 (spec §43 /doctor 2.0): extended checks
+        extra: list[str] = []
+        try:
+            from app.intelligence import current_intelligence
+            intel = current_intelligence()
+            intel.ensure_indexed()
+            fs = intel.cache.file_stats()
+            extra.append(f"✓ project intelligence: {fs.get('files', 0)} files, "
+                         f"{intel.cache.symbol_count()} symbols indexed (incremental cache on)")
+        except Exception as e:
+            extra.append(f"✗ project intelligence: {e}")
+        try:
+            from app.provider_health import get_health
+            hs = list(get_health().stats().values())
+            if hs:
+                bad = [h for h in hs if h["status"] == "🔴"]
+                extra.append("✓ provider health: " + ", ".join(
+                    f"{h['provider']}/{h['model'][:20]} {h['status']}" for h in hs[:4]))
+            else:
+                extra.append("ℹ provider health: no calls recorded this session")
+        except Exception as e:
+            extra.append(f"✗ provider health: {e}")
+        try:
+            from app.modes import get_active_mode
+            from app.agent_profiles import get_active_profile_name
+            extra.append(f"✓ mode={get_active_mode()}  profile={get_active_profile_name() or '(default)'}")
+        except Exception:
+            pass
+        try:
+            from app.intelligence.environment import detect_environment
+            env = detect_environment()
+            extra.append(f"✓ environment: {env['tool_count']} dev tools detected "
+                         f"(git={('git' in env['tools'])})")
+        except Exception:
+            pass
+        try:
+            from app.git_intel import GitIntelligence
+            gi = GitIntelligence()
+            if gi.is_repo():
+                extra.append("✓ git: repository detected — rollback snapshots + diff intel active")
+            else:
+                extra.append("ℹ git: not a repository (rollback/intel git features idle)")
+        except Exception:
+            pass
+        return base + "\n\nPhase 2 subsystems:\n" + "\n".join(extra)
 
     if command == "/log":
         n = 20
@@ -1073,16 +1236,254 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
         except Exception:
             return f"Debug logging set to {'ON' if on else 'OFF'} (best effort)."
 
+    # ------------------------------------------------------------------ Phase 2
+    # /plan (spec §41): persisted dependency-aware plan + status
+    if command == "/plan":
+        j = _journal()
+        if j is None:
+            return "Journal unavailable."
+        tid = arg.strip() or (agent._journal_task_id if agent else None)
+        if not tid:
+            t = (await j.current_status()).get("active_task")
+            tid = t["task_id"] if t else None
+        if not tid:
+            rows = await j.list_tasks(limit=1)
+            tid = rows[0]["task_id"] if rows else None
+        if not tid:
+            return "No task/plan found yet — start a task first."
+        from app.task_dag import TaskGraph
+        g = await TaskGraph(j, tid).load()
+        if not g.nodes():
+            return f"No plan nodes for task {tid}. (Plans are generated at task start — spec §7.)"
+        t = await j.get_task(tid) or {}
+        header = (f"Task {tid} — {t.get('goal', '')[:70]}\n"
+                  f"Status: {t.get('status')} | phase: {t.get('phase') or '-'}\n")
+        return header + g.render()
+
+    # /verify (spec §15): run project-aware verification NOW
+    if command == "/verify":
+        level = arg.strip().lower() or "standard"
+        if level not in ("fast", "standard", "thorough"):
+            return "Usage: /verify [fast|standard|thorough]"
+        try:
+            import asyncio as _aio
+            from app.verification import VerificationEngine, format_verification
+            ve = VerificationEngine()
+            report = await ve.verify(level=level)
+            out = format_verification(report)
+            # journal the outcome against the active task
+            j = _journal()
+            tid = (agent._journal_task_id if agent else None)
+            if j and tid:
+                await j.record_verification(tid, {
+                    "kind": "manual /verify", "ok": report.get("ok"),
+                    "summary": report.get("summary", "")[:300],
+                    "level": level})
+                for r in report.get("results", []):
+                    await j.record_test_result(tid, r.get("label", "verify"),
+                                                bool(r.get("ok")),
+                                                (r.get("output") or "")[:200])
+            return out
+        except Exception as e:
+            return f"verify failed: {e}"
+
+    # /project (spec §2/§28): project intelligence
+    if command == "/project":
+        action = arg.strip().lower() or "summary"
+        try:
+            from app.intelligence import current_intelligence
+            intel = current_intelligence()
+            if action in ("summary", "profile"):
+                intel.ensure_indexed()
+                p = intel.profile()
+                out = intel.summary()
+                deps = p.get("dependency_files") or []
+                if deps:
+                    out += f"\nDependency files: {', '.join(deps[:8])}"
+                return out
+            if action == "architecture":
+                return intel.architecture_map()
+            if action == "entry":
+                p = intel.profile()
+                return ("ENTRY POINTS: " + ", ".join(p.get("entry_points") or []))
+            if action == "git":
+                from app.git_intel import GitIntelligence
+                return GitIntelligence().render()
+            if action == "refresh":
+                from app.activity import emit
+                emit("indexing", project=intel.root.name)
+                stats = intel.ensure_indexed(force=True)
+                return (f"Index refreshed: {stats.get('files', 0)} files, "
+                        f"{stats.get('symbols', 0)} symbols, changed "
+                        f"{stats.get('changed', 0)}, {stats.get('ms', 0)}ms")
+            return "Usage: /project [summary|architecture|entry|git|refresh]"
+        except Exception as e:
+            return f"project intelligence error: {e}"
+
+    # /env (spec §29): development environment
+    if command == "/env":
+        try:
+            from app.intelligence.environment import environment_summary, command_available
+            return environment_summary()
+        except Exception as e:
+            return f"environment detection error: {e}"
+
+    # /usage (spec §42): provider usage + cost intelligence
+    if command == "/usage":
+        try:
+            from app.provider_health import get_health
+            out = get_health().render()
+            try:
+                budget = agent._effective_budget if agent else None
+                if budget:
+                    u = budget.usage()
+                    out += (f"\nSession token usage: input={u.input_tokens} "
+                            f"output={u.output_tokens} total={u.total()} "
+                            f"est ${u.cost_estimate_usd()}")
+            except Exception:
+                pass
+            return out
+        except Exception as e:
+            return f"usage error: {e}"
+
+    # /mode (spec §36): agent modes
+    if command == "/mode":
+        try:
+            from app.modes import render_modes, set_active_mode, get_mode_config, get_active_mode
+            if not arg.strip():
+                return render_modes()
+            name = arg.strip().lower()
+            if not set_active_mode(name):
+                return f"Unknown mode '{name}'. " + render_modes()
+            cfg = get_mode_config(name)
+            return (f"Mode set to {name} (persisted — applies to future runs).\n"
+                    f"{cfg['description']}\n"
+                    f"plan={cfg['plan']} verify={cfg['verification_level']} "
+                    f"step-budget x{cfg['max_steps_scale']}")
+        except Exception as e:
+            return f"mode error: {e}"
+
+    # /profile (spec §37): custom agent profiles
+    if command == "/profile":
+        try:
+            from app.agent_profiles import (render_profiles, set_active_profile,
+                                            create_profile, remove_profile,
+                                            get_profile)
+            sub = arg.split()
+            if not sub or sub[0] == "list":
+                return render_profiles()
+            action = sub[0].lower()
+            if action == "use" and len(sub) > 1:
+                if sub[1].lower() == "off":
+                    set_active_profile("")
+                    return "Profile deactivated — default agent behavior."
+                p = get_profile(sub[1])
+                if not p:
+                    return f"No profile named {sub[1]}. /profile list"
+                set_active_profile(sub[1])
+                return (f"Profile '{sub[1]}' active (persisted — applies to future runs).\n"
+                        f"{p.get('description', '')}\n"
+                        f"skills: {', '.join(p.get('skills') or [])} | "
+                        f"verification: {p.get('verification_strategy')}")
+            if action == "off":
+                set_active_profile("")
+                return "Profile deactivated — default agent behavior."
+            if action == "create" and len(sub) >= 2:
+                name = sub[1]
+                desc = arg.split(None, 2)[2] if len(sub) > 2 else ""
+                try:
+                    create_profile(name, description=desc)
+                    return (f"Profile '{name}' created. Configure it:\n"
+                            f"  edit ~/.manusclaw/profiles.json or ask me to "
+                            f"update its instructions/skills/verification.")
+                except ValueError as e:
+                    return f"Error: {e}"
+            if action == "remove" and len(sub) > 1:
+                return f"Removed profile {sub[1]}." if remove_profile(sub[1]) \
+                    else f"Cannot remove {sub[1]} (missing or builtin)."
+            if action == "show" and len(sub) > 1:
+                p = get_profile(sub[1])
+                if not p:
+                    return f"No profile named {sub[1]}."
+                import json as _json
+                return _json.dumps(p, ensure_ascii=False, indent=1)[:2000]
+            return ("Usage: /profile list|use <name>|off|show <name>|create <name> [desc]|remove <name>")
+        except Exception as e:
+            return f"profile error: {e}"
+
+    # /rollback (spec §33): smart rollback of agent-changed files
+    if command == "/rollback":
+        try:
+            from app.git_intel import SmartRollback
+            j = _journal()
+            toks = arg.split()
+            tid = toks[0] if toks else (agent._journal_task_id if agent else None)
+            if not tid:
+                t = (await j.current_status()).get("active_task") if j else None
+                tid = t["task_id"] if t else None
+            if not tid:
+                return "No task id given and none active. Usage: /rollback [task_id] [snapshot_id]"
+            rb = SmartRollback(tid)
+            snaps = rb.list_snapshots()
+            if not snaps:
+                return f"No rollback snapshots for task {tid}."
+            snap_id = toks[1] if len(toks) > 1 else None
+            if snap_id:
+                res = rb.restore(snap_id)
+                if res.get("ok"):
+                    return (f"Restored {len(res['restored'])} file(s) from {res['snapshot']} "
+                            f"(reason: {res.get('reason', '-')}).\n"
+                            f"Re-run verification after rollback: /verify fast")
+                return f"Restore failed: {res}"
+            lines = [f"Rollback snapshots for task {tid}:"]
+            for s in snaps[-8:]:
+                lines.append(f"  {s['id']} — {len(s.get('files', []))} file(s), "
+                             f"{_rel_ts(s.get('at'))} — {s.get('reason', '')[:50]}")
+            lines.append("\n/rollback <task_id> <snapshot_id> to restore. "
+                         "Only agent-snapshotted files are touched.")
+            return "\n".join(lines)
+        except Exception as e:
+            return f"rollback error: {e}"
+
     # ------------------------------------------------------------------ legacy
     if command == "/compress":
-        if session_id and agent:
-            from app.db.session import SessionDB
-            db = SessionDB()
-            summary = agent._task_history.context_summary() if agent._task_history else "No task history."
-            await db.compress_session(session_id, summary)
-            db.close()
-            return f"Session {session_id[:8]} compressed in DB."
-        return "No active session."
+        # SHS Code Phase 2 (spec §23): structured compaction — extract
+        # operational state, never a lossy plain summary.
+        if agent is None:
+            return "No agent active."
+        try:
+            from app.compaction import compact_messages, render_report
+            plan_text = ""
+            try:
+                if getattr(agent, "_plan_graph", None) and agent._plan_graph.nodes():
+                    plan_text = agent._plan_graph.to_prompt()
+            except Exception:
+                pass
+            msgs = [m.to_dict() for m in agent.memory.messages]
+            new_msgs, report = compact_messages(msgs, keep_last=6, plan_text=plan_text)
+            if not report.get("compacted"):
+                return render_report(report)
+            from app.schema import Message
+            agent.memory.messages = [Message.from_dict(m) for m in new_msgs]
+            # keep DB compression too
+            if session_id:
+                try:
+                    from app.db.session import SessionDB
+                    db = SessionDB()
+                    summary = agent._task_history.context_summary() if agent._task_history else "structured compaction"
+                    await db.compress_session(session_id, summary)
+                    db.close()
+                except Exception:
+                    pass
+            # checkpoint the compacted state immediately
+            j = _journal()
+            tid = getattr(agent, "_journal_task_id", None)
+            if j and tid:
+                await j.checkpoint(tid, agent._step_count,
+                                   [m.to_dict() for m in agent.memory.messages])
+            return render_report(report)
+        except Exception as e:
+            return f"compress failed: {e}"
 
     if command == "/new":
         return "NEW_SESSION"
@@ -1220,7 +1621,73 @@ async def _handle_sessions(arg: str, agent=None, session_id: str = "") -> str:
             return "Usage: /sessions spawn --prompt \"task description\""
         return f"SPAWN_TASK:{prompt_text}"
 
-    return f"Unknown sessions subcommand: {subcmd}. Use: list, history, send, spawn"
+    # ── Phase 2 (spec §27): switch | rename | archive | delete ──
+    if subcmd == "switch":
+        if not subarg:
+            return "Usage: /sessions switch <session_id>"
+        from app.db.session import SessionDB
+        db = SessionDB()
+        try:
+            sessions = await db.get_sessions(limit=100)
+            target = next((s for s in sessions if s["id"] == subarg.strip()), None)
+            if not target:
+                return f"No session {subarg.strip()}."
+            # preserve current session state before switching
+            if session_id:
+                await db.close_session(session_id, state="paused", step_count=0)
+            await db.log_message(subarg.strip(), "system",
+                                  "Session switched back into (context in journal/agent memory).")
+            db.close()
+            return (f"Switched to session {subarg.strip()}.\n"
+                    f"Goal: {(target.get('goal') or '')[:60]}\n"
+                    f"Use /resume to restore that session's task context, or /branch to fork it.")
+        except Exception as e:
+            db.close()
+            return f"Switch failed: {e}"
+
+    if subcmd == "rename":
+        toks = subarg.split(None, 1)
+        if len(toks) < 2:
+            return "Usage: /sessions rename <session_id> <new goal/title>"
+        from app.db.session import SessionDB
+        db = SessionDB()
+        try:
+            await db.rename_session(toks[0].strip(), toks[1].strip())
+            db.close()
+            return f"Session {toks[0].strip()} renamed to: {toks[1].strip()[:60]}"
+        except Exception as e:
+            db.close()
+            return f"Rename failed: {e}"
+
+    if subcmd == "archive":
+        if not subarg:
+            return "Usage: /sessions archive <session_id>"
+        from app.db.session import SessionDB
+        db = SessionDB()
+        try:
+            await db.archive_session(subarg.strip())
+            db.close()
+            return (f"Session {subarg.strip()} archived (hidden from the default list; "
+                    f"data preserved).")
+        except Exception as e:
+            db.close()
+            return f"Archive failed: {e}"
+
+    if subcmd == "delete":
+        if not subarg:
+            return "Usage: /sessions delete <session_id>"
+        from app.db.session import SessionDB
+        db = SessionDB()
+        try:
+            await db.delete_session(subarg.strip())
+            db.close()
+            return f"Session {subarg.strip()} deleted (journal tasks remain in the task journal)."
+        except Exception as e:
+            db.close()
+            return f"Delete failed: {e}"
+
+    return ("Unknown sessions subcommand: {subcmd}. Use: list, history, send, "
+            "spawn, switch, rename, archive, delete")
 
 
 # ──────────────────────────────────────────────────────────────────────────────

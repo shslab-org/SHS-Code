@@ -234,6 +234,43 @@ class SessionDB:
         logger.info(f"[SessionDB] Compressed session {session_id}")
 
     # ------------------------------------------------------------------
+    # Phase 2 (spec §27): rename / archive / delete
+    # ------------------------------------------------------------------
+
+    async def rename_session(self, session_id: str, new_goal: str) -> None:
+        def _rename():
+            self._execute_query(lambda conn: (
+                conn.execute("UPDATE sessions SET goal=? WHERE id=?",
+                             (new_goal, session_id)),
+                conn.commit(),
+            )[-1])
+        await _with_retry(_rename)
+        logger.info(f"[SessionDB] Renamed session {session_id}")
+
+    async def archive_session(self, session_id: str) -> None:
+        """Archive: mark state='archived' — hidden from default lists, data kept."""
+        def _archive():
+            self._execute_query(lambda conn: (
+                conn.execute("UPDATE sessions SET state='archived', ended_at=? WHERE id=?",
+                             (time.time(), session_id)),
+                conn.commit(),
+            )[-1])
+        await _with_retry(_archive)
+        logger.info(f"[SessionDB] Archived session {session_id}")
+
+    async def delete_session(self, session_id: str) -> None:
+        """Delete a session and its messages/tool calls (journal tasks remain)."""
+        def _delete():
+            self._execute_query(lambda conn: (
+                conn.execute("DELETE FROM messages WHERE session_id=?", (session_id,)),
+                conn.execute("DELETE FROM tool_calls WHERE session_id=?", (session_id,)),
+                conn.execute("DELETE FROM sessions WHERE id=?", (session_id,)),
+                conn.commit(),
+            )[-1])
+        await _with_retry(_delete)
+        logger.info(f"[SessionDB] Deleted session {session_id}")
+
+    # ------------------------------------------------------------------
     # Message logging
     # ------------------------------------------------------------------
 
@@ -388,13 +425,14 @@ class SessionDB:
     # Queries
     # ------------------------------------------------------------------
 
-    async def get_sessions(self, limit: int = 20) -> list[dict[str, Any]]:
+    async def get_sessions(self, limit: int = 20, include_archived: bool = False) -> list[dict[str, Any]]:
         def _get():
             def _do_query(conn):
+                where = "" if include_archived else " WHERE state != 'archived'"
                 rows = conn.execute(
                     "SELECT id, goal, agent_name, mode, parent_session_id,"
                     " started_at, ended_at, state, step_count"
-                    " FROM sessions ORDER BY started_at DESC LIMIT ?",
+                    f" FROM sessions{where} ORDER BY started_at DESC LIMIT ?",
                     (limit,),
                 ).fetchall()
                 cols = [

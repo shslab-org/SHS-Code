@@ -16,8 +16,11 @@ LLM knows WHY a particular tool was recommended, making its choice more
 deliberate.
 """
 
+import json
+import os
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
 
 from app.logger import logger
@@ -167,7 +170,16 @@ class ToolSelector:
     """
     Scores all available tools against a goal string using heuristic signals
     and optionally an LLM call. Returns an ordered SelectionResult.
+
+    Phase 2 (spec §18): failure/success confidence persists ACROSS runs in
+    ~/.manusclaw/tool_confidence.json — a tool that repeatedly failed for
+    this environment receives durably lower priority.
     """
+
+    @staticmethod
+    def _conf_path() -> Path:
+        return Path(os.getenv("MANUSCLAW_HOME",
+                              str(Path.home() / ".manusclaw"))) / "tool_confidence.json"
 
     def __init__(self, tool_names: list[str]) -> None:
         self._tool_names = tool_names
@@ -176,6 +188,32 @@ class ToolSelector:
         # Track recently used tools (recency penalty to diversify selection)
         self._recent_uses: list[str] = []   # Most-recent last
         self._recency_window = 5
+        # Cross-run persistent confidence (spec §18)
+        self._load_persistent()
+
+    # ------------------------------------------------------------------
+    # Cross-run confidence persistence (spec §18)
+    # ------------------------------------------------------------------
+
+    def _load_persistent(self) -> None:
+        try:
+            if self._conf_path().exists():
+                data = json.loads(self._conf_path().read_text(encoding="utf-8"))
+                for name, fc in (data.get("failure_counts") or {}).items():
+                    if name in self._tool_names and fc > 0:
+                        # decay: only carry half the failures across runs
+                        self._failure_counts[name] = max(1, int(fc / 2))
+        except Exception:
+            pass
+
+    def _save_persistent(self) -> None:
+        try:
+            self._conf_path().parent.mkdir(parents=True, exist_ok=True)
+            self._conf_path().write_text(
+                json.dumps({"failure_counts": self._failure_counts}, indent=1),
+                encoding="utf-8")
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Public API
@@ -240,10 +278,12 @@ class ToolSelector:
 
     def record_failure(self, tool_name: str) -> None:
         self._failure_counts[tool_name] = self._failure_counts.get(tool_name, 0) + 1
+        self._save_persistent()
 
     def record_success(self, tool_name: str) -> None:
         # Success resets the failure count for that tool
         self._failure_counts.pop(tool_name, None)
+        self._save_persistent()
 
     def get_stats(self) -> dict[str, dict]:
         """Return per-tool usage and failure statistics.

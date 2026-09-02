@@ -87,6 +87,36 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 
 # statuses: queued | in_progress | paused | completed | failed | interrupted
 
+# ── Phase 2 (spec §6-§9): Task DAG table + Work State 2.0 columns ──
+_DAG_SCHEMA = """
+CREATE TABLE IF NOT EXISTS task_nodes (
+    task_id     TEXT NOT NULL,
+    node_id     TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'pending',
+    priority    INTEGER NOT NULL DEFAULT 5,
+    depends_on  TEXT NOT NULL DEFAULT '[]',
+    files       TEXT NOT NULL DEFAULT '[]',
+    notes       TEXT NOT NULL DEFAULT '',
+    attempts    INTEGER NOT NULL DEFAULT 0,
+    created_at  REAL NOT NULL,
+    updated_at  REAL NOT NULL,
+    PRIMARY KEY (task_id, node_id)
+);
+CREATE INDEX IF NOT EXISTS idx_task_nodes_task ON task_nodes(task_id, status);
+"""
+
+# Work State 2.0 (spec §9) — new columns added via idempotent migration
+_WS2_COLUMNS = {
+    "plan": "TEXT NOT NULL DEFAULT '[]'",           # TaskGraph snapshot
+    "phase": "TEXT NOT NULL DEFAULT ''",            # current phase name
+    "decisions": "TEXT NOT NULL DEFAULT '[]'",       # important decisions
+    "test_results": "TEXT NOT NULL DEFAULT '[]'",   # verification results
+    "recovery_actions": "TEXT NOT NULL DEFAULT '[]'",
+    "blocked_reason": "TEXT",                      # human-dependency (spec §47)
+    "verification": "TEXT NOT NULL DEFAULT '{}'",  # last verification outcome
+}
+
 
 class Journal:
     """Persistent task journal + checkpoint store. Singleton via get_journal()."""
@@ -118,6 +148,12 @@ class Journal:
         with self._rl:
             conn = self._connection()
             conn.executescript(_SCHEMA)
+            conn.executescript(_DAG_SCHEMA)
+            # Phase 2 migration: add Work State 2.0 columns if missing
+            have = {r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()}
+            for col, ddl in _WS2_COLUMNS.items():
+                if col not in have:
+                    conn.execute(f"ALTER TABLE tasks ADD COLUMN {col} {ddl}")
             conn.commit()
 
     @classmethod
@@ -149,6 +185,14 @@ class Journal:
             conn = self._connection()
             cur = conn.execute(sql, params)
             return [dict(r) for r in cur.fetchall()]
+
+    # Public typed-SQL surface (Phase 2: TaskGraph + planner use this
+    # instead of reaching into private plumbing).
+    async def exec_sql(self, sql: str, params: tuple = ()) -> None:
+        await self._aexec(sql, params)
+
+    async def query_sql(self, sql: str, params: tuple = ()) -> List[Dict[str, Any]]:
+        return await self._aquery(sql, params)
 
     async def _aexec(self, sql: str, params: tuple = ()) -> None:
         try:
@@ -189,7 +233,10 @@ class Journal:
             return
         cols, vals = [], []
         for k, v in fields.items():
-            if k in ("progress", "files_changed", "commands"):
+            if k in ("progress", "files_changed", "commands", "plan",
+                     "decisions", "test_results", "recovery_actions"):
+                v = json.dumps(v, ensure_ascii=False)
+            elif k == "verification":
                 v = json.dumps(v, ensure_ascii=False)
             cols.append(f"{k}=?")
             vals.append(v)
@@ -301,6 +348,65 @@ class Journal:
         return str(args)[:120]
 
     # ------------------------------------------------------------------
+    # Work State 2.0 (spec §9): decisions, tests, recovery, blocked, phase
+    # ------------------------------------------------------------------
+
+    async def _append_json_col(self, task_id: str, col: str, item: dict) -> None:
+        row = (await self._aquery(
+            f"SELECT {col} FROM tasks WHERE task_id=?", (task_id,)))
+        cur: list = json.loads(row[0][col]) if row and row[0][col] else []
+        cur.append(item)
+        if len(cur) > 200:
+            cur = cur[-200:]
+        await self._aexec(
+            f"UPDATE tasks SET {col}=?, updated_at=? WHERE task_id=?",
+            (json.dumps(cur, ensure_ascii=False), time.time(), task_id))
+
+    async def record_decision(self, task_id: str, decision: str,
+                              rationale: str = "") -> None:
+        await self._append_json_col(task_id, "decisions", {
+            "decision": decision[:500], "rationale": rationale[:300],
+            "ts": time.time()})
+        await self._log(task_id, "decision", None,
+                        {"decision": decision[:300]})
+
+    async def record_test_result(self, task_id: str, name: str, passed: bool,
+                                 detail: str = "") -> None:
+        await self._append_json_col(task_id, "test_results", {
+            "name": name[:200], "passed": bool(passed),
+            "detail": detail[:400], "ts": time.time()})
+
+    async def record_recovery(self, task_id: str, action: str,
+                              outcome: str = "") -> None:
+        await self._append_json_col(task_id, "recovery_actions", {
+            "action": action[:400], "outcome": outcome[:300],
+            "ts": time.time()})
+
+    async def set_phase(self, task_id: str, phase: str) -> None:
+        await self.task_update(task_id, phase=phase[:120])
+
+    async def set_blocked(self, task_id: str, reason: str,
+                          needed: str = "", completed: str = "",
+                          next_action: str = "") -> None:
+        """Human-dependency detection (spec §47): record WHY the task is
+        blocked, what finished, what is needed, and the next action —
+        the task is never lost."""
+        await self.task_update(task_id, status="blocked",
+                               blocked_reason=reason[:1000],
+                               next_action=next_action[:500])
+        await self._log(task_id, "blocked", None, {
+            "reason": reason[:300], "needed": needed[:300],
+            "completed": completed[:300]})
+
+    async def record_verification(self, task_id: str, result: dict) -> None:
+        result = dict(result)
+        result["ts"] = time.time()
+        await self.task_update(task_id, verification=result)
+        await self._log(task_id, "verification", None, {
+            "k": result.get("kind"), "ok": result.get("ok"),
+            "summary": str(result.get("summary", ""))[:300]})
+
+    # ------------------------------------------------------------------
     # Checkpoints — atomic memory snapshots (spec §8, §43)
     # ------------------------------------------------------------------
 
@@ -375,9 +481,16 @@ class Journal:
         if not rows:
             return None
         t = rows[0]
-        t["progress"] = json.loads(t.get("progress") or "{}")
-        t["files_changed"] = json.loads(t.get("files_changed") or "[]")
-        t["commands"] = json.loads(t.get("commands") or "[]")
+        for col, default in (("progress", "{}"), ("files_changed", "[]"),
+                             ("commands", "[]"), ("plan", "[]"),
+                             ("decisions", "[]"), ("test_results", "[]"),
+                             ("recovery_actions", "[]"), ("verification", "{}")):
+            raw = t.get(col)
+            if isinstance(raw, str) or raw is None:
+                try:
+                    t[col] = json.loads(raw or default)
+                except (TypeError, json.JSONDecodeError):
+                    t[col] = json.loads(default)
         return t
 
     async def list_tasks(self, status: Optional[str] = None,
@@ -419,7 +532,8 @@ class Journal:
             "SELECT * FROM journal ORDER BY ts DESC LIMIT 5")
         t = active[0] if active else None
         if t:
-            t["progress"] = json.loads(t.get("progress") or "{}")
+            # deserialize ALL JSON columns (Work State 2.0 included)
+            t = await self.get_task(t["task_id"]) or t
         last_cp = None
         if t:
             cp = self.load_checkpoint_sync(t["task_id"])

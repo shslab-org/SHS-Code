@@ -764,6 +764,10 @@ class LLM:
         wait = RETRY_BASE_WAIT
         last_err: Optional[Exception] = None
 
+        # SHS Code Phase 2 (spec §21/§24): live provider health + usage telemetry
+        from app.provider_health import get_health
+        health = get_health()
+
         # Grace call: allow one extra call after budget exhausted
         if self.token_budget.is_exhausted:
             if not self.token_budget.use_grace():
@@ -811,6 +815,17 @@ class LLM:
 
                 if cred and self._pool:
                     await self._pool.mark_success(cred)
+                # SHS Code Phase 2: record successful call (latency + usage tokens)
+                try:
+                    usage = result.get("usage") or {}
+                    in_tok = int(usage.get("prompt_tokens") or usage.get("input_tokens") or 0)
+                    out_tok = int(usage.get("completion_tokens") or usage.get("output_tokens") or 0)
+                    health.record_call(self._provider, self._model,
+                                       latency_s=elapsed, ok=True,
+                                       input_tokens=in_tok, output_tokens=out_tok)
+                    health.clear_rate_limit(self._provider, self._model)
+                except Exception:
+                    pass
                 return result
 
             except TokenLimitExceeded:
@@ -819,6 +834,12 @@ class LLM:
             except RateLimitError as e:
                 if cred and self._pool:
                     await self._pool.mark_exhausted(cred)
+                # SHS Code Phase 2: rate-limit health event (🟡)
+                try:
+                    health.record_error(self._provider, self._model,
+                                        error=str(e), rate_limited=True)
+                except Exception:
+                    pass
                 # SHS Code: honor server Retry-After when provided (spec §18)
                 retry_after = getattr(e, "retry_after", None)
                 if limiter is not None:
@@ -858,6 +879,11 @@ class LLM:
 
             except Exception as e:
                 last_err = e
+                # SHS Code Phase 2: provider failure health event (🔴)
+                try:
+                    health.record_error(self._provider, self._model, error=str(e))
+                except Exception:
+                    pass
                 # FIX: Distinguish connection errors (retry) from content errors (don't retry)
                 error_str = str(e).lower()
                 is_transient = any(kw in error_str for kw in (

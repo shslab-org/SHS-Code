@@ -74,14 +74,21 @@ SHSCode               # start the persistent interactive shell
 **Daily commands:**
 
 ```text
-/status               # task, progress, provider, model, memory, rate limiter
+/status               # task, progress %, phase, files, tests, verify verdict, health
 /model claude-sonnet  # switch model — context preserved, zero restart
 /provider my-nim      # switch to a custom provider (registry persisted)
+/plan                 # dependency-aware plan (persisted, survives restarts)
+/verify               # project-aware build+test verification NOW
+/usage                # provider stats: requests, latency, tokens, cost
+/project architecture # symbol map + import hubs of the indexed repo
+/mode autonomous      # coding|debugging|reviewer|research|autonomous|planning
+/profile use backend-expert   # custom agent profiles (skills + verify strategy)
 /remember I prefer TypeScript — persistent memory
 /memory               # view memories (SQLite, survives everything)
 /tasks  /task <id>    # task journal with files/commands/errors
-/resume               # continue interrupted task from checkpoint
-/doctor               # full diagnostics
+/resume               # EXACT resume — real state verified vs checkpoint
+/rollback <task> <snap>  # restore agent-changed files from pre-edit snapshots
+/doctor               # full diagnostics (incl. Phase 2 subsystems)
 exit                  # clean exit — state saved, /resume next time
 ```
 
@@ -144,6 +151,50 @@ Rate-limit waits use a **true rolling timestamp window** (4 RPM example: request
 - [License](#-license)
 
 ---
+
+## 🆕 What's New in v2.0.0 (Phase 2 — Claude Code-level Coding Intelligence)
+
+**Project Intelligence Layer** — SHS Code now *understands* codebases:
+- AST/structural symbol indexing (Python, JS/TS, Kotlin, Java, PHP, Go)
+- Persistent incremental index (`~/.manusclaw/intel/`) — only changed files reindex
+- Semantic concept search: "where is authentication handled" → ranked files+symbols
+- Structural search: usages, callers, importers, dependency hubs
+- Project profile detection: type, frameworks, entry points, build/test commands
+- Environment detection: 50+ tools with versions
+
+**Autonomous execution upgrades:**
+- Dependency-aware **Task DAG** — completion refused until dependencies done;
+  smart prioritization (unlock value > priority > failure history); persisted
+- **Exact resume**: real filesystem + git state verified against the checkpoint
+  before continuing; duplicate-work prevention (existing AuthService → verify,
+  not recreate)
+- **Verification engine**: project-aware build/test/lint/typecheck with error
+  extraction, failure hypotheses and fix suggestions; `verify` agent tool + /verify
+- **Error intelligence**: 12-class classification → RETRYABLE / WAIT / REQUIRES_FIX /
+  REQUIRES_USER / EXTERNAL_BLOCKER; missing credentials mark the task BLOCKED
+  (never lost) instead of failed
+- **Parallel tools**: read-only batches execute concurrently; writes stay sequential
+- **Review phase**: automatic self-review after every 3 file edits
+- **Smart rollback**: pre-edit snapshots of agent-touched files; /rollback restores
+  only those, never unrelated user work
+- **Provider health**: 🟢🟡🔴 status, latency, tokens, cost estimate, cooldown,
+  routing hints — wired into the live call path (/usage)
+- **Structured compaction**: requirements/decisions/files/errors/tests extracted —
+  compaction without destroying operational state
+- **Subagent state**: delegate tool progress persists; recoverable after crashes
+- **Skills 2.0**: builtin/user/project/installed levels; /skill install from git URL
+- **Agent modes**: coding/debugging/reviewer/research/autonomous/planning — each
+  changes plan depth, verification level and step budget for real
+- **Custom profiles**: android-expert, backend-expert, security-reviewer… composed
+  from instructions + skills + verification strategy
+
+**Verified by 342 tests** including a 17-scenario end-to-end suite (real temp
+project + git repo + scripted LLM): create project → multi-file edits → tests →
+controlled failure → detect+fix → model switch mid-task → provider failure →
+failover → 4 RPM rate-limit rolling window → interruption → restart → resume →
+no-duplicate-work → git diff → final verification + crash recovery.
+
+See `SHS_CODE_IMPLEMENTATION_STATE.md` for the full implementation ledger.
 
 ## 🆕 What's New in v5.1
 

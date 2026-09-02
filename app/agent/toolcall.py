@@ -33,6 +33,26 @@ _DONE_PATTERNS = [
     r"\bwork\s+is\s+complete\b",
 ]
 
+# SHS Code Phase 2 (spec §19): tools that NEVER mutate state — safe to run
+# in parallel when the model requests several at once. Anything that writes
+# files, runs commands, or spawns agents stays strictly sequential.
+READ_ONLY_TOOLS = {
+    "web_search", "crawl4ai", "cross_session_search", "memory",
+    "code_search", "project_intel", "browser_read", "ask_human",
+}
+
+
+def _is_read_only_call(name: str, args: dict) -> bool:
+    if name in READ_ONLY_TOOLS:
+        return True
+    if name in ("str_replace_editor", "editor", "file_read"):
+        return (args.get("command") or "").lower() in ("view", "read")
+    return False
+
+
+# Tools that modify files — snapshot target before first edit (spec §33)
+_EDIT_TOOLS = {"str_replace_editor", "editor", "file_write", "file_edit"}
+
 
 # ---------------------------------------------------------------------------
 # ToolCallAgent
@@ -94,6 +114,8 @@ tool or different arguments — DO NOT repeat the same failing call.
             self.tools.add(Terminate())
 
         self._selector = ToolSelector(tool_names=list(self.tools._tools.keys()))
+        # SHS Code Phase 2 (spec §33): files already snapshotted this task
+        self._snapshotted_files: set = set()
 
     # ------------------------------------------------------------------
     # PAORR overrides
@@ -120,6 +142,16 @@ tool or different arguments — DO NOT repeat the same failing call.
                     op = {"create": "created", "insert": "modified", "str_replace": "modified",
                           "view": "read"}.get(cmd, "modified")
                     await self.journal.record_file_change(tid, str(path), op)
+                    # SHS Code Phase 2 (spec §13): count file edits → review phase
+                    if op in ("created", "modified"):
+                        try:
+                            self._note_file_edit()
+                        except AttributeError:
+                            pass
+                    # SHS Code Phase 2 (spec §3): incremental index refresh
+                    # after agent edits — never a full rescan.
+                    if op in ("created", "modified"):
+                        await self._refresh_index_for(str(path))
             # Command tracking (spec §36)
             if name in ("bash", "shell", "terminal"):
                 cmd = args.get("command") or ""
@@ -137,6 +169,56 @@ tool or different arguments — DO NOT repeat the same failing call.
                 [m.to_dict() for m in self.memory.messages])
         except Exception as e:
             logger.debug(f"[Journal] tool record failed (non-fatal): {e}")
+
+    async def _snapshot_before_edit(self, name: str, args: dict) -> None:
+        """SHS Code Phase 2 (spec §33 smart rollback): before the FIRST edit of
+        each file in this task, copy it into the rollback store so a bad
+        change can be restored without destroying anything else."""
+        if name not in _EDIT_TOOLS:
+            return
+        cmd = (args.get("command") or "").lower()
+        if cmd in ("view", "read"):
+            return
+        path = args.get("path") or args.get("file_path")
+        if not path or not self._journal_task_id:
+            return
+        key = str(path)
+        if key in self._snapshotted_files:
+            return
+        self._snapshotted_files.add(key)
+        try:
+            import asyncio as _aio
+            from app.git_intel import SmartRollback
+            rb = SmartRollback(self._journal_task_id)
+            sid = await _aio.to_thread(rb.snapshot, [key],
+                                       reason=f"before {name}:{cmd}")
+            if sid:
+                from app.activity import emit
+                emit("rollback_snapshot", file=key, snapshot=sid)
+        except Exception as e:
+            logger.debug(f"[Rollback] snapshot skipped (non-fatal): {e}")
+
+    async def _refresh_index_for(self, path: str) -> None:
+        """SHS Code Phase 2 (spec §3): after editing a file, refresh ONLY that
+        file's index entry — cheap incremental update, no full rescan."""
+        try:
+            import asyncio as _aio
+            from pathlib import Path as _P
+            from app.intelligence import get_intelligence
+            p = _P(path)
+            if not p.is_absolute():
+                p = _P.cwd() / p
+            if not p.exists():
+                return
+            intel = get_intelligence(p.parent if p.parent != _P.cwd() else _P.cwd())
+            # only refresh if the file belongs to the indexed project root
+            try:
+                rel = str(p.relative_to(intel.root))
+            except ValueError:
+                return
+            await _aio.to_thread(intel.on_files_changed, [rel])
+        except Exception as e:
+            logger.debug(f"[Intel] post-edit refresh skipped: {e}")
 
     async def think(self) -> str:
         """
@@ -162,12 +244,17 @@ tool or different arguments — DO NOT repeat the same failing call.
         return response.content or ""
 
     async def act(self, thought: str) -> Optional[str]:
-        """Execute all tool calls from the last LLM response."""
+        """Execute all tool calls from the last LLM response.
+
+        SHS Code Phase 2 (spec §19): when the model requests MULTIPLE calls
+        in one response and every one is read-only (search/view/inspect),
+        they are executed CONCURRENTLY — dependent & mutating operations
+        remain strictly sequential, exactly as the spec requires."""
         last_msg = self.memory.messages[-1]
         if not last_msg.tool_calls:
             return thought or None
 
-        outputs: list[str] = []
+        calls: list[tuple[str, dict, str]] = []
         for tc in last_msg.tool_calls:
             name = tc.function.name
             try:
@@ -175,9 +262,37 @@ tool or different arguments — DO NOT repeat the same failing call.
             except json.JSONDecodeError as e:
                 args = {}
                 logger.warning(f"[{self.name}] JSON decode error for {name} args: {e}")
+            calls.append((name, args, tc.id))
 
+        outputs: list[str] = []
+
+        # ── Phase 2 (spec §19): parallel batch when ALL calls are read-only ──
+        if len(calls) >= 2 and all(_is_read_only_call(n, a) for n, a, _ in calls):
+            from app.activity import emit
+            emit("parallel_tools", count=len(calls),
+                 tools=[n for n, _, _ in calls][:6])
+
+            async def _run_one(name: str, args: dict, tc_id: str):
+                self._selector.record_use(name)
+                return await self._execute_with_retry(name, args, tool_call_id=tc_id)
+
+            results = await asyncio.gather(
+                *[_run_one(n, a, i) for n, a, i in calls],
+                return_exceptions=True)
+            for (name, args, tc_id), result in zip(calls, results):
+                if isinstance(result, Exception):
+                    result = ToolResult(error=str(result))
+                outputs.append(str(result))
+                self._selector.record_success(name) if not result.error \
+                    else self._selector.record_failure(name)
+                if result.system == "terminate":
+                    self.state = AgentState.FINISHED
+            return "\n".join(outputs) if outputs else None
+
+        # ── Sequential path (mutating / dependent operations) ──
+        for name, args, tc_id in calls:
             self._selector.record_use(name)
-            result = await self._execute_with_retry(name, args, tool_call_id=tc.id)
+            result = await self._execute_with_retry(name, args, tool_call_id=tc_id)
             outputs.append(str(result))
 
             if result.success:
@@ -200,6 +315,9 @@ tool or different arguments — DO NOT repeat the same failing call.
 
         last_result = ToolResult(error="Unknown error")
         wait = TOOL_RETRY_BASE
+
+        # SHS Code Phase 2 (spec §33): snapshot files before FIRST modification
+        await self._snapshot_before_edit(name, args)
 
         for attempt in range(1, MAX_TOOL_RETRIES + 1):
             try:
@@ -293,6 +411,26 @@ tool or different arguments — DO NOT repeat the same failing call.
                     f"[{self.name}] Tool '{name}' raised exception "
                     f"(attempt {attempt}): {exc}"
                 )
+                # SHS Code Phase 2 (spec §44/§45): classify the failure and
+                # stop early when retrying cannot help.
+                try:
+                    from app.recovery import diagnose, RetryStrategy, should_change_strategy
+                    diag = diagnose(str(exc), context="tool", attempts=attempt)
+                    if diag.strategy == RetryStrategy.REQUIRES_USER:
+                        emit("blocked", tool=name, reason=diag.render())
+                        self.memory.add(Message.tool(
+                            content=(f"BLOCKED (needs user): {diag.render()}\n{exc}"),
+                            tool_call_id=tool_call_id, name=name))
+                        self.memory.add(Message.user(
+                            f"The tool '{name}' cannot proceed without user action: "
+                            f"{diag.reason}. State exactly what you need from the user, "
+                            f"then stop (do not retry the same call)."))
+                        return ToolResult(error=f"[REQUIRES_USER] {exc}")
+                    if diag.strategy == RetryStrategy.EXTERNAL_BLOCKER:
+                        emit("blocked", tool=name, reason=diag.render())
+                        return ToolResult(error=f"[EXTERNAL_BLOCKER] {exc}")
+                except Exception:
+                    pass
                 last_result = ToolResult(error=str(exc))
                 self._selector.record_failure(name)
                 self.record_observation(

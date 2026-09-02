@@ -12,10 +12,14 @@ from app.tool.ask_human import AskHuman
 from app.tool.base import ToolCollection
 from app.tool.bash import Bash
 from app.tool.browser_use_tool import BrowserUseTool
+from app.tool.code_search import CodeSearchTool
 from app.tool.crawl4ai import Crawl4AITool
+from app.tool.project_intel import ProjectIntelTool
 from app.tool.python_execute import PythonExecute
 from app.tool.str_replace_editor import StrReplaceEditor
+from app.tool.task_dag_tool import TaskDagTool
 from app.tool.terminate import Terminate
+from app.tool.verify import VerifyTool
 from app.tool.web_search import WebSearch
 from app.tool.memory_tool import MemoryTool
 from app.tool.delegate import DelegateTool
@@ -114,9 +118,37 @@ QUALITY RULES:
   - For code: always RUN it and check output before claiming success.
   - Save every meaningful artefact to workspace/.
 
+CODE INTELLIGENCE (SHS Code Phase 2):
+  - code_search: semantic/symbol/regex/import/usages search over the indexed
+    project. USE IT before bash grep. Ask "where is X handled" as semantic mode.
+  - project_intel: project summary, architecture map, entry points, env, git state.
+    Inspect BEFORE creating anything (duplicate-work prevention).
+  - task_dag: the persisted plan. Mark steps started/completed as you go —
+    completion is refused until dependencies are done. Keep it current.
+  - verify: project-aware build/test verification. MANDATORY before claiming
+    completion. "Code generated" ≠ "task completed" — verify, then report.
+
+RECOVERY:
+  - On failures: read the diagnosis (error class + suggested fix), fix, retry.
+  - Same failing call 3x → change strategy completely.
+  - Missing credential/user decision → say exactly what you need, then stop.
+
 TERMINATION:
-  Call terminate ONLY when all sub-goals are complete and verified.
-  Terminate reason must summarise what was accomplished and list output paths.
+  Call terminate ONLY when all sub-goals are complete AND verified.
+  Terminate reason must summarise what was accomplished, verification results,
+  and list output paths.
+"""
+
+_REVIEW_PROMPT = """
+[CODE REVIEW PHASE — every 3 file edits (spec §13)]
+You have modified several files. Before continuing, review your own changes:
+1. Correctness — do the edits do what the task requires? Any logic bug?
+2. Edge cases — empty inputs, errors, boundaries handled?
+3. Consistency — imports, naming, and style coherent with the rest of the codebase?
+4. Side effects — did anything outside the intended scope change?
+5. Tests — which existing tests cover these files? Run verify before claiming done.
+If problems are found, fix them NOW. If unsure, use code_search to check usages.
+Answer briefly, then continue.
 """
 
 _SELF_CHECK_PROMPT = """
@@ -139,6 +171,9 @@ class Manus(ToolCallAgent):
         workspace = Path(Config.get().workspace_dir)
         workspace.mkdir(exist_ok=True)
 
+        # SHS Code Phase 2: the DAG/verify tools share the live journal task
+        self._task_ref = lambda: (self.journal, self._journal_task_id)
+
         tools = ToolCollection(
             PythonExecute(),
             NodeExecute(),
@@ -151,15 +186,35 @@ class Manus(ToolCallAgent):
             MemoryTool(),
             SkillManagerTool(),
             CrossSessionSearch(),
-            DelegateTool(),
+            DelegateTool(task_provider=self._task_ref),
             AskHuman(),
+            CodeSearchTool(),
+            ProjectIntelTool(),
+            TaskDagTool(task_provider=self._task_ref),
+            VerifyTool(journal_task_provider=self._task_ref, level_provider=lambda: self._verification_level()),
             Terminate(),
         )
         super().__init__(tools=tools, mode=mode, session_id=session_id)
+        # SHS Code Phase 2 (spec §13): file-edit milestone counter → review phase
+        self._file_edit_count = 0
+        self._last_review_at = 0
+
+    def _note_file_edit(self) -> None:
+        self._file_edit_count += 1
 
     async def step(self) -> Optional[str]:
         if self._task_history:
             self._task_history.add_step(f"step {self._step_count}")
+
+        # SHS Code Phase 2 (spec §13): automatic review phase after every
+        # 3 file edits — injected BEFORE the next think so the model reviews
+        # its own diff before building further on top of it.
+        if self._file_edit_count >= 3 and \
+                self._file_edit_count - self._last_review_at >= 3:
+            self._last_review_at = self._file_edit_count
+            self.memory.add(Message.user(_REVIEW_PROMPT))
+            from app.activity import emit
+            emit("review_phase", file_edits=self._file_edit_count)
 
         await self.think()
         result = await self.act("")
