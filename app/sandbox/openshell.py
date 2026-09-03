@@ -22,6 +22,7 @@ import asyncio
 import os
 import signal
 import sys
+import time
 from typing import Optional
 
 from app.exceptions import SandboxError
@@ -85,6 +86,13 @@ class OpenShellSandbox:
         # --pid    = new PID namespace
         # --fork   = fork into new namespace
         # --map-root-user = map current user to root (for mount ops)
+        #
+        # start_new_session: put the whole unshare tree in its OWN process
+        # group. The namespace child runs as PID 1 inside the PID namespace,
+        # which IGNORES unhandled signals (kernel semantics) — SIGTERM to the
+        # unshare parent is therefore ineffective and wait() never returns.
+        # A dedicated process group lets stop() kill the entire tree with
+        # one group-wide SIGKILL (the only kernel-enforced signal).
         cmd = [
             _UNSHARE_CMD,
             "--net",
@@ -101,6 +109,7 @@ class OpenShellSandbox:
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                start_new_session=True,
             )
             self._running = True
             logger.info("[OpenShell] Started isolated namespace process")
@@ -223,18 +232,42 @@ class OpenShellSandbox:
             return ToolResult(error=f"OpenShell command error: {e}")
 
     async def stop(self) -> None:
-        """Terminate the isolated namespace process."""
+        """Terminate the isolated namespace process tree.
+
+        The namespace child runs as PID 1 in its PID namespace, which ignores
+        unhandled signals — SIGTERM alone never works. Strategy:
+          1. SIGKILL the entire process group (parent + namespace tree)
+          2. Bounded asyncio wait; if the child watcher is desynced (e.g.
+             after a cancelled wait()), reap synchronously with waitpid
+        Every path is time-bounded: stop() can never hang forever.
+        """
         if self._process and self._running:
+            proc = self._process
             try:
-                self._process.terminate()
                 try:
-                    await asyncio.wait_for(self._process.wait(), timeout=5)
-                except asyncio.TimeoutError:
-                    self._process.kill()
-                    await self._process.wait()
-            except ProcessLookupError:
-                pass  # Already dead
-            except Exception as e:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    try:
+                        proc.kill()
+                    except ProcessLookupError:
+                        pass  # already dead
+                deadline = time.monotonic() + 5.0
+                while proc.returncode is None and time.monotonic() < deadline:
+                    try:
+                        await asyncio.wait_for(
+                            asyncio.shield(proc.wait()), 0.2)
+                    except (asyncio.TimeoutError, asyncio.CancelledError):
+                        # child-watcher fallback: reap synchronously
+                        try:
+                            pid, _status = os.waitpid(proc.pid, os.WNOHANG)
+                            if pid == proc.pid:
+                                break
+                        except ChildProcessError:
+                            break  # reaped elsewhere
+                if proc.returncode is None:
+                    logger.warning(
+                        f"[OpenShell] process {proc.pid} not reaped within 5s")
+            except Exception as e:  # noqa: BLE001
                 logger.warning(f"[OpenShell] Error stopping process: {e}")
             finally:
                 self._process = None

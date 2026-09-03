@@ -1220,9 +1220,9 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             pass
         try:
             from app.intelligence.environment import detect_environment
-            env = detect_environment()
-            extra.append(f"✓ environment: {env['tool_count']} dev tools detected "
-                         f"(git={('git' in env['tools'])})")
+            env_info = detect_environment()
+            extra.append(f"✓ environment: {env_info['tool_count']} dev tools detected "
+                         f"(git={('git' in env_info['tools'])})")
         except Exception:
             pass
         try:
