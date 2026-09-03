@@ -40,7 +40,7 @@ from typing import Optional
 # Version / branding
 # ──────────────────────────────────────────────────────────────────────────────
 
-VERSION = "2.0.0"           # SHS Code Phase 2
+VERSION = "2.1.0"           # SHS Code — stabilized, live-verified on NVIDIA NIM
 PREDECESSOR = "ManusClaw v5.1.1"
 
 SHS_BANNER = r"""

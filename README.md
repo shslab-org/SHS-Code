@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Version-SHS%20Code%201.0.0-ff69b4?style=for-the-badge&logo=github&logoColor=white" alt="Version">
+<img src="https://img.shields.io/badge/Version-SHS%20Code%202.1.0-ff69b4?style=for-the-badge&logo=github&logoColor=white" alt="Version">
 <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
 <img src="https://img.shields.io/badge/License-MIT-FFD700?style=for-the-badge&logo=opensourceinitiative&logoColor=black" alt="License">
 <img src="https://img.shields.io/badge/Status-Persistent%20%7C%20Autonomous-00C853?style=for-the-badge&logo=bugsnag&logoColor=white" alt="Status">
@@ -113,6 +113,8 @@ Rate-limit waits use a **true rolling timestamp window** (4 RPM example: request
 ## Table of Contents
 
 - [SHS Code Quickstart](#️-shs-code-quickstart)
+- [What's New in v2.1.0 (Stabilization)](#-whats-new-in-v210-full-stabilization--live-verified-on-nvidia-nim)
+- [What's New in v2.0.0 (Phase 2)](#-whats-new-in-v200-phase-2--claude-code-level-coding-intelligence)
 - [What's New in v5.1](#-whats-new-in-v51)
 - [What's Fixed in v5.1.1](#-whats-fixed-in-v511)
 - [Overview](#-overview)
@@ -152,6 +154,54 @@ Rate-limit waits use a **true rolling timestamp window** (4 RPM example: request
 
 ---
 
+## 🆕 What's New in v2.1.0 (Full Stabilization — Live-Verified on NVIDIA NIM)
+
+**Found and fixed live on real NVIDIA NIM (40 RPM, gpt-oss-120b) — not just
+unit tests:**
+
+- **Final-answer semantics**: a text-only response (no tool calls) now ends
+  the run and RETURNS the answer to the user. Previously only "task complete"
+  phrases could end a run — direct answers looped, tripped the duplicate
+  nudge, and the user never saw the answer.
+- **Goal-completion gate (spec §34)**: a final answer may only end the run
+  when the journaled task DAG has no unfinished steps. Mid-tier models that
+  summarise partial progress ("f1.py and f2.py created" with 8 files to go)
+  are nudged to continue until the plan is actually complete. Live result:
+  10/10 files on a task that previously stopped at 2/10.
+- **Narration guard**: models that narrate their next action in text
+  ("I'll create the test file next") instead of emitting the tool call get
+  a bounded nudge to actually call it.
+- **Any-directory universal provider**: `LLM_BASE_URL` + `LLM_API_KEY`/
+  `NVIDIA_API_KEY` env config now works in ANY cwd — previously a directory
+  without a project `config.toml` silently fell back to MockLLM.
+- **Config layer deep-merge**: a partial `~/.manusclaw/config.yaml` (e.g.
+  only `mcp_servers: []`) no longer shadows the entire project config —
+  layers merge per-key instead of first-file-wins.
+- **Bash heredoc fix**: commands containing heredocs no longer hang until
+  the deadline — the wrapper keeps terminators pure.
+
+**Plus 40+ earlier fixes** (v2.1.0-stabil1/2): server `/sessions` registry
+sync, SQLite cross-thread TaskQueue, IdentityGuard false positives, explicit
+timeout honored exactly, one-shot leak-free shutdown, log prefix mangling,
+and a full CLI/tools/LLM/memory/server/MCP/skills/messaging audit pass.
+
+**Live verification matrix (real NIM API, real tools, real journal):**
+- 45-request burst: 0 errors / 0 429s — request #41 waited exactly the
+  window-slide time (37.0s), proving true rolling-window pacing (not naive
+  60s sleeps). NIM auto-detects 40 RPM.
+- Live E2E workloads 10/10: simple coding (externally verified), terminal +
+  report, multi-file lib+tests (externally verified), debug broken script
+  (externally verified), codebase exploration.
+- Live server lifecycle 11/11: run/sync + run, registry reflects reality
+  (state, step_count, messages, timestamps), no stale running sessions.
+- Live model switch + resume 7/7: interrupt mid-work → switch
+  gpt-oss-120b → gpt-oss-20b → resume completes without duplicate work.
+- Live long task across the 40-RPM boundary: 70 steps, 158s, 73 requests,
+  10/10 files created + contents verified.
+- CLI command sweep: 50/50 commands executed against the real dispatcher.
+
+**489 tests passing** (regression suite), 0 failed.
+
 ## 🆕 What's New in v2.0.0 (Phase 2 — Claude Code-level Coding Intelligence)
 
 **Project Intelligence Layer** — SHS Code now *understands* codebases:
@@ -188,10 +238,10 @@ Rate-limit waits use a **true rolling timestamp window** (4 RPM example: request
 - **Custom profiles**: android-expert, backend-expert, security-reviewer… composed
   from instructions + skills + verification strategy
 
-**Verified by 342 tests** including a 17-scenario end-to-end suite (real temp
+**Verified by 489 tests** including a 17-scenario end-to-end suite (real temp
 project + git repo + scripted LLM): create project → multi-file edits → tests →
 controlled failure → detect+fix → model switch mid-task → provider failure →
-failover → 4 RPM rate-limit rolling window → interruption → restart → resume →
+failover → rolling-window rate limit → interruption → restart → resume →
 no-duplicate-work → git diff → final verification + crash recovery.
 
 See `SHS_CODE_IMPLEMENTATION_STATE.md` for the full implementation ledger.
