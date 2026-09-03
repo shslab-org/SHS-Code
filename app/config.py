@@ -402,6 +402,10 @@ class Config:
                 or os.getenv("ANTHROPIC_API_KEY")
                 or os.getenv("MISTRAL_API_KEY")
                 or os.getenv("LLM_API_KEY")
+                # SHS Code FIX: NVIDIA NIM convention — a universal/NIM
+                # endpoint configured via LLM_BASE_URL + NVIDIA_API_KEY
+                # (no LLM_API_KEY) must also resolve its key.
+                or os.getenv("NVIDIA_API_KEY")
             )
         if not cfg.llm.base_url:
             cfg.llm.base_url = os.getenv("LLM_BASE_URL")
@@ -520,6 +524,15 @@ class Config:
         if os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY"):
             return "bedrock"
         if os.getenv("GOOGLE_API_KEY"):    return "google"
+        # SHS Code FIX (any-directory universal — found in live NIM E2E):
+        # an explicit LLM_BASE_URL defines an OpenAI-compatible endpoint
+        # (NVIDIA NIM, vLLM, Together, Groq, ...). Previously this returned
+        # None -> provider stayed "mock" -> SILENT MockLLM fallback whenever
+        # the agent ran outside a directory containing a project config.toml.
+        # Env-based universal configuration (LLM_BASE_URL + LLM_API_KEY or
+        # NVIDIA_API_KEY) must work in ANY cwd, not only inside the repo.
+        if os.getenv("LLM_BASE_URL"):
+            return "universal"
         return None
 
     # ------------------------------------------------------------------

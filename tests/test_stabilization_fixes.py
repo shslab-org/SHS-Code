@@ -848,3 +848,124 @@ class TestLLMInfoPoolSize:
         info = llm.backend_info()   # previously: TypeError len(self._pool.credentials)
         assert "pool_size" in info
         assert isinstance(info["pool_size"], int)
+
+
+class TestAnyDirectoryUniversalDetection:
+    """stabil3 live-E2E finding: running the agent in a directory WITHOUT a
+    project config.toml (any random workspace) silently fell back to
+    MockLLM even with LLM_BASE_URL + LLM_API_KEY/NVIDIA_API_KEY exported.
+    Env-based universal (NIM/vLLM/Together) config must work in ANY cwd."""
+
+    def test_detect_provider_universal_from_base_url(self, monkeypatch):
+        from app.config import Config
+        for var in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "MISTRAL_API_KEY",
+                    "GOOGLE_API_KEY", "AWS_ACCESS_KEY_ID",
+                    "AWS_SECRET_ACCESS_KEY", "NVIDIA_API_KEY"):
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("LLM_BASE_URL", "https://integrate.api.nvidia.com/v1")
+        assert Config._detect_provider() == "universal"
+
+    def test_detect_provider_none_when_no_env(self, monkeypatch):
+        from app.config import Config
+        for var in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "MISTRAL_API_KEY",
+                    "GOOGLE_API_KEY", "AWS_ACCESS_KEY_ID",
+                    "AWS_SECRET_ACCESS_KEY", "LLM_BASE_URL",
+                    "NVIDIA_API_KEY"):
+            monkeypatch.delenv(var, raising=False)
+        assert Config._detect_provider() is None
+
+    def test_nvidia_api_key_resolves(self, monkeypatch, tmp_path):
+        """LLM_BASE_URL + NVIDIA_API_KEY (no LLM_API_KEY) -> real provider,
+        real key — never a silent MockLLM fallback."""
+        import app.config as C
+        for var in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "MISTRAL_API_KEY",
+                    "GOOGLE_API_KEY", "LLM_API_KEY", "LLM_MODEL_OVERRIDE",
+                    "MANUSCLAW_PROFILE"):
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("LLM_BASE_URL", "https://integrate.api.nvidia.com/v1")
+        monkeypatch.setenv("NVIDIA_API_KEY", "nvapi-test")
+        monkeypatch.setenv("APP_ENV", "production")   # bypass test mock override
+        monkeypatch.setattr(C, "_HOME", tmp_path)          # empty home config
+        monkeypatch.chdir(tmp_path)                        # no project config
+        C.Config._instance = None
+        try:
+            cfg = C.Config.get()
+            assert cfg.llm.provider == "universal", cfg.llm.provider
+            assert cfg.llm.api_key == "nvapi-test"
+            assert cfg.llm.base_url == "https://integrate.api.nvidia.com/v1"
+        finally:
+            C.Config._instance = None
+
+
+class TestNarrationGuard:
+    """LIVE NIM finding #2: mid-tier models sometimes NARRATE the next
+    action ("I'll create the test file next") as plain text instead of
+    emitting the tool call. A narration must NOT end the run — the agent
+    nudges the model to actually call the tool. A direct answer still ends
+    it. Budgeted: 5 nudges max, then the text becomes the final answer."""
+
+    @pytest.mark.asyncio
+    async def test_narration_does_not_end_run(self):
+        from app.agent.manus import Manus
+        from tests.test_integration_e2e import ScriptedLLM
+        agent = Manus()
+        agent.llm = ScriptedLLM([
+            ("text", "I'll now create the file for you."),
+            ("tool", ("bash", {"command": "echo narr_fixed"})),
+            ("text", "Created and verified."),
+        ])
+        agent._max_steps = 12
+        result = await agent.run("create a file")
+        # the bash tool between narration and final text MUST have run
+        assert agent._narration_nudges == 1
+        assert agent.state.name == "FINISHED"
+
+    @pytest.mark.asyncio
+    async def test_direct_answer_still_final_no_nudge(self):
+        from app.agent.manus import Manus
+        from tests.test_integration_e2e import ScriptedLLM
+        agent = Manus()
+        agent.llm = ScriptedLLM([("text", "42")])
+        agent._max_steps = 6
+        result = await agent.run("what is 6*7?")
+        assert agent._narration_nudges == 0
+        assert "42" in (result or "")
+        assert agent.state.name == "FINISHED"
+
+    @pytest.mark.asyncio
+    async def test_narration_budget_exhausted_text_becomes_final(self):
+        from app.agent.manus import Manus
+        from tests.test_integration_e2e import ScriptedLLM
+        agent = Manus()
+        agent.llm = ScriptedLLM([
+            ("text", "I'll do it now.")     # nudge 1
+        ])
+        agent._max_steps = 4
+        agent._narration_nudges = 5          # budget already exhausted
+        await agent.run("do a thing")
+        # no 6th nudge: text is the final answer
+        assert agent._narration_nudges == 5
+        assert agent.state.name == "FINISHED"
+
+    def test_narration_patterns_narrow(self):
+        from app.agent.toolcall import _NARRATION_PATTERNS
+        narrates = [
+            "I'll create the test file next.",
+            "Let me check the file first.",
+            "I will now run the tests.",
+            "I'm going to fix the bug.",
+            "Now I need to inspect the output.",
+            "Next, I'll add the second file.",
+        ]
+        finals = [
+            "42",
+            "The rate limiter is in app/llm/rate_limiter.py with 40 RPM.",
+            "NIM_LIVE_OK",
+            "The function returns Hello, name.",
+            "Use add(2,3) to sum the values.",
+            "Task complete.",
+        ]
+        for t in narrates:
+            assert any(p.search(t) for p in _NARRATION_PATTERNS), t
+        for t in finals:
+            assert not any(p.search(t) for p in _NARRATION_PATTERNS), t

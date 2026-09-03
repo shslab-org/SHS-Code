@@ -33,6 +33,28 @@ _DONE_PATTERNS = [
     r"\bwork\s+is\s+complete\b",
 ]
 
+# SHS Code FIX (narration guard — live NIM finding #2): first-person
+# forward-looking intent in a text-only response means the model is
+# NARRATING its next action instead of emitting the tool call. These are
+# deliberately narrow (first-person + future action) so genuine final
+# answers ("42", "the function is in rate_limiter.py", "use add(2,3)")
+# never match.
+_NARRATION_PATTERNS = [
+    re.compile(p, re.IGNORECASE)
+    for p in (
+        r"\bI(?:'ll|’ll| will)\b",
+        r"\bI(?:'m|’m| am) (?:going|about) to\b",
+        r"\blet me\b",
+        r"\bnow I\b",
+        r"\bnext,?\s+I\b",
+        r"\bI'(?:ll|m) now\b",
+        r"\bproceed(?:ing|s)? to\b",
+        r"\bI'll first\b",
+        r"\bI'?m going ahead\b",
+    )
+]
+_MAX_NARRATION_NUDGES = 5
+
 # SHS Code Phase 2 (spec §19): tools that NEVER mutate state — safe to run
 # in parallel when the model requests several at once. Anything that writes
 # files, runs commands, or spawns agents stays strictly sequential.
@@ -116,6 +138,9 @@ tool or different arguments — DO NOT repeat the same failing call.
         self._selector = ToolSelector(tool_names=list(self.tools._tools.keys()))
         # SHS Code Phase 2 (spec §33): files already snapshotted this task
         self._snapshotted_files: set = set()
+        # SHS Code FIX (narration guard): bounded budget of
+        # "narrate instead of tool call" nudges per run
+        self._narration_nudges = 0
 
     # ------------------------------------------------------------------
     # PAORR overrides
@@ -265,11 +290,35 @@ tool or different arguments — DO NOT repeat the same failing call.
             # NEVER finished the run: the loop re-asked, the model repeated
             # itself, the duplicate nudge fired, and the agent terminated
             # WITHOUT ever returning the answer to the user.
+            content = (last_msg.content or "").strip()
             if (
                 self.state == AgentState.RUNNING
                 and last_msg.role == Role.ASSISTANT
-                and (last_msg.content or "").strip()
+                and content
             ):
+                # NARRATION GUARD (live NIM finding #2): mid-tier models
+                # sometimes narrate their NEXT action as plain text
+                # ("I'll create the test file next") instead of emitting the
+                # tool call. Treating that as a final answer ends the run
+                # with the work only partially done. Forward-looking
+                # first-person intent => nudge once and keep the loop alive;
+                # a bounded budget prevents narration-only models from
+                # looping forever — after _MAX_NARRATION_NUDGES the text is
+                # treated as the final answer after all.
+                if (
+                    self._narration_nudges < _MAX_NARRATION_NUDGES
+                    and any(p.search(content) for p in _NARRATION_PATTERNS)
+                ):
+                    self._narration_nudges += 1
+                    logger.info(
+                        "Narration instead of tool call — nudging "
+                        f"({self._narration_nudges}/{_MAX_NARRATION_NUDGES})")
+                    self.memory.add(Message.user(
+                        "You described what you will do instead of calling the "
+                        "tool. Continue NOW by actually calling the tool you "
+                        "described (emit the tool call in this response)."
+                    ))
+                    return thought or None
                 self.state = AgentState.FINISHED
                 return last_msg.content
             return thought or None
