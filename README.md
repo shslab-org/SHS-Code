@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Version-SHS%20Code%202.1.0-ff69b4?style=for-the-badge&logo=github&logoColor=white" alt="Version">
+<img src="https://img.shields.io/badge/Version-2.2.0-ff69b4?style=for-the-badge&logo=github&logoColor=white" alt="Version">
 <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
 <img src="https://img.shields.io/badge/License-MIT-FFD700?style=for-the-badge&logo=opensourceinitiative&logoColor=black" alt="License">
 <img src="https://img.shields.io/badge/Status-Persistent%20%7C%20Autonomous-00C853?style=for-the-badge&logo=bugsnag&logoColor=white" alt="Status">
@@ -11,16 +11,14 @@
 
 ### **Persistent Autonomous AI Coding Agent — SHS Lab**
 
-**SHS Code** (by Sazzad Hussain Shobuj, SHS Lab) is a persistent, model-independent, autonomous coding agent. It remembers across restarts, switches providers/models **without losing context**, journals every step of every task, checkpoints continuously, and resumes interrupted work automatically.
-
-> **Lineage:** SHS Code evolved from **SHS Code v5.1.1** — its predecessor and original project foundation. Everything that worked in SHS Code still works here.
+**SHS Code** (by Sazzad Hussain Shobuj, SHS Lab) is a persistent, model-independent, autonomous coding agent. It remembers across restarts, switches providers and models **without losing context**, journals every step of every task, checkpoints continuously, and resumes interrupted work automatically.
 
 ```text
 $ SHSCode
 ███████╗██╗  ██╗███████╗  ██████╗ ██████╗ ██████╗ ██████╗
 ██╔════╝██║  ██║██╔════╝ ██╔════╝██╔═══██╗██╔══██╗██╔══██╗
 ███████╗███████║███████╗ ██║     ██║   ██║██████╔╝██████╔╝
-╚════██║██╔══██║╚════██║ ██║     ██║   ██║██╔══██║██╔═══╝
+╚════██║██╔══██║╚════██║ ██║     ██║   ██║██╔══██╗██╔═══╝
 ███████║██║  ██║███████╗ ╚██████╗╚██████╔╝██║  ██║██║
 ╚══════╝╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝
 SHS Code initialized.
@@ -30,1026 +28,535 @@ SHS Code initialized.
 
 | Capability | Meaning |
 |---|---|
-| 🧠 **Persistent memory** | SQLite long-term memory survives restarts, model switches, provider switches |
-| ⚡ **Live model switching** | `/model gpt-4o` → `/model claude-sonnet` — context, files, progress preserved |
-| 📓 **Task journal** | Every tool call, file change, command, error is journaled with checkpoints |
-| 🔁 **Interruption recovery** | Crash / Ctrl+C / terminal closed → `/resume` continues from the checkpoint |
-| ⏳ **Rolling-window rate limiter** | NVIDIA NIM (40 RPM default, configurable) paced by true timestamps — waits preserve all state |
-| 🛠️ **29 builtin skills** | + custom skills in `~/.shscode/skills`, enable/disable persisted |
-| 🔌 **Custom providers** | `/provider add my-nim openai-compat https://integrate.api.nvidia.com/v1 model key 40` |
-| 🔗 **Connectors** | GitHub/GitLab tokens feed real git-provider tools automatically |
+| 🧠 **Four-layer memory** | SQLite short-term, SQLite long-term, Markdown memory, and an agent work notebook — all survive restarts and model switches |
+| ⚡ **Live model switching** | `/model` and `/provider` switch the reasoning backend mid-task — context, files, progress preserved |
+| 📓 **Task journal** | Every tool call, file change, command, decision and error is journaled with checkpoints |
+| 🔁 **Interruption recovery** | Crash / Ctrl+C / terminal closed → `/resume` continues from the checkpoint without redoing work |
+| ⏳ **Rolling-window rate limiting** | Provider defaults (NVIDIA NIM: 40 RPM) with optional custom limits; waits preserve all state |
+| 🛠️ **29 builtin skills** | Language/stack skills plus custom skills in `~/.shscode/skills`, per-level enable/disable |
+| 🔌 **Custom providers** | `/provider add my-nim openai-compat https://... model key 30` — persisted in the registry |
+| 🔎 **Codebase intelligence** | AST-level indexing, semantic + structural search, project profiles |
 | 🩺 **`/doctor`** | Full diagnostics with actionable hints |
 | 🖥️ **Stable terminal** | Live activity feed (thinking / tools / rate-limit waits), no input flicker |
-
-**Everything below (PAORR loop, multi-agent DAG, 12+ channels, GGUF/offline, canvas, SSH, cron, 244 tests) is inherited from SHS Code and still fully functional.**
 
 <p>
   <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows%20%7C%20Docker-informational?style=flat-square" alt="Platforms">
   &nbsp;•&nbsp;
-  <img src="https://img.shields.io/badge/LLM-100%2B%20Providers-FF6F00?style=flat-square&logo=brain&logoColor=white" alt="LLM Providers">
+  <img src="https://img.shields.io/badge/Providers-100%2B-FF6F00?style=flat-square&logo=brain&logoColor=white" alt="LLM Providers">
   &nbsp;•&nbsp;
   <img src="https://img.shields.io/badge/Offline-GGUF%20%7C%20HF%20%7C%20Ollama-9C27B0?style=flat-square" alt="Offline">
   &nbsp;•&nbsp;
-  <img src="https://img.shields.io/badge/Channels-13%2B-00B4D8?style=flat-square&logo=message&logoColor=white" alt="Channels">
+  <img src="https://img.shields.io/badge/Channels-13-00B4D8?style=flat-square&logo=message&logoColor=white" alt="Channels">
   &nbsp;•&nbsp;
-  <img src="https://img.shields.io/badge/Tools-17%2B-00C853?style=flat-square" alt="Tools">
+  <img src="https://img.shields.io/badge/Tools-17-00C853?style=flat-square" alt="Tools">
   &nbsp;•&nbsp;
-  <img src="https://img.shields.io/badge/Tests-244%20passed-brightgreen?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-527%20passed-brightgreen?style=flat-square" alt="Tests">
 </p>
 
 </div>
 
----
-
-## ⌨️ SHS Code Quickstart
-
-```bash
-# install (from repo root)
-./install.sh          # creates SHSCode + manusclaw commands
-# or: pip install -e .   →  SHSCode / shscode / manusclaw console scripts
-
-SHSCode               # start the persistent interactive shell
-```
-
-**Daily commands:**
-
-```text
-/status               # task, progress %, phase, files, tests, verify verdict, health
-/model claude-sonnet  # switch model — context preserved, zero restart
-/provider my-nim      # switch to a custom provider (registry persisted)
-/plan                 # dependency-aware plan (persisted, survives restarts)
-/verify               # project-aware build+test verification NOW
-/usage                # provider stats: requests, latency, tokens, cost
-/project architecture # symbol map + import hubs of the indexed repo
-/mode autonomous      # coding|debugging|reviewer|research|autonomous|planning
-/profile use backend-expert   # custom agent profiles (skills + verify strategy)
-/remember I prefer TypeScript — persistent memory
-/memory               # view memories (SQLite, survives everything)
-/tasks  /task <id>    # task journal with files/commands/errors
-/resume               # EXACT resume — real state verified vs checkpoint
-/rollback <task> <snap>  # restore agent-changed files from pre-edit snapshots
-/doctor               # full diagnostics (incl. Phase 2 subsystems)
-exit                  # clean exit — state saved, /resume next time
-```
-
-**NVIDIA NIM rate limiting (rolling window):**
-
-```toml
-# ~/.shscode/config.yaml
-llm:
-  provider: universal
-  base_url: "https://integrate.api.nvidia.com/v1"
-  api_key: "nvapi-..."
-  model: "meta/llama-3.1-70b-instruct"
-  rate_limit: { enabled: true, rpm: 40 }   # NIM default = 40; 4 RPM works too
-```
-
-Rate-limit waits use a **true rolling timestamp window** (4 RPM example: requests at 12:00:05/15/30/50 → the 5th waits only until 12:01:05, not a fixed 60s) and **never destroy task context** — conversation, tool results and progress all survive the wait.
-
-**Persistent state lives in `~/.shscode/`:** `state/journal.db` (task journal) · `state/checkpoints/` (atomic memory snapshots) · `.memory/long_term.db` (long-term memory) · `providers.json` (custom providers) · `connectors.json` (platform connectors) · `skills_state.json` (skill toggles).
-
----
-
 ## Table of Contents
 
-- [SHS Code Quickstart](#️-shs-code-quickstart)
-- [What's New in v2.1.0 (Stabilization)](#-whats-new-in-v210-full-stabilization--live-verified-on-nvidia-nim)
-- [What's New in v2.0.0 (Phase 2)](#-whats-new-in-v200-phase-2--claude-code-level-coding-intelligence)
-- [What's New in v5.1](#-whats-new-in-v51)
-- [What's Fixed in v5.1.1](#-whats-fixed-in-v511)
-- [Overview](#-overview)
-- [Architecture](#-architecture)
-- [Features](#-features)
-  - [Agent System](#-agent-system--paorr-loop--multi-agent--roles)
-  - [Event System](#-event-system--discriminated-unions--eventlog)
-  - [Security Defense-in-Depth](#-security-defense-in-depth)
-  - [Hooks System](#-hooks-system)
-  - [Context Management](#-context-management--view--condenser)
-  - [Conversation System](#-conversation-system)
-  - [Parallel Tool Execution](#-parallel-tool-execution)
-  - [LLM Integration](#-llm-integration--100-providers--offline--streaming)
-  - [Secrets Management](#-secrets-management--fernet-encryption)
-  - [File Storage](#-file-storage-backends)
-  - [Git Provider Integrations](#-git-provider-integrations)
-  - [Issue & PR Resolution](#-issue--pr-resolution)
-  - [Project Management](#-project-management--jira--linear--slack)
-  - [Observability](#-observability--opentelemetry--prometheus)
-  - [Messaging Channels](#-13-messaging-channels)
-  - [Voice System](#-voice-system--wake-word--stt--tts)
-  - [Canvas UI](#-canvas-ui--a2ui-protocol)
-  - [Tools](#-17-tools--intelligent-selector)
-  - [SSH Server](#-ssh-server)
-  - [Cron Scheduler](#-cron-scheduler)
-  - [Skills Engine](#-skills-engine)
-  - [MCP Protocol](#-mcp-protocol--client--server)
-  - [Desktop Apps](#-desktop-apps)
-  - [Session & Memory](#-session--memory-system)
-- [Quick Start](#-quick-start)
-- [Configuration](#-configuration)
-- [Docker Deployment](#-docker-deployment)
-- [Entry Points](#-entry-points)
-- [Contributing](#-contributing)
-- [Changelog](CHANGELOG.md)
-- [License](#-license)
+- [What is SHS Code](#what-is-shs-code)
+- [Features](#features)
+- [How SHS Code Works](#how-shs-code-works)
+- [Autonomous Coding](#autonomous-coding)
+- [Persistent Memory](#persistent-memory)
+- [Persistent Work State](#persistent-work-state)
+- [Checkpoints & Recovery](#checkpoints--recovery)
+- [Model & Provider System](#model--provider-system)
+- [Rate-Limit Handling](#rate-limit-handling)
+- [Tools](#tools)
+- [Skills](#skills)
+- [MCP](#mcp)
+- [Git & GitHub](#git--github)
+- [Browser / Web](#browser--web)
+- [Multi-Agent System](#multi-agent-system)
+- [Server & API](#server--api)
+- [CLI](#cli)
+- [Channels & Connectors](#channels--connectors)
+- [Sandboxing](#sandboxing)
+- [Configuration](#configuration)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Examples](#examples)
+- [Architecture](#architecture)
+- [Testing](#testing)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## 🆕 What's New in v2.1.0 (Full Stabilization — Live-Verified on NVIDIA NIM)
+## What is SHS Code
 
-**Found and fixed live on real NVIDIA NIM (40 RPM, gpt-oss-120b) — not just
-unit tests:**
+SHS Code is a terminal-first autonomous coding agent. You give it a goal — "fix the failing login tests", "add pagination to the orders API", "explore this codebase and explain the auth flow" — and it plans, executes, verifies, and reports back, using real tools: a shell, a file editor, a browser, web search, Git, and more.
 
-- **Final-answer semantics**: a text-only response (no tool calls) now ends
-  the run and RETURNS the answer to the user. Previously only "task complete"
-  phrases could end a run — direct answers looped, tripped the duplicate
-  nudge, and the user never saw the answer.
-- **Goal-completion gate (spec §34)**: a final answer may only end the run
-  when the journaled task DAG has no unfinished steps. Mid-tier models that
-  summarise partial progress ("f1.py and f2.py created" with 8 files to go)
-  are nudged to continue until the plan is actually complete. Live result:
-  10/10 files on a task that previously stopped at 2/10.
-- **Narration guard**: models that narrate their next action in text
-  ("I'll create the test file next") instead of emitting the tool call get
-  a bounded nudge to actually call it.
-- **Any-directory universal provider**: `LLM_BASE_URL` + `LLM_API_KEY`/
-  `NVIDIA_API_KEY` env config now works in ANY cwd — previously a directory
-  without a project `config.toml` silently fell back to MockLLM.
-- **Config layer deep-merge**: a partial `~/.shscode/config.yaml` (e.g.
-  only `mcp_servers: []`) no longer shadows the entire project config —
-  layers merge per-key instead of first-file-wins.
-- **Bash heredoc fix**: commands containing heredocs no longer hang until
-  the deadline — the wrapper keeps terminators pure.
+The defining design principle: **the LLM is a replaceable reasoning engine; SHS Code's state is not owned by it.** Conversations, memories, task journals, checkpoints, file changes and progress live in SHS Code's own persistence layer (SQLite + Markdown + atomic checkpoint files). Switch the model, switch the provider, restart the process, hit a rate limit, lose the network mid-task — the work state survives and the agent continues.
 
-**Plus 40+ earlier fixes** (v2.1.0-stabil1/2): server `/sessions` registry
-sync, SQLite cross-thread TaskQueue, IdentityGuard false positives, explicit
-timeout honored exactly, one-shot leak-free shutdown, log prefix mangling,
-and a full CLI/tools/LLM/memory/server/MCP/skills/messaging audit pass.
+SHS Code runs as an interactive CLI shell (`SHSCode`), a one-shot command (`shscode "do something"`), an HTTP/WebSocket server with a built-in web chat, and as a daemon connected to 13 messaging channels. It supports every major LLM provider plus any OpenAI-compatible endpoint, local GGUF/HF/Ollama models, and a user-defined provider registry.
 
-**Live verification matrix (real NIM API, real tools, real journal):**
-- 45-request burst: 0 errors / 0 429s — request #41 waited exactly the
-  window-slide time (37.0s), proving true rolling-window pacing (not naive
-  60s sleeps). NIM auto-detects 40 RPM.
-- Live E2E workloads 10/10: simple coding (externally verified), terminal +
-  report, multi-file lib+tests (externally verified), debug broken script
-  (externally verified), codebase exploration.
-- Live server lifecycle 11/11: run/sync + run, registry reflects reality
-  (state, step_count, messages, timestamps), no stale running sessions.
-- Live model switch + resume 7/7: interrupt mid-work → switch
-  gpt-oss-120b → gpt-oss-20b → resume completes without duplicate work.
-- Live long task across the 40-RPM boundary: 70 steps, 158s, 73 requests,
-  10/10 files created + contents verified.
-- CLI command sweep: 50/50 commands executed against the real dispatcher.
+## Features
 
-**489 tests passing** (regression suite), 0 failed.
+**Autonomy & coding**
+- PAORR execution loop (Plan → Act → Observe → Reflect → Retry) with self-check every 3 steps and a code review phase every 3 file edits
+- Task DAG planning with dependency-enforced completion; completion is refused until dependencies are done
+- Project intelligence: incremental AST indexer (Python, JS/TS, Kotlin, Java, PHP, Go), semantic + structural search, project profiles, environment detection
+- Verification engine: project-aware build/test command selection, error extraction, failure hypotheses
+- Recovery engine: 12-class error classification with per-class retry strategies
+- Smart rollback: snapshots of agent-touched files with one-command restore
 
-## 🆕 What's New in v2.0.0 (Phase 2 — Claude Code-level Coding Intelligence)
+**Persistence & recovery**
+- Four independent memory layers (see [Persistent Memory](#persistent-memory))
+- Task journal recording every action, file change, command, decision, test result
+- Atomic checkpoints after every meaningful operation; automatic resume after interruption
+- Stale-session recovery, interrupted-task detection at startup
 
-**Project Intelligence Layer** — SHS Code now *understands* codebases:
-- AST/structural symbol indexing (Python, JS/TS, Kotlin, Java, PHP, Go)
-- Persistent incremental index (`~/.shscode/intel/`) — only changed files reindex
-- Semantic concept search: "where is authentication handled" → ranked files+symbols
-- Structural search: usages, callers, importers, dependency hubs
-- Project profile detection: type, frameworks, entry points, build/test commands
-- Environment detection: 50+ tools with versions
+**Model & provider independence**
+- Live `/model` + `/provider` switching without context loss
+- Provider registry with per-provider custom rate limits
+- Credential pools with rotation, provider health tracking (🟢🟡🔴), fallback and failover
+- Rolling-window rate limiter with provider defaults (no artificial throttling below the limit)
 
-**Autonomous execution upgrades:**
-- Dependency-aware **Task DAG** — completion refused until dependencies done;
-  smart prioritization (unlock value > priority > failure history); persisted
-- **Exact resume**: real filesystem + git state verified against the checkpoint
-  before continuing; duplicate-work prevention (existing AuthService → verify,
-  not recreate)
-- **Verification engine**: project-aware build/test/lint/typecheck with error
-  extraction, failure hypotheses and fix suggestions; `verify` agent tool + /verify
-- **Error intelligence**: 12-class classification → RETRYABLE / WAIT / REQUIRES_FIX /
-  REQUIRES_USER / EXTERNAL_BLOCKER; missing credentials mark the task BLOCKED
-  (never lost) instead of failed
-- **Parallel tools**: read-only batches execute concurrently; writes stay sequential
-- **Review phase**: automatic self-review after every 3 file edits
-- **Smart rollback**: pre-edit snapshots of agent-touched files; /rollback restores
-  only those, never unrelated user work
-- **Provider health**: 🟢🟡🔴 status, latency, tokens, cost estimate, cooldown,
-  routing hints — wired into the live call path (/usage)
-- **Structured compaction**: requirements/decisions/files/errors/tests extracted —
-  compaction without destroying operational state
-- **Subagent state**: delegate tool progress persists; recoverable after crashes
-- **Skills 2.0**: builtin/user/project/installed levels; /skill install from git URL
-- **Agent modes**: coding/debugging/reviewer/research/autonomous/planning — each
-  changes plan depth, verification level and step budget for real
-- **Custom profiles**: android-expert, backend-expert, security-reviewer… composed
-  from instructions + skills + verification strategy
+**Integration surface**
+- 13 messaging channels, 5 Git forge providers, MCP client + server, webhooks, cron
+- Browser automation (Playwright), web search, URL extraction
+- Docker / SSH / local sandboxes; S3 / GCS / local file stores
+- Observability: structured logging with trace/correlation IDs, health checks, OpenTelemetry-style tracing
 
-**Verified by 489 tests** including a 17-scenario end-to-end suite (real temp
-project + git repo + scripted LLM): create project → multi-file edits → tests →
-controlled failure → detect+fix → model switch mid-task → provider failure →
-failover → rolling-window rate limit → interruption → restart → resume →
-no-duplicate-work → git diff → final verification + crash recovery.
+## How SHS Code Works
 
-See `SHS_CODE_IMPLEMENTATION_STATE.md` for the full implementation ledger.
+1. **Understand** — the task is classified (Q&A vs. build), and the project intelligence layer is consulted: indexed symbols, architecture map, Git state, environment. Duplicate-work prevention starts here.
+2. **Plan** — non-trivial tasks get a persisted, numbered plan (LLM or heuristic planner) stored as a task DAG in the journal. Steps are marked started/completed as work proceeds; completion is dependency-enforced.
+3. **Act** — the agent calls tools: edit files, run commands, search the codebase, browse, delegate to subagents.
+4. **Observe** — tool output is read carefully; findings are journaled (actions, file changes, commands, discoveries).
+5. **Verify** — before any claim of completion, the verification engine runs project-appropriate build/test commands and checks results. A goal-completion gate reloads the journaled DAG and blocks premature "done" claims while steps are pending.
+6. **Recover** — failures are classified (12 error classes), retried with matching strategies, or escalated; every recovery is journaled.
 
-## 🆕 What's New in v5.1
+Under all of this sits the persistence layer: session DB, long-term memory, Markdown memory, the work journal and checkpoints — none of it owned by the LLM.
 
-SHS Code v5.1 introduces enterprise-grade capabilities that transform it from a powerful agent framework into a production-ready AI operations platform.
+## Autonomous Coding
 
-| Category | Highlights |
-|---|---|
-| **Event System** | 17 discriminated union event types, `LLMConvertibleEvent`, file-backed `EventLog` with O(1) length, crash-proof atomic writes |
-| **Security** | Defense-in-depth: Pattern + Policy Rails + LLM + Ensemble analyzers with max-severity fusion |
-| **Hooks** | 6 lifecycle event types, DENY/MODIFY/ALLOW decisions, audit trail, per-hook timeout |
-| **Context** | View system with manipulation indices, `LLMSummarizingCondenser`, property enforcement |
-| **Conversation** | Local & Remote modes, `StuckDetector` (5 patterns), `CancellationToken`, FIFOLock |
-| **Parallel Execution** | `ResourceLockManager` with readers-writer locking, deadlock prevention |
-| **LLM** | 100+ providers via litellm, streaming deltas, model failover, non-native tool calling |
-| **Secrets** | Fernet-encrypted store, `SecretRegistry` with lazy resolution, audit logging |
-| **File Storage** | Pluggable backends: Local, S3, GCS, In-Memory with factory auto-detection |
-| **Git Providers** | GitHub, GitLab, Azure DevOps, Bitbucket, Forgejo — unified provider interface |
-| **Issue Resolution** | LLM-powered resolver for issues, PRs, merge conflicts with webhook triggers |
-| **Project Mgmt** | Jira, Linear, Slack integrations for task tracking and notifications |
-| **Observability** | OpenTelemetry tracing, Prometheus metrics, K8s liveness + readiness probes |
-| **Migrations** | Alembic database migrations with 7 core tables |
+The main agent (class `SHSCode` in `app/agent/shscode.py`) is a tool-calling agent with the PAORR loop:
 
----
-
-## 🔧 What's Fixed in v5.1.1
-
-v5.1.1 is a maintenance release that closes 32 bugs across the agent core, security layer, FastAPI server, cron scheduler, secrets redaction, multi-agent role pipeline, and observability subsystem. All fixes are covered by the existing test suite plus two new regression tests; the full suite runs **212 passed, 2 skipped, 0 failed**.
-
-### Critical Runtime Fixes
-
-| # | Component | Bug | Fix |
-|---|---|---|---|
-| 1 | `app/agent/router.py` | `AgentRegistry._evict_idle` was declared `async` but called from sync `get()`/`put()` without `await` — eviction never ran, so idle-TTL test expected `None` but got the cached agent. | Converted `_evict_idle` to a sync method; agent `cleanup()` coroutines are scheduled fire-and-forget via `_safe_create_task`. Also fixed LRU `put()` path that moved-to-end but did not overwrite the stored agent when re-inserting an existing key. |
-| 2 | `app/cli.py` | `logger` was referenced in two functions without being imported → `NameError` on the Spinner long-operation exit path and the background-task checkpoint-restore path. | Local `from app.logger import logger as _logger` imports at the use-site. |
-| 3 | `app/conversation/stuck_detector.py` | `_action_fingerprint` referenced undefined `tool_call` instead of the local `tool_name` → `NameError` on every action without a `.function` attribute, breaking stuck detection. | Use `tool_name` consistently. |
-| 4 | `app/integrations/slack.py` | `re` was used in `@self._bolt_app.action(re.compile(...))` but never imported → `NameError` on Slack Bolt action-handler registration. | Added `import re`. |
-| 5 | `app/server/webhook_router.py` | **Route ordering bug**: `@router.post("/{hook_id}")` was declared before `@router.post("/create")`, so FastAPI matched the parameterised path first and `POST /webhooks/create` returned 404 ("Webhook 'create' not found"). Create / list / delete all broken via HTTP. | Reordered the router so literal sub-paths (`/create`, `/sign/{hook_id}`) come before the parameterised catch-all. Added regression tests using the real FastAPI TestClient. |
-| 6 | `app/observability/health.py` | `LLMHealthChecker._test_api_call` was `def` (sync) but called `llm.ask(...)` which is async → returned a coroutine object that was silently discarded (F841 `result`). The health check would always report success regardless of the LLM's actual state. | Bridge the sync/async boundary via a worker thread running `asyncio.run`. Also fixed the call signature: `LLM.ask` takes a list of `Message` objects, not a string. |
-| 7 | `app/llm/profile_rotation.py` | `ModelProfile.default()` exception fallback called `cls(name="default")` but `__init__` does not accept `name` → `TypeError` masked the original error. | Construct the profile first, then set `.name`. |
-| 8 | `app/llm/credential_pool.py` | Forward-reference `"ModelProfile"` triggered F821 (undefined name) under strict type checking. | Use `TYPE_CHECKING` import so the symbol is resolvable for type checkers without creating a runtime circular import. |
-| 9 | `app/observability/metrics.py` | `Union` was used in three module-level type hints but never imported → F821 on module import under strict checkers. | Added `Union` to the existing `typing` import. |
-| 10 | `app/voice/talk.py` | `Any` was used in two instance-variable annotations but never imported → F821. | Added `Any` to the existing `typing` import. |
-
-### Logic & Correctness Fixes
-
-| # | Component | Bug | Fix |
-|---|---|---|---|
-| 11 | `app/cron.py` | `_JOBS_FILE = Path(os.getenv(...))` was evaluated ONCE at module import. Runtime changes to `MANUSCLAW_CRON_FILE` (tests, profile switching, CLI overrides) were silently ignored. | Replaced with `_get_jobs_file()` lazy resolver called inside `_load_jobs` / `_save_jobs`. |
-| 12 | `app/cron.py` | `shscode-cron --trigger JOB` did not `return` after triggering → fell through to `asyncio.run(scheduler.run_forever())` and blocked the terminal forever. | Added `return`. |
-| 13 | `app/cron.py` | `--list` output overwrote `output` on every loop iteration (`output = f"{t}"`) instead of appending, so only the LAST output_target was ever shown. | Use `output += f" {t}"` and strip. |
-| 14 | `app/skills/skill_engine.py` | Same module-level-eval bug as cron.py: `_SKILLS_DIR` was set at import time and ignored subsequent `MANUSCLAW_SKILLS_DIR` changes. | Replaced with `_get_skills_dir()` lazy resolver; updated `_load_user()` and `create()` to call it. |
-| 15 | `app/tool/memory_tool.py` | Same bug: `_WORKSPACE` / `MEMORY_FILE` / `USER_FILE` frozen at import. The `tmp_workspace` pytest fixture set `MANUSCLAW_WORKSPACE` at runtime, but `MemoryTool.execute()` still wrote to the import-time path — tests passed only because they manually monkey-patched `mt.MEMORY_FILE`. | Added `_get_workspace()` / `_memory_file()` / `_user_file()` lazy resolvers; rewrote `execute()` to use them. |
-| 16 | `app/task_queue.py` | Same bug: `_WORKSPACE` / `_DB_PATH` evaluated at import. | Added `_get_db_path()` lazy resolver; `TaskQueue.__init__` calls it when no explicit path is provided. |
-| 17 | `app/llm/secret_redaction.py` | AWS-secret pattern used a non-capturing prefix group `(?:secret_key...|aws_secret...)` so `redact()` replaced the entire match including the prefix — `secret_key=ABC...` became `***REDACTED***` (prefix lost). | Converted to a capturing group and use the `\1` backreference pattern, matching the other redaction rules. |
-| 18 | `app/integrations/resolver.py` | `clear_results(older_than_hours=24)` computed `cutoff` but never used it — every terminal-status result was removed regardless of age, breaking the documented "older than N hours" contract. | Now uses `started_at` to filter by age, with a safe default (keep results we can't prove are old enough). |
-
-### Resource Leak Fixes
-
-| # | Component | Bug | Fix |
-|---|---|---|---|
-| 19 | `app/agent/roles/engineer.py` | `Manus()` instances were created for the main pass and the retry pass but `cleanup()` was never called → leaked Bash subprocesses (and any other tool resources) for the lifetime of the process. | Wrapped each Manus run in `try/finally` with a `_cleanup_agent` helper. |
-| 20 | `app/agent/roles/qa.py` | Same leak as engineer.py: the QA Manus agent was never cleaned up. | Added `try/finally` with cleanup call. |
-
-### Test Pollution Fix
-
-| # | Component | Bug | Fix |
-|---|---|---|---|
-| 21 | `tests/test_voice.py` | `test_get_tts_provider_returns_nulltts_stub` did `tts_mod._create_provider = lambda name: ...` — a permanent module-level monkeypatch that leaked into every subsequent test in the file, causing `test_get_tts_provider_preferred_openai` to receive `NullTTS` instead of `OpenAITTS`. | Use the `monkeypatch` fixture so the override is automatically restored at test teardown. |
-
-### Dead-Code / F841 Cleanup
-
-| # | Component | Issue | Resolution |
-|---|---|---|---|
-| 22 | `app/canvas/tool.py` | `_add_chart` captured `state = await self._server.update(...)` but never used it. | Now reports the resulting component count for consistency with the other canvas method. |
-| 23 | `app/file_store/s3.py` | `write_stream` computed `key = self._make_key(path)` but never used it. | Removed the assignment but kept the call for its path-traversal-validation side-effect. |
-| 24 | `app/conversation/local_conversation.py` | `_do_fork` computed `fork_log_path` but never used it. | Now logged at DEBUG level so the path is visible in diagnostics. |
-| 25 | `app/integrations/webhook_handler.py` | `handler_result = await handler(event)` discarded result. | Replaced with bare `await handler(event)` + explanatory comment. |
-| 26 | `app/parallel_executor/executor.py` | `call_lookup = {c.call_id: c for c in calls}` built but never used. | Removed with explanatory comment (results are correlated via `zip()`). |
-| 27 | `app/llm/litellm_client.py` | `except Exception as e: ... raise` — `e` unused. | Dropped the `as e` binding. |
-| 28 | `app/observability/health.py` | Two `except Exception as e: ... raise` blocks — `e` unused. | Dropped the `as e` bindings. |
-| 29 | `app/voice/wake.py` | `sample_width = 2` assigned but never used. | Converted to a comment so the int16 / 2-byte intent is preserved for future readers. |
-| 30 | `app/integrations/resolver.py` | `service` and `content` bindings unused in the `apply_changes` path. | Removed bindings with explanatory comments noting why the calls are still made. |
-
-### New Regression Tests
-
-| # | Test | Purpose |
-|---|---|---|
-| 31 | `tests/test_webhooks.py::test_webhook_router_create_endpoint_not_swallowed_by_catchall` | POSTs to `/webhooks/create` via the real FastAPI `TestClient` and asserts `200` (was `404` before the route-order fix). |
-| 32 | `tests/test_webhooks.py::test_webhook_router_trigger_still_works_after_reorder` | Ensures the parameterised `POST /webhooks/{hook_id}` route still triggers webhooks with non-literal IDs after the reorder. |
-
-### Verification
-
-- **Test suite:** `pytest` → 212 passed, 2 skipped, 0 failed (was 210 passed, 2 failed in v5.1.0).
-- **Static analysis:** `ruff check app/ --select F821,F841` → 0 errors (was 23 in v5.1.0).
-- **HTTP smoke test:** FastAPI `TestClient` hits against `/healthz`, `/`, `/tools`, `/sessions`, `/webhooks` (create / list / trigger-with-HMAC / delete) all pass.
-- **Path-traversal audit:** `LocalFileStore._resolve()` rejects `../../../etc/passwd`, `/etc/passwd`, `a/../../b`, `../outside`, `subdir/../../../etc/passwd` — all blocked with `FileStorePermissionError`.
-- **Module import audit:** all 133 main modules import cleanly under Python 3.12.
-
----
-
-## 🌟 Overview
-
-SHS Code is an enterprise-grade autonomous AI agent framework that empowers Large Language Models to **plan**, **execute code**, **browse the web**, **manage files**, **resolve issues**, and **complete complex multi-step tasks** — all autonomously.
-
-At its core is the **PAORR reasoning loop** (Plan → Act → Observe → Reflect → Retry), a self-correcting execution model. Combined with **DAG-based multi-agent orchestration**, **defense-in-depth security**, **offline LLM support (GGUF/HuggingFace/Ollama)**, and **enterprise observability**, SHS Code runs anywhere — cloud, local, or fully air-gapped.
-
-**Why SHS Code?**
-
-| Challenge | SHS Code Solution |
-|---|---|
-| Vendor lock-in | 100+ cloud providers + offline GGUF/HuggingFace/Ollama with credential rotation and model failover |
-| No internet access | Fully offline: GGUF via llama-cpp-python, HuggingFace local, Ollama local — zero cloud dependency |
-| No persistence | SQLite-backed sessions, event logs, task queues — all survive restarts |
-| Security blind spots | Defense-in-depth: Pattern → Rails → LLM → Ensemble with audit trails |
-| Single-agent limit | DAG-based Multi-Agent Orchestrator with per-channel/per-account routing |
-| Context overflow | View system with LLM Summarizing Condenser and property enforcement |
-| Tool chaos | Heuristic + LLM ToolSelector scores 17+ tools with failure penalties |
-| Platform fragmentation | 13+ messaging adapters, voice, canvas, SSH, webhooks, cron |
-| No observability | OpenTelemetry, Prometheus metrics, K8s health probes, correlation IDs |
-| Secret management | Fernet encryption, SecretRegistry with lazy resolution |
-
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          PRESENTATION LAYER                                 │
-│  CLI · WebChat · Canvas (A2UI) · SSH Server · 13+ Messaging · Voice        │
-│  Desktop: macOS Menubar · Windows Hub · Mobile Node Client                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                           AGENT LAYER                                       │
-│  ┌──────────────┐  ┌───────────────┐  ┌─────────────────────────────────┐  │
-│  │  PAORR Loop  │  │  Multi-Agent  │  │  Role Pipeline                  │  │
-│  │ Plan → Act → │  │  Orchestrator │  │  PM → Architect → Engineer → QA │  │
-│  │ Observe →    │  │  (DAG-based)  │  │  with RoleMessageBus            │  │
-│  │ Reflect →    │  └───────────────┘  └─────────────────────────────────┘  │
-│  │ Retry        │                                                         │
-│  └──────────────┘                                                         │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                         MIDDLEWARE LAYER                                    │
-│  Hooks · Security Ensemble · Context View + Condenser · Conversation       │
-│  Parallel Executor (ResourceLock) · Event System (Discriminated Unions)    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                        INTEGRATION LAYER                                    │
-│  LLM (100+ cloud + GGUF/HF/Ollama offline) · Git Providers (5 platforms)  │
-│  Issue Resolver · Project Mgmt (Jira/Linear/Slack) · Secrets (Fernet)     │
-│  File Storage (S3/GCS/Local) · MCP Protocol · Observability (OTEL/Prom)   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                          TOOL LAYER (17+)                                   │
-│  Bash · Python · Node.js · Browser · WebSearch · Crawl4AI · ImageGen      │
-│  StrReplace · Memory · Delegate · Planning · DataViz · AskHuman           │
-│  PlatformCtrl · SkillManager · CrossSessionSearch · Terminate · Selector   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                       INFRASTRUCTURE LAYER                                  │
-│  SQLite WAL · SessionDB (FTS5) · Cron Scheduler · TaskQueue · Sandbox     │
-│  (Docker/SSH/OpenShell) · Alembic Migrations · LongTermMemory             │
-└─────────────────────────────────────────────────────────────────────────────┘
+```text
+PLAN    → Decompose the task into clear, ordered sub-goals (first)
+ACT     → Call a tool to execute one sub-goal
+OBSERVE → Read tool output; extract key findings
+REFLECT → Did this output solve the sub-goal? (yes/no, why)
+RETRY   → If not solved: diagnose the failure, try a different tool/args
 ```
 
----
-
-## ✨ Features
-
-### 🤖 Agent System — PAORR Loop + Multi-Agent + Roles
-
-The PAORR loop is the heart of SHS Code — a self-correcting reasoning cycle that plans, acts, observes, reflects, and retries until the task is complete.
-
-| Feature | Description |
-|---|---|
-| **PAORR Loop** | Plan → Act → Observe → Reflect → Retry — autonomous self-correction at every step |
-| **Self-Check** | Manus agent performs self-check every 3 steps to verify progress |
-| **Multi-Agent Orchestrator** | DAG-based pipeline with topological sorting (Kahn's algorithm), event hooks, global timeout |
-| **Role Pipeline** | ProductManager → Architect → Engineer → QA with typed `RoleResult` and `RoleMessageBus` |
-| **Agent Router** | Per-channel and per-account routing with LRU cache (64 entries, 300s idle TTL) |
-| **Agent Registry** | Dynamic agent class import (sandboxed to `app.` namespace) with idle eviction + cleanup |
-| **Identity Guard** | 30+ anti-jailbreak patterns in 9 languages (English, Chinese, Spanish, French, German, Portuguese, Japanese, Korean, Russian) |
-| **Permission Gate** | 3-tier access control: AUTONOMOUS / CONFIRM / RESTRICTED with catastrophic pattern blocking |
-| **Skill Engine** | Auto-injection of domain expertise from Markdown skill files based on relevance matching |
-| **PlanningFlow** | Step-by-step task decomposition with scoring, replanning, and agent caching |
-
-**Agent Types:**
-
-| Agent | Description |
-|---|---|
-| **Manus** | Full-featured autonomous agent with all 14+ tools, PAORR loop, self-check every 3 steps |
-| **ReAct** | Think → Act → Observe → Reflect → Retry loop with max 3 reflect retries per step |
-| **ToolCall** | Structured function-calling agent with ToolSelector scoring and permission gate |
-| **Browser** | Browser-focused agent (browser, search, crawl, terminate) |
-| **DataAnalysis** | Manus + DataVisualization tool for data exploration workflows |
-| **MCP** | Connects to MCP servers (stdio/SSE) and proxies their tools |
-
-**Agent Inheritance:** `BaseAgent → ReActAgent → ToolCallAgent → Manus → DataAnalysisAgent`
-
-### 📡 Event System — Discriminated Unions + EventLog
-
-| Feature | Description |
-|---|---|
-| **17 Event Types** | SystemPrompt, Message, Action, Observation, Condensation, CondensationRequest, AgentError, Token, Interrupt, Pause, ConversationError, StateUpdate, LLMCompletionLog, HookExecution, StreamingDelta, UserRejectObservation, ResumeTranscript |
-| **Discriminated Unions** | Type-safe polymorphism via `kind` literal discriminators for pattern matching |
-| **LLMConvertibleEvent** | Protocol for events that convert to LLM message format with parallel tool-call batching |
-| **File-Backed EventLog** | NDJSON append-only log with O(1) length queries, lazy loading, atomic writes |
-| **Crash Safety** | Temp-file-then-rename strategy; count file updated post-write; `reindex()` recovery |
-| **JSON Serialization** | Full serialize/deserialize with `serialize_batch()` / `deserialize_batch()` for NDJSON |
-
-### 🛡️ Security Defense-in-Depth
-
-Multi-layer security analysis combining pattern matching, policy rails, LLM-based analysis, and ensemble fusion.
-
-| Layer | Class | Description |
-|---|---|---|
-| **Pattern Analyzer** | `PatternSecurityAnalyzer` | 8 regex patterns across 2 corpora (executable + all-field): `rm_rf`, `sudo_rm`, `eval_call`, `subprocess`, `curl_pipe_exec`, `inject_override`, `inject_mode_switch`, `inject_identity` |
-| **Policy Rails** | `PolicyRailSecurityAnalyzer` | 3 structural rails: fetch-to-exec, raw-disk-op, catastrophic-delete. Per-segment evaluation prevents cross-field false positives |
-| **LLM Analyzer** | `LLMSecurityAnalyzer` | AI-powered semantic analysis for subtle threats, configurable call budget |
-| **Ensemble Analyzer** | `EnsembleSecurityAnalyzer` | Combines all analyzers with max-severity fusion, crash isolation, full audit trail |
-| **Confirmation Policy** | `NeverConfirm` / `ConfirmRisky` | Human-in-the-loop confirmation for HIGH/UNKNOWN risk operations |
-| **Cipher Module** | `Cipher` | Fernet-based encryption for data at rest with key rotation support |
-| **Secret Redaction** | `redact()` | Context-aware detection and masking of API keys, tokens, AWS secrets with prefix preservation |
-
-### 🪝 Hooks System
-
-| Event Type | When | Can Block? |
-|---|---|---|
-| `SESSION_START` | Agent session begins | No |
-| `USER_PROMPT_SUBMIT` | Before user prompt enters loop | Yes (DENY/MODIFY) |
-| `PRE_TOOL_USE` | Before tool execution | Yes (DENY) |
-| `POST_TOOL_USE` | After tool returns | No |
-| `STOP` | Agent about to stop | Yes (DENY) |
-| `SESSION_END` | Session terminates | No |
-
-**Built-in Hooks:** `LoggingHook` (logs all events), `SecurityHook` (integrates with security analyzers and blocks dangerous actions), `AuditHook` (JSONL audit trail with secret sanitization).
-
-**Hook Loading:** YAML config with `class_path` imports, Python module auto-discovery from manusclaw home directory.
-
-### 🧠 Context Management — View + Condenser
-
-| Feature | Description |
-|---|---|
-| **View System** | Linear event projection with `manipulation_indices` — safe points for condensation |
-| **View Properties** | `BatchAtomicity`, `ObservationUniqueness`, `ToolCallMatching`, `ToolLoopAtomicity` — structural integrity guarantees |
-| **LLM Summarizing Condenser** | Dedicated condenser LLM generates summaries of removed events; 3 trigger reasons: REQUEST (hard), TOKENS (soft), EVENTS (soft) |
-| **Rolling Window Condenser** | Keeps the N most recent events, drops the rest |
-| **Pipeline Condenser** | Chains multiple condensers with `stop_on_first` short-circuit and aggregated metrics |
-| **Progressive Truncation** | If condenser LLM fails, progressively truncates with retry scaling (5 retries, 0.8x per retry) |
-| **No-op Condenser** | Pass-through for when condensation is disabled |
-
-### 💬 Conversation System
-
-| Feature | Description |
-|---|---|
-| **Local Conversation** | In-process conversation with event log, async support, fork/branch, confirmation mode |
-| **Remote Conversation** | WebSocket-backed conversation for distributed deployments with reconnection + event buffering |
-| **StuckDetector** | 5 detection patterns: repeating action-observation, action-error loops, agent monologue, alternating patterns, context window overflow |
-| **CancellationToken** | Thread-safe cancellation with `raise_if_cancelled()`, timeout support, context manager |
-| **FIFOLock** | Fair, starvation-free lock (sync + async variants) guaranteeing FIFO ordering |
-| **Conversation Factory** | Auto-creates Local or Remote based on configuration |
-
-### ⚡ Parallel Tool Execution
-
-| Feature | Description |
-|---|---|
-| **ResourceLockManager** | Readers-writer locking per resource with deadlock prevention via global acquisition ordering |
-| **Declared Resources** | Each tool declares `READ`/`WRITE` dependencies: `file_resource()`, `terminal_resource()`, `network_resource()` |
-| **ParallelToolExecutor** | Thread-pool concurrent execution with resource conflict serialization |
-| **AsyncParallelToolExecutor** | `asyncio.gather` variant with semaphore for concurrency capping |
-| **Metrics** | Execution time, concurrency level, resource conflicts, per-tool timeout |
-
-### 🧠 LLM Integration — 100+ Providers + Offline + Streaming
-
-#### Cloud Providers
-
-| Provider | Class | Auth |
-|---|---|---|
-| **OpenAI** | Native SDK | `OPENAI_API_KEY` (supports `_2`, `_3` for pool) |
-| **Anthropic** | Native SDK | `ANTHROPIC_API_KEY` |
-| **Google/Gemini** | `google-generativeai` | `GOOGLE_API_KEY` |
-| **Mistral** | `MistralClient` | `MISTRAL_API_KEY` |
-| **AWS Bedrock** | `BedrockClient` (Converse API) | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` |
-| **100+ via litellm** | `LiteLLMClient` | Varies per provider |
-
-#### Offline / Local / Air-Gapped Providers
-
-| Provider | Class | Details |
-|---|---|---|
-| **GGUF** | `GGUFRouter` | llama-cpp-python, fully offline, GPU support (`n_gpu_layers`), tool-call parsing from text |
-| **Ollama** | `OllamaRouter` | Official SDK, local + Ollama Cloud with API key |
-| **LMStudio** | `OpenAICompatRouter` | OpenAI-compatible endpoint at `localhost:1234` |
-| **text-gen-webui** | `OpenAICompatRouter` | OpenAI-compatible endpoint at `localhost:5000` |
-| **HuggingFace** | `HuggingFaceRouter` | Inference API + Spaces + Dedicated Endpoints |
-| **Any OpenAI-compat** | `OpenAICompatRouter` | Generic REST endpoint (Groq, Together, etc.) |
-| **Mock** | `MockLLM` | No API key needed, safe for immediate testing |
-
-#### Pre-Configured Provider TOMLs
-
-| Config File | Service | Type |
-|---|---|---|
-| `ollama.toml` | Ollama (local) | Free / Local |
-| `ollama-cloud.toml` | Ollama Cloud | Paid / API |
-| `openrouter.toml` | OpenRouter (200+ models) | Paid / API |
-| `pollinations.toml` | Pollinations AI | **Free / No key needed** |
-| `7llm.toml` | 7LLM | Paid / API |
-| `opencode.toml` | OpenCode (deepseek-v4-flash-free) | **Free / No key needed** |
-
-#### LLM Infrastructure
-
-| Feature | Description |
-|---|---|
-| **Credential Pool** | Per-provider multi-key rotation with priority ordering, cooldown, and health tracking. Supports `OPENAI_API_KEY_2`, `_3`, etc. |
-| **Cross-Provider Rotator** | `CrossProviderRotator` — unified credential interface across all providers |
-| **Profile Rotation** | `ProfileRotator` — ordered model entries with priority, fallback weights, per-session profile selection, bounded cache |
-| **Fallback Strategy** | Configurable model chains with per-model cooldown, 8 fallback triggers (rate_limit, context_window, timeout, etc.) |
-| **Streaming** | Token-level streaming with `StreamingDeltaEvent`, SSE for web clients, backpressure handling, multi-provider chunk parsing |
-| **Enhanced Retry** | 5 backoff strategies (fixed, linear, exponential, exponential_jitter, decorrelated_jitter), retry budgets, provider-specific error mapping |
-| **Token Budget** | Per-session token tracking with grace call support and cost estimation |
-| **LLM Metrics** | Per-conversation cost tracking, latency percentiles (p50/p95/p99), budget alerts, Prometheus export |
-| **Non-Native Tool Calling** | `NonNativeToolCallingMixin` — emulates function calling for models without native support via prompt engineering + JSON extraction |
-| **Secret Redaction** | Context-aware masking of API keys, Bearer tokens, AWS secrets in prompts and logs |
-
-### 🔐 Secrets Management — Fernet Encryption
-
-| Feature | Description |
-|---|---|
-| **Fernet Encryption** | Symmetric encryption for secrets at rest with `FERNET_TOKEN_PREFIX` identifier |
-| **SecretRegistry** | Named registry with lazy resolution from backing store, namespaces, caching |
-| **File Secrets Store** | Encrypted file-based storage with atomic writes and `0600` permissions |
-| **Secret Sources** | `STATIC` (provided value), `LOOKUP` (fetched from URL), `ENV` (from environment variable) |
-| **API Router** | FastAPI `/secrets` endpoints — never exposes raw values (masked with `***`) |
-| **Key Rotation** | `Cipher` supports key rotation with `add_key()` for seamless rotation |
-
-### 📦 File Storage Backends
-
-| Backend | Use Case | Key Feature |
-|---|---|---|
-| **Local** | Filesystem storage (default) | Atomic writes, sidecar `.meta.json`, streaming |
-| **S3** | AWS S3 / MinIO | Presigned URLs, retry with backoff, async executor |
-| **GCS** | Google Cloud Storage | Signed URLs (v4), retry with backoff, async executor |
-| **In-Memory** | Testing and ephemeral | Full metadata tracking, size limits |
-
-**Factory auto-detection** from `MANUSCLAW_FILE_STORE_BACKEND` env var, config, or explicit parameter.
-
-### 🔀 Git Provider Integrations
-
-| Provider | OAuth | PRs/MRs | Issues | Branches | Files | Suggested Tasks | Webhooks |
-|---|---|---|---|---|---|---|---|
-| **GitHub** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **GitLab** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Azure DevOps** | ✅ | ✅ | ✅ (Work Items) | ✅ | ✅ | ✅ | ✅ |
-| **Bitbucket** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Forgejo** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-
-All providers implement a unified `GitProviderService` interface with both sync and async methods, thread-safety, rate limiting, and exponential backoff.
-
-**Suggested Task Types:** `OPEN_ISSUE`, `FAILING_CHECKS`, `MERGE_CONFLICT`, `UNRESOLVED_COMMENTS`
-
-**Git Provider Router** — URL-based provider detection (10+ URL patterns including self-hosted instances) with service caching.
-
-### 🎯 Issue & PR Resolution
-
-LLM-powered automated resolution for issues, PRs, and merge conflicts.
-
-| Resolution Type | Description |
-|---|---|
-| **Issue Resolution** | Analyze reported issue → generate fix → apply changes → post summary comment |
-| **PR Update** | Process review feedback → update code → respond to comments |
-| **Merge Conflict Resolution** | Detect conflicts → resolve with LLM assistance → push resolution |
-| **Comment Response** | Reply to issue/PR comments with context-aware responses |
-
-**Features:** Thread-safe with per-resolution locking, timeout protection, full audit trail, concurrency semaphore (max 5), Jinja2 prompt templates per provider.
-
-**Webhook Handler:** HMAC-SHA256 signature verification, event deduplication, background processing with retry, provider-specific payload normalization.
-
-### 📋 Project Management — Jira + Linear + Slack
-
-| Integration | Capabilities |
-|---|---|
-| **Jira Cloud + DC** | OAuth/PAT auth, create/update/search issues, JQL search, comments, transitions, ADF to text, webhooks |
-| **Linear** | GraphQL API, OAuth 2.0, teams, issues, comments, suggested tasks, webhooks |
-| **Slack** | Socket Mode + API, slash commands (`/manusclaw`, `/resolve`, `/review`), Block Kit, thread conversations, interactive buttons, file uploads |
-
-### 📊 Observability — OpenTelemetry + Prometheus
-
-| Component | Description |
-|---|---|
-| **OpenTelemetry Tracing** | `@observe` decorator for sync/async functions, context propagation, custom span attributes (model, tokens, tool_name) |
-| **Prometheus Metrics** | Counters, histograms, gauges for LLM calls, tool execution, conversations, tokens, errors |
-| **Health Probes** | Kubernetes-style liveness (`/healthz`) and readiness (`/ready`) with component checkers |
-| **Component Checkers** | `DatabaseHealthChecker`, `LLMHealthChecker`, `SandboxHealthChecker` |
-| **Correlation IDs** | Request-scoped correlation ID propagation across service boundaries, `error_id` for 500 error lookup |
-| **Structured Logging** | JSON-structured logs with context enrichment and sensitive data redaction |
-| **Metrics Export** | Prometheus exposition format, JSON dict format |
-
-**Built-in Metrics:** `llm_calls_total`, `llm_call_duration_seconds`, `tool_calls_total`, `tool_call_duration_seconds`, `conversation_duration_seconds`, `active_conversations`, `token_usage_total`, `error_count_total`
-
-### 📨 13+ Messaging Channels
-
-| Channel | Type | Key Feature |
-|---|---|---|
-| **Telegram** | Bot API | Inline keyboards, file handling, media messages |
-| **Discord** | Bot | Slash commands, embeds, thread support |
-| **Slack** | Bolt SDK | Blocks, modals, events, interactive components |
-| **WhatsApp** | Business API | Media messages, templates, read receipts |
-| **Signal** | CLI | End-to-end encrypted messaging |
-| **Microsoft Teams** | Bot Framework | Adaptive cards, tabs, channel messages |
-| **Matrix** | Protocol | Federation, E2E encryption, rooms |
-| **IRC** | Client | Multi-network, channels, CTCP |
-| **Twitch** | Chat | Stream integration, commands |
-| **Google Chat** | Webhook | Spaces, threads, cards |
-| **WebChat** | Built-in | WebSocket, real-time, canvas integration |
-| **Email** | SMTP/IMAP | Send/receive, Gmail Pub/Sub auto-reply |
-| **Messaging Gateway** | Unified | Multi-adapter routing, agent caching, eviction with cleanup |
-
-### 🎤 Voice System — Wake Word + STT + TTS
-
-| Feature | Description |
-|---|---|
-| **Wake Word Detection** | Pvporcupine or STT-based wake word ("Hey SHS Code") |
-| **Talk Mode** | Continuous mic → STT → agent → TTS conversation loop |
-| **Text-to-Speech** | 3 backends: OpenAI TTS, ElevenLabs, System TTS (espeak/piper) |
-| **Speech-to-Text** | 3 engines: OpenAI Whisper, Google STT, Vosk (fully offline) |
-
-### 🎨 Canvas UI — A2UI Protocol
-
-| Feature | Description |
-|---|---|
-| **A2UI Protocol** | Real-time WebSocket updates from agent to browser with typed component model |
-| **Canvas Server** | Built-in WebSocket server for live rendering |
-| **Canvas Tool** | Agent tool for rendering charts, tables, buttons, text, images, containers |
-| **Chart Types** | Bar, line, scatter, pie, histogram, area, radar |
-| **Component Types** | Text, Image, Button, Table, Chart, Container — composable UI |
-| **Mobile Nodes** | Connect mobile devices as canvas nodes |
-| **Static HTML** | Standalone `canvas.html` for quick deployment |
-
-### 🛠️ 17+ Tools — Intelligent Selector
-
-| # | Tool | Category | Description |
-|---|---|---|---|
-| 1 | **Bash** | Execution | Persistent async shell (Linux/macOS/Windows/Termux). No artificial timeout. Only OS-destroying commands blocked. Atexit cleanup for orphaned processes. |
-| 2 | **PythonExecute** | Execution | Isolated subprocess (2GB memory rlimit on Linux). No default timeout. Full stdout/stderr capture. |
-| 3 | **NodeExecute** | Execution | Execute Node.js/JavaScript in isolated subprocess |
-| 4 | **StrReplaceEditor** | Files | View, create, str_replace, insert, undo_edit — precise file operations |
-| 5 | **BrowserUse** | Web | Playwright browser: navigate, click, type, screenshot, get_text, execute_js, tabs |
-| 6 | **WebSearch** | Web | Multi-engine search: DuckDuckGo → Bing fallback with retry |
-| 7 | **Crawl4AI** | Web | Extract clean content from URLs (crawl4ai or aiohttp fallback) |
-| 8 | **ImageGenerate** | Creative | Generate images via FAL.ai (or mock). Saves to `workspace/images/` |
-| 9 | **DataVisualization** | Analysis | Generate charts (bar, line, scatter, pie, histogram). PNG or HTML with mpld3. |
-| 10 | **Memory** | Knowledge | CRUD for `MEMORY.md` and `USER.md` — persistent context files across sessions |
-| 11 | **Planning** | Planning | Create/update/mark_step/get multi-step execution plans |
-| 12 | **Delegate** | Multi-Agent | Spawn isolated subagent (Manus instance) for independent subtasks |
-| 13 | **AskHuman** | Interaction | Request clarification from user (interactive mode only) |
-| 14 | **PlatformControl** | System | Authenticate and control external platforms: GitHub, Vercel, WordPress, HuggingFace, Netlify, Discord, Telegram, generic REST |
-| 15 | **SkillManager** | Skills | Create/patch/delete/list/get skill files |
-| 16 | **CrossSessionSearch** | Knowledge | FTS5 full-text search across all past sessions |
-| 17 | **Terminate** | Control | Signal task completion |
-
-**Tool Selector** — Confidence-based tool scoring (0.0–1.0) with heuristic keyword matching, optional LLM scoring, failure penalty, recency diversification, and public stats API.
-
-### 📡 SSH Server
-
-| Feature | Description |
-|---|---|
-| **Remote Access** | Full SSH server for remote agent control and task execution |
-| **Shell Integration** | Interactive shell with agent commands via SSH |
-| **Configurable** | Port, host, and authentication via `config.toml` or env vars |
-
-### ⏰ Cron Scheduler
-
-| Feature | Description |
-|---|---|
-| **YAML Persistence** | Cron jobs persisted to YAML with auto-reload |
-| **Webhook Delivery** | Job results delivered via webhooks |
-| **Multi-Platform Output** | Results posted to messaging channels |
-| **Auto-Cleanup** | Agent cleanup after each job execution (no resource leaks) |
-| **Secret Protection** | Webhook secrets redacted in storage, loaded from env var |
-
-### 🧩 Skills Engine
-
-Built-in skills auto-injected based on relevance to the current task:
-
-| Skill | File | Domain |
-|---|---|---|
-| **Coding** | `coding.md` | Software development, debugging, code review |
-| **DevOps** | `devops.md` | CI/CD, Docker, Kubernetes, deployment |
-| **Data Analysis** | `data_analysis.md` | Pandas, statistics, data exploration |
-| **Research** | `research.md` | Web research, summarization, fact-checking |
-| **MLOps** | `mlops.md` | Machine learning pipelines, model training |
-| **GitHub** | `github.md` | Repository management, PR/Issue workflows |
-
-### 🔌 MCP Protocol — Client + Server
-
-| Feature | Description |
-|---|---|
-| **MCP Client** | Connect to MCP servers via stdio or SSE, proxy their tools into the agent |
-| **MCP Server** | Expose manusclaw tools as MCP-compatible server |
-| **Tool Proxying** | MCP tools become native manusclaw tools with full schema conversion |
-| **Auto-Discovery** | Configure MCP servers in `config.toml` with auto-connect |
-
-### 🖥️ Desktop Apps
-
-| App | Platform | Description |
-|---|---|---|
-| **macOS Menubar** | macOS | System tray menubar app via `rumps` |
-| **Windows Hub** | Windows | Desktop hub for managing manusclaw instances |
-| **Mobile Node** | iOS/Android | Connect mobile devices as canvas nodes |
-
-### 💾 Session & Memory System
-
-| Feature | Description |
-|---|---|
-| **SessionDB** | SQLite WAL with FTS5 full-text search, session branching, compression |
-| **Session Resume** | Resume interrupted sessions with `/resume` command |
-| **Session Branching** | Fork sessions with `/branch` for parallel exploration |
-| **Long-Term Memory** | RAG-like persistent memory with FTS5 + LIKE fallback, SQLite WAL |
-| **Short-Term Memory** | Conversation buffer with refresh, snapshot, and restore |
-| **Task Queue** | Persistent SQLite task queue with priority ordering, checkpoint/resume, worker pool, deduplication |
-| **Alembic Migrations** | 7 core tables: conversations, events, sessions, tasks, credentials, secrets, audit_log |
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Python 3.11+
-- At least one LLM API key (or use **free** Pollinations/OpenCode providers — no key needed!)
-- Or run fully **offline** with GGUF/Ollama/HuggingFace — no internet needed!
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/manusagents/manusclaw.git
-cd manusclaw
-
-# Install dependencies
-pip install -e .
-
-# Or install with all enterprise features
-pip install -e ".[all-plus]"
-
-# Configure your API key
-cp config.toml config.toml.local
-# Edit config.toml with your API keys, or set env vars:
-export OPENAI_API_KEY=sk-...
-
-# Run your first task
-python main.py "Create a Python script that generates Fibonacci numbers"
+Behavioral guardrails baked into the loop:
+
+- **Planning phase** — a numbered plan with success criteria is written before any tool call for non-trivial tasks.
+- **Self-check every 3 steps** — the agent lists completed sub-goals, the current sub-goal, and the next concrete tool call.
+- **Code review phase every 3 file edits** — correctness, edge cases, consistency, side effects, test coverage.
+- **Loop detection** — identical tool + args signatures in a window are detected and the strategy is forced to change.
+- **Duplicate nudge / goal-completion gate** — partial progress cannot be summarized as a final answer while DAG steps are pending (applies once real work started; pure Q&A still gets direct answers).
+- **Termination discipline** — `terminate` may only be called when all sub-goals are complete AND verified; the reason must summarize accomplishments, verification results, and output paths.
+
+Role-based teams are available through the multi-agent system (architect, product manager, engineer, QA), and an agent router maps channels/users/topics to different agent configurations.
+
+## Persistent Memory
+
+SHS Code maintains four independent memory/state systems. Each is persisted to disk, each survives restarts, model switches, provider switches, and context compaction, and each is verified by its own test suite (`tests/test_memory_layers.py`).
+
+### Short-Term Memory
+
+SQLite-backed session memory (`workspace/.sessions/shscode.db`): every message, tool call (with args, output, error, attempt, duration), step count, session state, errors and timestamps for the active session. Full-text search over messages is provided by FTS5. This is the conversation context the agent rehydrates when a session resumes.
+
+### Long-Term Memory
+
+SQLite-backed durable memory (`workspace/.memory/long_term.db`) with FTS keyword search and optional vector similarity when a vector library is available (graceful fallback otherwise). It stores durable facts: user preferences, coding preferences, project facts, architecture decisions, recurring instructions, useful task history. The agent stores and recalls via the memory system; recall results are injected into working context.
+
+### Markdown Memory
+
+Human-readable, human-editable Markdown files in the workspace:
+
+- `MEMORY.md` — durable facts and knowledge the agent should always recall
+- `USER.md` — user profile and preferences
+
+The `memory` tool reads and writes them (`read_memory`, `write_memory`, `append_memory`, `read_user`, `write_user`). Being plain Markdown, they can be inspected and edited directly, put under version control, and shared across projects. They are separate from the SQLite layers: Markdown memory is for instructions and durable knowledge; SQLite long-term memory is for searchable episodic facts.
+
+### Agent Work Notebook
+
+The task journal (`workspace/.task_queue/journal.db`) is the agent's operational "what I did" record — deliberately lightweight and structured, not a transcript:
+
+- what was inspected and changed (every tool call, success and failure)
+- files modified (path, operation, timestamp — deduplicated, capped)
+- commands and tests executed (with status)
+- decisions made (with rationale)
+- errors encountered and fixes applied (recovery actions)
+- current position (step count, current step, phase, progress: completed / in-progress / pending)
+
+The purpose: after context compaction, a model switch, an interruption, or a long-running task, the agent reads its own notes and knows exactly what it already did — instead of redoing work. Context summaries of recent steps are injected back into the conversation every few steps, and `/resume` restores the full picture from the journal.
+
+## Persistent Work State
+
+Beyond memory, SHS Code's work state is persistent and first-class:
+
+- **Task journal** — every task row holds goal, status, progress, plan (DAG steps), file changes, commands, decisions, test results, recovery actions, and verification results.
+- **Task queue** — background task execution with worker pool (multi-worker SQLite with correct thread ownership).
+- **Checkpoints** — atomic JSON snapshots after every meaningful operation (see below).
+- **Interruption handling** — at startup, tasks left in `running` by a crash/kill are marked `interrupted` (never silently restarted, never lost).
+- **State resolution authority** — on resume, the real filesystem/Git state is authoritative; the journal is a record, not a source of truth. If the disk says otherwise, the agent re-inspects.
+
+## Checkpoints & Recovery
+
+```
+START → WORK → CHECKPOINT → INTERRUPT → RESTART → RECOVER → INSPECT REAL STATE → CONTINUE → COMPLETE
 ```
 
-### Free / No API Key Required
+- A checkpoint (goal, step count, conversation messages, provider/model, cwd) is written atomically after every tool call and step.
+- Ctrl+C during a run interrupts cleanly — the task is checkpointed and marked interrupted; at the prompt, Ctrl+C exits cleanly.
+- On next launch, SHS Code detects interrupted tasks and offers `/resume`: the checkpoint restores conversation state, the journal restores progress, and the filesystem/Git state is inspected before continuing.
+- Crash recovery, stale-session recovery, and pause/resume are covered by dedicated regression tests (`tests/test_journal_recovery.py`, `tests/test_stabilization_fixes.py`).
+- `/rollback [task]` restores agent-changed files from snapshot stores; SmartRollback integrates with Git state.
 
-```bash
-# Use Pollinations (free, no key)
-# Set in config.toml: provider = "pollinations"
-# Or use OpenCode (free deepseek-v4-flash)
-# Set in config.toml: provider = "opencode"
+## Model & Provider System
+
+The LLM layer is a multi-provider router (`app/llm/`):
+
+| Built-in providers | Notes |
+|---|---|
+| `openai`, `anthropic`, `google`, `mistral`, `bedrock` | native SDK clients |
+| `universal` | any OpenAI-compatible endpoint (Groq, OpenRouter, Together, NIM, vLLM, LM Studio, …) |
+| `ollama` | local models |
+| `gguf` | offline GGUF router |
+| `huggingface` | HF inference |
+
+On top of that:
+
+- **Provider registry** — unlimited user-defined providers, persisted at `~/.shscode/providers.json`, each with its own API type, base URL, key, default model, headers, timeout, retries, and custom RPM.
+- **Credential pools** — multiple API keys per provider with rotation; backends that reject per-call keys are handled correctly.
+- **Provider health** — latency/token/cost tracking with 🟢🟡🔴 states, cooldown, and recommendations, wired into the retry loop.
+- **Fallback & failover** — configurable triggers (rate limit, service unavailable, context window, quota) route to fallback models automatically; profile rotation rotates configured profiles.
+- **Live switching** — `/model` and `/provider` rebuild the backend in place. Message history lives in agent memory, never in the LLM client, so switching can never destroy conversation state (regression-tested).
+- **Token tracking** — per-request and cumulative budgets; `/usage` shows live stats.
+- **Streaming, secret redaction, adaptive timeouts** — explicit user timeouts are honored exactly; adaptive defaults only apply when none is configured.
+
+## Rate-Limit Handling
+
+A true rolling-window limiter paces requests per provider/endpoint/model — never a naive "sleep 60s after each request".
+
+Resolution order for the RPM limit:
+
+1. **per-provider custom RPM** (provider registry entry)
+2. **global custom RPM** (`[llm.rate_limit].rpm` when non-zero)
+3. **provider default** — NVIDIA NIM endpoints: 40 RPM
+4. **no limiter at all** — providers without a known default are not throttled
+
+Key behaviors:
+
+- **No artificial delay below the limit.** The limiter only engages when the rolling window is actually full; normal request flow is untouched.
+- **Burst-friendly.** Requests fire back-to-back until capacity is reached; only then does the next request wait until the oldest timestamp leaves the 60-second window.
+- **Server-side 429 handling.** `Retry-After` headers block until the stated moment — honored even for providers with no configured limit.
+- **State preservation.** A rate-limit wait is a pure sleep: task context, conversation history and tool results live outside the LLM client and survive every wait (`rate_limit_wait` / `rate_limit_resume` events are emitted so the UI shows what is happening).
+- **Recovery.** When the window slides or the block expires, work continues automatically from preserved state.
+
+Configuration (`config.toml`):
+
+```toml
+[llm.rate_limit]
+enabled = true
+rpm     = 0   # 0 = automatic: provider default (NIM 40), others unlimited
 ```
 
-### Fully Offline (Air-Gapped)
+Per-provider custom limit:
 
-```bash
-# GGUF — download any .gguf model and run with zero internet
-# Set in config.toml:
-#   provider = "gguf"
-#   model_path = "/path/to/model.gguf"
-#   n_gpu_layers = 0  # set >0 for GPU acceleration
-
-# Ollama — run ollama serve, then:
-#   provider = "ollama"
-#   model = "llama3"
-
-# HuggingFace — use Inference API, Spaces, or local models
-#   provider = "huggingface"
-#   model = "meta-llama/Llama-3-8B"
+```
+/provider add my-nim openai-compat https://integrate.api.nvidia.com/v1 meta/llama-3.1-70b-instruct nvapi-... 30
 ```
 
-### One-Line Install (Linux/macOS)
+## Tools
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/manusagents/manusclaw/main/install.sh | bash
+17 tools are wired into the main agent (22 tool modules ship in total):
+
+| Tool | Purpose |
+|---|---|
+| `python_execute` / `node_execute` | isolated subprocess execution |
+| `bash` | persistent shell with full system access |
+| `str_replace_editor` | view / create / edit any file |
+| `browser_use` | Playwright browser automation (navigate, click, screenshot) |
+| `web_search` | multi-engine search (DuckDuckGo/Bing/Google) with fallback |
+| `crawl` | clean-text extraction from any URL |
+| `image_generate` | text-to-image |
+| `memory` | read/write Markdown memory files |
+| `skill_manager` | create/patch/delete/list skills |
+| `cross_session_search` | full-text search across all past sessions |
+| `delegate` | spawn isolated subagents for parallel subtasks |
+| `ask_human` | request clarification (blocks task, records why) |
+| `code_search` | semantic / symbol / regex / import / usages search over the indexed project |
+| `project_intel` | project summary, architecture map, entry points, env, Git state |
+| `task_dag` | read/update the persisted plan; dependency-enforced completion |
+| `verify` | project-aware build/test verification |
+| `terminate` | signal verified task completion |
+
+Every tool has a JSON-schema definition, argument validation, structured results, error surfaces, and its execution is journaled. Read-only tools are batched in parallel when safe.
+
+## Skills
+
+29 builtin skills ship in `app/skills/builtin/` covering languages and workflows: Python, JavaScript, TypeScript, Java, Kotlin, C, C++, C#, PHP, SQL, web/API/database/security engineering, DevOps, MLOps, debugging, testing, documentation, Git, GitHub, Linux, UI/UX, browser automation, automation, data analysis, research, android development.
+
+Skills are loaded at four levels: `builtin`, `user` (`~/.shscode/skills/`), `project` (`.shscode/skills/`), and `installed` (`~/.shscode/skills/installed/`). A skill is a Markdown instruction file with optional metadata; the skill engine selects relevant skills for a task and injects their instructions into the agent context. Users can create, install, enable, disable and remove skills (`/skill`), with state persisted.
+
+## MCP
+
+Model Context Protocol support on both sides:
+
+- **Client** — connect to MCP servers (stdio / SSE), discover their tools, and use them as native agent tools; resources and prompts are discovered where the server supports them. Multiple servers are supported; configuration lives in `config.toml`; auto-discovery from the SHS Code home directory.
+- **Server** — SHS Code can expose its own tools via MCP with optional API-key authentication.
+
+The full path is real: agent → MCP server → tool discovery → tool invocation → result into task state → agent continues. Connection failures, malformed responses, and unavailable servers are handled gracefully with recovery.
+
+## Git & GitHub
+
+- **Git intelligence** (`/git`) — status, diff, log, branches, remotes, staged/uncommitted awareness; repository-state detection feeds resume decisions (the filesystem/Git state is authoritative over journaled claims).
+- **Forge connectors** — GitHub, GitLab, Azure DevOps, Bitbucket, and Forgejo providers (`/connectors`): tokens are stored per provider and feed the git-provider tools for repository inspection, issue/PR retrieval and creation where supported.
+- **Workflow integration** — a realistic flow is first-class: inspect repository → understand issue → inspect relevant files (via `code_search`/`project_intel`) → implement change → run tests (`verify`) → commit → push/PR where supported. GitHub operations are connected to the agent execution system, not isolated utilities. Failures never destroy task state.
+
+## Browser / Web
+
+- `browser_use` — Playwright-driven navigation, interaction, screenshots
+- `web_search` — multi-engine search with fallback
+- `crawl` — clean text extraction from URLs
+- `image_generate` — image generation
+
+Web research results enter the agent's working state like any tool result and are journaled. Timeouts, redirects, unavailable pages and network failures are handled with retries and clear error surfaces.
+
+## Multi-Agent System
+
+- **Orchestrator** (`app/multi_agent.py`, `/multi-agent`) — DAG-based team execution with the role agents: Architect, Product Manager, Engineer, QA.
+- **`delegate` tool** — the main agent spawns isolated subagents (own toolset, own session) for parallelizable subtasks; results return to the parent task state.
+- **Agent router** — route by channel/user/topic to different agent configurations; falls back to the default SHSCode agent.
+- Task delegation, result aggregation, failure propagation (one agent's failure never becomes another's success), and shared persistent state are covered by tests.
+
+## Server & API
+
+`shscode-server` (or `python run_server.py`) starts a FastAPI server:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /healthz` | liveness |
+| `POST /run` | async agent run (streams via activity events) |
+| `POST /run/sync` | synchronous one-shot run |
+| `GET /sessions` | session registry — accurate state (running/finished/failed/cancelled/interrupted/blocked), steps, messages, timestamps |
+| `GET /sessions/{id}/messages` / `tool_calls` | full message and tool-call history |
+| `GET /tools` | tool catalog |
+| `WS /ws/{id}` | live event stream per session |
+| `POST /multi-agent` | orchestrate a team run |
+| `GET /chat`, `GET /canvas` | built-in web UIs |
+| `WS /ws/chat/{id}`, `WS /ws/canvas/{id}` | web UI streams |
+
+Webhooks (registered via API or `shscode-webhook`) trigger agent runs on external events, with signature verification. Optional API-key authentication (`SHSCODE_API_KEY`) and CORS restriction (`SHSCODE_ALLOWED_ORIGINS`). The session registry is synchronized with the real agent runtime and the session database — a session is never reported as running once its task has completed (regression-tested).
+
+## CLI
+
+`SHSCode` / `shscode` starts the interactive shell (one-shot: `shscode "task"`).
+
+47 slash commands, all backed by real functionality:
+
+```
+Session/task   /tasks /task /resume /pause /stop /continue /bg /sessions
+               /branch /new /checkpoint /history /context /compress /undo /retry
+Model/provider /model /models /providers /provider /usage /profile /mode
+Project        /project /env /search /files /git /verify /plan /rollback
+Capabilities   /tools /skills /skill /mcp /channels /connectors /browser
+Diagnostics    /status /doctor /log /debug /config /version /help /clear /exit
 ```
 
-### Windows
+The shell features a live activity feed (thinking / tool calls / rate-limit waits / checkpoints), skins, plain-`exit`, and Ctrl+C-safe interruption. Additional console commands: `shscode-server`, `shscode-cron`, `shscode-multi`, `shscode-sessions`, `shscode-channels`, `shscode-webhook`.
 
-```powershell
-.\install.ps1
-```
+## Channels & Connectors
 
----
+13 messaging channels connect to the same underlying task/memory/state system (a task started from any channel uses the same intelligence and persistence — no isolated per-channel state):
 
-## ⚙️ Configuration
+Telegram, Slack, Discord, Matrix, IRC, WhatsApp, Email, Google Chat, Microsoft Teams, Signal, Twitch, WebChat, plus the built-in web chat.
 
-SHS Code uses `config.toml` for all configuration. Key sections:
+The messaging gateway maps inbound messages to sessions, handles commands, streams progress, and survives reconnects, duplicate and malformed messages. Slack integration includes slash commands (`/shscode`, `/resolve`, `/review`) with Block Kit UI.
+
+**Connectors** (`/connectors`) store per-forge credentials (GitHub, GitLab, Azure DevOps, Bitbucket, Forgejo) that feed the Git provider tools.
+
+## Sandboxing
+
+Three sandbox backends (`[sandbox]` in `config.toml`):
+
+- `local` — the openshell executor (default)
+- `docker` — containerized command execution
+- `ssh` — remote execution over SSH
+
+Each handles initialization, execution, timeouts, cleanup, failure reporting and task recovery. An SSH server mode is also available for remote gateway control with a restricted shell and public-key auth.
+
+## Configuration
+
+Layered, with sensible defaults:
+
+1. Environment variables (`SHSCODE_*`, `.env`)
+2. Profile dir: `~/.shscode/profiles/<name>/.env` + `config.yaml`
+3. Project `config.toml`
 
 ```toml
 [llm]
-model = "gpt-4o"
-provider = "openai"                   # openai | anthropic | google | mistral | bedrock | ollama | gguf | huggingface | litellm | openrouter | pollinations | opencode | 7llm | mock
-api_key = ""                          # Or set OPENAI_API_KEY env var
-max_tokens = 4096
-temperature = 0.7
+provider = "openai"        # or anthropic/google/mistral/bedrock/universal/ollama/gguf/huggingface
+model    = "gpt-4o"
+# base_url = "https://api.groq.com/openai/v1"   # universal provider
+# api_key  = "sk-..."                            # or env: OPENAI_API_KEY / LLM_API_KEY
 
-[llm.streaming]
+[llm.rate_limit]
 enabled = true
-buffer_size = 4096
+rpm     = 0                # 0 = provider default (NIM 40), others unlimited
 
-[llm.fallback]
-enabled = false
-chain = ["gpt-4o", "claude-3-5-sonnet-20241022", "gemini-2.0-flash"]
+[mcp]                      # MCP servers
+[[mcp.servers]]
+name    = "filesystem"
+command = "npx"
+args    = ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
 
-[agent]
-max_iterations = 50
-mode = "confirm"                      # autonomous | confirm | restricted
-
-[security]
-enabled = true
-analyzers = ["pattern", "rails"]      # pattern | rails | llm | ensemble
-confirmation_threshold = "medium"      # low | medium | high
-
-[hooks]
-enabled = true
-auto_load = true
-timeout_s = 30
-
-[context]
-max_events = 200
-max_tokens = 128000
-condenser_type = "rolling"            # rolling | llm_summarizing | noop
-
-[conversation]
-max_iterations = 30
-confirmation_mode = "confirm_risky"   # never_confirm | confirm_risky
-stuck_detection = true
-
-[observability]
-tracing = false
-metrics = true
-health_probes = true
-
-[secrets]
-backend = "file"                      # file | env
-encryption_enabled = true
-
-[file_store]
-backend = "local"                     # local | s3 | gcs | memory
-
-[git_providers]
-default_provider = "github"           # github | gitlab | azure_devops | bitbucket | forgejo
-
-[integrations]
-webhooks_enabled = true
-jinja_templates_dir = ""
-
-[parallel_executor]
-max_workers = 4
-timeout_s = 300
-
-[migrations]
-enabled = true
-auto_run = false
-
-[sandbox]
-backend = "docker"                    # docker | ssh | openshell
-
-[ssh]
-host = "0.0.0.0"
-port = 2222
-
-[voice]
-wake_word = "hey manusclaw"
-stt_engine = "openai"                 # openai | google | vosk (offline)
-tts_engine = "openai"                 # openai | elevenlabs | system
+[git_providers]            # forge tokens
+github_token = "ghp_..."
 ```
 
-See `config.toml` for the full configuration reference with all options and defaults.
+Key environment variables: `SHSCODE_HOME` (default `~/.shscode`), `SHSCODE_WORKSPACE`, `SHSCODE_PROFILE`, `SHSCODE_API_KEY` (server auth), `SHSCODE_CIPHER_KEY` (secrets encryption), `SHSCODE_SSH_*`. Full reference in `docs/CONFIG.md`.
 
----
+**Upgrade note:** installations from before the SHS Code rename are detected automatically — legacy `MANUSCLAW_*` environment variables, the `~/.manusclaw` home directory, and legacy session databases keep working without any action.
 
-## 🐳 Docker Deployment
+## Installation
 
-### Build
+**Requirements:** Python 3.11+ (optional: Node.js for `node_execute` and MCP servers; Docker for the docker sandbox; Playwright for browser automation).
 
 ```bash
-docker build -t manusclaw:latest .
+# one-shot installer (venv + deps + SHSCode command)
+curl -fsSL https://raw.githubusercontent.com/shslab-org/SHS-Code/main/install.sh | bash
+
+# or from source
+git clone https://github.com/shslab-org/SHS-Code.git && cd SHS-Code
+pip install -e .
+SHSCode
 ```
 
-### Run CLI Agent
+Docker:
 
 ```bash
-docker compose up
-
-# One-shot task
-docker compose run --rm manusclaw "Your task here"
+docker build -t shscode:latest .
+docker compose up          # interactive
+docker compose run --rm shscode "Your task here"
 ```
 
-### Run Server Mode
+Platform extras: `pip install -e ".[voice]"` (wake word + TTS), `".[ssh]"`, `".[gmail]"`, `".[matrix]"`, `".[companion]"`, `".[s3]"`, `".[gcs]"`, or `".[all-plus]"`. Windows: `install.ps1`. Termux: `setup-termux.sh`.
+
+## Usage
 
 ```bash
-docker compose --profile server up -d
+# interactive shell
+SHSCode
+
+# one-shot task
+shscode "write a Python script that dedupes CSV rows and explain it"
+
+# pick a model/provider live
+> /model meta/llama-3.1-70b-instruct
+> /provider universal
+> /status
+
+# background + resume
+> /bg run the full test suite and fix failures
+> /tasks
+> /resume
+
+# health
+> /doctor
 ```
 
-### Run Multi-Agent Pipeline
+## Examples
+
+```text
+> Fix the failing tests in tests/test_auth.py
+  [plans] 1. run pytest to see failures  2. read the test + implementation
+          3. locate the bug  4. fix  5. re-run until green  6. verify
+  ...
+
+> Explore this codebase and explain how authentication works
+  [uses project_intel + code_search → structured answer, no files changed]
+
+> Add a /health endpoint to the FastAPI app in app/server, with a test
+  [edits files → runs pytest via verify → journals file changes → reviews
+   its own diff after 3 edits → terminates with verification results]
+
+> What did you do in the last task?
+> [reads work notebook] Inspected app/auth.py, changed 2 files, ran
+  pytest (527 passed), decided rolling-window over fixed sleep...
+```
+
+Long-running and multi-file tasks checkpoint after every step; interrupt any time (`Ctrl+C`) and `/resume` later — no work is redone (the agent re-reads its journal and re-verifies the real state).
+
+## Architecture
+
+```text
+app/
+├── agent/          SHSCode agent, base/ReAct/tool-call agents, roles, router,
+│                   identity guard
+├── cli.py          interactive shell + 47 slash commands
+├── llm/            provider router, rate limiter, credential pool, retry,
+│                   fallback, health, streaming, token tracking
+├── memory/         long-term SQLite memory
+├── db/             session DB (short-term memory)
+├── state.py        task journal + checkpoints + state store
+├── task_queue.py   background worker pool
+├── intelligence/   AST indexer, semantic/structural search, profiles
+├── planner.py      LLM + heuristic planners, task DAG
+├── tools (tool/)   22 tool modules
+├── skills/         skill engine + 29 builtin skills
+├── mcp/            MCP client + server
+├── git_intel.py    Git intelligence
+├── git_providers/  GitHub/GitLab/Azure/Bitbucket/Forgejo
+├── connectors.py   credential connector store
+├── messaging/      13 channels + gateway
+├── server/         FastAPI server, webhooks, web chat + canvas
+├── sandbox/        local / docker / ssh executors
+├── security/       secrets, cipher, security ensemble, identity guard
+├── observability/  structured logging, tracing, health, correlation
+├── compaction.py   structured context compaction
+├── multi_agent.py  orchestrator + role teams
+├── automation/     gmail watch, email tool
+├── cron.py         scheduled tasks
+├── desktop/        desktop companions (macOS/Windows/mobile)
+└── flow/, nodes/, events/, hooks/, conversation/, context/ …
+```
+
+Detailed docs live in `docs/` (ARCHITECTURE, CONFIG, FEATURES, LOGGER, PROVIDERS).
+
+## Testing
 
 ```bash
-docker compose --profile multi up
+python -m pytest tests/ -q        # 527 passed, 2 skipped
 ```
 
-### Docker Compose Services
+The suite covers: the agent loop, rate limiting (rolling window, 429 recovery, precedence), model/provider switching with state preservation, interruption and crash recovery, journal/checkpoint behavior, all four memory layers, session registry accuracy, webhooks, channels, SSH, sandbox, skills, tools, intelligence indexing, planner/DAG, verification, and end-to-end multi-step workloads.
 
-| Service | Profile | Description |
-|---|---|---|
-| `manusclaw` | default | Interactive CLI agent |
-| `server` | server | FastAPI + WebSocket server on port 8765 |
-| `multi-agent` | multi | Multi-agent pipeline runner |
-
-### Environment Variables
+## Development
 
 ```bash
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-GOOGLE_API_KEY=AI...
-MISTRAL_API_KEY=...
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-MANUSCLAW_ALLOWED_ORIGINS=https://yourdomain.com
+git clone https://github.com/shslab-org/SHS-Code.git
+cd SHS-Code
+pip install -e ".[all-plus]"
+python -m pytest tests/ -q
+python main.py            # dev entry
 ```
 
-### Health Checks
+Core development principles (enforced across the codebase):
 
-```bash
-curl http://localhost:8765/healthz   # Liveness probe
-curl http://localhost:8765/ready     # Readiness probe (checks DB, LLM, sandbox)
-```
+1. Never rebuild from scratch when a working implementation can be evolved.
+2. Fix root causes; never hide errors to make tests pass.
+3. The LLM is a replaceable reasoning engine — persistent SHS Code state must survive model, provider, rate-limit, network and process failures.
+4. The real filesystem/Git state is authoritative on resume.
+5. Every bug fix ships with a regression test.
+6. Never mark incomplete work complete.
 
----
+## Contributing
 
-## 📟 Entry Points
+Issues and pull requests are welcome at [github.com/shslab-org/SHS-Code](https://github.com/shslab-org/SHS-Code). Keep changes aligned with the principles above; add regression tests for any behavior change; run the full suite before submitting. See `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`.
 
-SHS Code installs several CLI commands:
+## License
 
-| Command | Description |
-|---|---|
-| `manusclaw` | Interactive CLI agent with slash commands |
-| `shscode-server` | FastAPI + WebSocket server |
-| `shscode-cron` | Cron scheduler daemon |
-| `shscode-multi` | Multi-agent pipeline runner |
-| `shscode-sessions` | Session management tool |
-
-### CLI Slash Commands
-
-| Command | Description |
-|---|---|
-| `/model <name>` | Switch LLM model |
-| `/skills` | List available skills |
-| `/tools` | List available tools |
-| `/memory` | Show memory contents |
-| `/compress` | Compress conversation context |
-| `/new` | Start new session |
-| `/resume <id>` | Resume interrupted session |
-| `/branch` | Fork current session |
-| `/tasks` | Show background task queue |
-| `/bg <task>` | Run task in background |
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how to get started:
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Write** your code with tests
-4. **Run** the test suite (`pytest tests/`)
-5. **Submit** a pull request
-
-### Development Setup
-
-```bash
-# Install with dev dependencies
-pip install -e ".[all]"
-
-# Run tests
-pytest tests/ -v
-
-# Run linting
-ruff check app/
-```
-
-### Code Style
-
-- Python 3.11+ with type hints throughout
-- Pydantic v2 models for all data structures (`frozen=True` where appropriate)
-- Thread-safe by default (locks on all shared state, `RLock` for reentrant access)
-- Docstrings on every public class and function
-- Crash-proof: atomic writes, atexit cleanup, proper resource management
-
----
-
-## 📜 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-**SHS Code v5.1.1** — Built by [The-JDdev (SHS Lab)](https://github.com/The-JDdev)
-
-</div>
+Modified MIT License — see `LICENSE`. Copyright (c) 2025-2026 SHS Lab (Sazzad Hussain Shobuj).
