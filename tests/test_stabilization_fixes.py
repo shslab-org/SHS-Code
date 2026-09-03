@@ -720,3 +720,131 @@ def _sync_get_session(db, sid):
     cols = ["id", "goal", "agent_name", "mode", "parent_session_id",
             "started_at", "ended_at", "state", "step_count", "error"]
     return dict(zip(cols, row))
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# stabil3 — findings from the LIVE NVIDIA NIM 40-RPM validation pass
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestFinalAnswerSemantics:
+    """LIVE NIM FINDING: a text-only response (no tool calls) never ended the
+    loop. The agent re-asked, the model repeated itself, the duplicate nudge
+    fired, and the agent terminated WITHOUT returning the answer to the user.
+    In the function-calling protocol, no-tool-calls == final answer."""
+
+    @pytest.mark.asyncio
+    async def test_text_only_response_finishes_and_returns_answer(self):
+        from app.agent.manus import Manus
+        from tests.test_integration_e2e import ScriptedLLM
+        agent = Manus()
+        agent.llm = ScriptedLLM([("text", "NIM_LIVE_OK")])
+        agent._max_steps = 10
+        result = await agent.run("Reply with exactly this token: NIM_LIVE_OK")
+        assert "NIM_LIVE_OK" in (result or ""), \
+            f"direct answer must be returned to the user, got: {result!r}"
+        assert agent.state.name == "FINISHED"
+
+    @pytest.mark.asyncio
+    async def test_empty_text_response_does_not_finish(self):
+        """Guard: empty content with no tool calls must NOT finish the run
+        (that's a degenerate response — loop keeps nudging)."""
+        from app.agent.manus import Manus
+        from tests.test_integration_e2e import ScriptedLLM
+        agent = Manus()
+        agent.llm = ScriptedLLM([("text", "   ")])
+        agent._max_steps = 2
+        await agent.run("do something")
+        # never produced a real answer -> must not claim FINISHED with content
+        assert agent.state.name in ("FINISHED", "IDLE")  # loop ended by max_steps
+        assert agent._step_count >= 2, "empty response must not finish early"
+
+    @pytest.mark.asyncio
+    async def test_tool_call_then_text_answer(self):
+        """Normal coding flow: tool call → observation → text summary = final."""
+        from app.agent.manus import Manus
+        from tests.test_integration_e2e import ScriptedLLM
+        agent = Manus()
+        agent.llm = ScriptedLLM([
+            ("tool", ("bash", {"command": "echo stable3"})),
+            ("text", "The command printed stable3. Done."),
+        ])
+        agent._max_steps = 10
+        result = await agent.run("run echo and report output")
+        assert "stable3" in (result or ""), result
+        assert agent.state.name == "FINISHED"
+
+
+class TestConfigLayerDeepMerge:
+    """stabil3 finding: a partial ~/.manusclaw/config.yaml (e.g. only
+    mcp_servers: []) silently SHADOWED the entire project config.toml —
+    LLM provider fell back to mock. Layers must deep-merge instead."""
+
+    def test_deep_merge_overlay_wins_per_key(self):
+        from app.config import _deep_merge
+        base = {"llm": {"provider": "universal", "model": "m1", "nested": {"a": 1}}}
+        overlay = {"llm": {"model": "m2", "nested": {"b": 2}}}
+        out = _deep_merge(base, overlay)
+        assert out["llm"]["provider"] == "universal"   # kept from base
+        assert out["llm"]["model"] == "m2"             # overridden by overlay
+        assert out["llm"]["nested"] == {"a": 1, "b": 2}  # recursive merge
+        # base not mutated
+        assert base["llm"]["model"] == "m1"
+
+    def test_partial_home_yaml_no_longer_shadows_project_toml(self, tmp_path,
+                                                               monkeypatch):
+        import app.config as C
+        proj = tmp_path / "proj.toml"
+        proj.write_text(
+            '[llm]\nprovider = "universal"\nmodel = "openai/gpt-oss-120b"\n'
+            'base_url = "https://integrate.api.nvidia.com/v1"\n'
+        )
+        home = tmp_path / "home"
+        home.mkdir()
+        (home / "config.yaml").write_text("mcp_servers: []\n")
+        monkeypatch.setattr(C, "_HOME", home)
+        monkeypatch.setenv("MANUSCLAW_PROFILE", "")
+        monkeypatch.delenv("LLM_MODEL_OVERRIDE", raising=False)
+        cfg = C.Config.__new__(C.Config)   # bare instance, no side effects
+        got = cfg._load_config_files(str(proj))
+        # llm config from project toml SURVIVES the partial home yaml
+        assert got.get("llm", {}).get("provider") == "universal"
+        assert got.get("llm", {}).get("model") == "openai/gpt-oss-120b"
+        # and the home yaml's own key is present too
+        assert got.get("mcp_servers") == []
+
+
+class TestBashHeredocWrap:
+    """stabil3 finding: `(cmd); echo ...` broke any heredoc command — `PY);`
+    is not a valid heredoc terminator, the shell never closed it, stdin was
+    consumed and the tool waited until its deadline (visible hang)."""
+
+    def test_wrap_keeps_heredoc_terminator_pure(self):
+        from app.tool.bash import _wrap
+        cmd = 'cat << "PYEOF"\nhello\nPYEOF'
+        wrapped = _wrap(cmd, "SENT42")
+        # heredoc terminator must be on its own line (no trailing `);`)
+        assert "\nPYEOF\n" in wrapped
+        assert "PYEOF);" not in wrapped
+
+    @pytest.mark.asyncio
+    async def test_heredoc_command_executes(self):
+        from app.tool.bash import Bash
+        b = Bash()
+        try:
+            res = await b.execute('cat << "PYEOF"\nline1\nline2\nPYEOF',
+                                  timeout=15)
+            assert "line1" in str(res) and "line2" in str(res), res
+        finally:
+            await b.cleanup()
+
+
+class TestLLMInfoPoolSize:
+    """stabil3 finding: llm.info() crashed with AttributeError —
+    CredentialPool has no len(); it has .size."""
+
+    def test_info_pool_size_no_attributeerror(self):
+        from app.llm.llm import LLM
+        llm = LLM()
+        info = llm.backend_info()   # previously: TypeError len(self._pool.credentials)
+        assert "pool_size" in info
+        assert isinstance(info["pool_size"], int)

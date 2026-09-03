@@ -274,7 +274,10 @@ class TestEndToEndSuite:
         agent_a.state = type(agent_a.state).IDLE
         agent_a._step_count = 0
         agent_a.llm = ScriptedLLM([
-            ("text", "Continuing from existing task state — verifying work"),
+            # NOTE: a text-only response is now a FINAL answer (final-answer
+            # semantics fix) — to keep "Model B continues working" semantics,
+            # use a read-only tool step before finishing.
+            ("tool", ("code_search", {"mode": "symbol", "query": "add"})),
             ("done", "model B finished the task"),
         ])
         result = asyncio.run(agent_a.run("continue: verify and finish"))
@@ -367,7 +370,8 @@ class TestEndToEndSuite:
                 ("tool", ("str_replace_editor", {
                     "command": "create", "path": "calc/new.py",
                     "file_text": "x = 1\n"})),
-            ] + [("text", f"working {i}") for i in range(500)])
+            ] + [("tool", ("code_search", {"mode": "symbol", "query": "add"}))
+                 for _ in range(500)])
             agent.llm = slow
             agent._max_steps = 100
             task = asyncio.create_task(agent.run("long task"))
@@ -476,7 +480,8 @@ class TestCrashRecovery:
                     "command": "create", "path": "calc/partial.py",
                     "file_text": "y = 2\n"})),
                 ("tool", ("code_search", {"mode": "symbol", "query": "add"})),
-            ] + [("text", f"mid work {i}") for i in range(500)])
+            ] + [("tool", ("code_search", {"mode": "symbol", "query": "add"}))
+                 for _ in range(500)])
             agent._max_steps = 50
             task = asyncio.create_task(agent.run("task that will crash"))
             await asyncio.sleep(0.8)

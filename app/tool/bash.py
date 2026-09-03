@@ -69,7 +69,17 @@ def _wrap(command: str, sentinel: str) -> str:
             f"{_exit_cmd()}\n"
             f"{_sentinel_cmd(sentinel)}\n"
         )
-    return f"({command}); {_exit_cmd()}; {_sentinel_cmd(sentinel)}\n"
+    # SHS Code FIX (heredoc hang): the old one-liner `(cmd); echo ...` broke
+    # ANY command containing a heredoc — `PY);` is not a valid heredoc
+    # terminator, so the shell never closed it, consumed the rest of stdin
+    # and the tool waited until its deadline. Newline-separated lines keep
+    # the subshell isolation (cd does not leak) AND keep heredoc/multiline
+    # terminators pure.
+    return (
+        f"(\n{command}\n)\n"
+        f"{_exit_cmd()}\n"
+        f"{_sentinel_cmd(sentinel)}\n"
+    )
 
 
 # ---------------------------------------------------------------------------

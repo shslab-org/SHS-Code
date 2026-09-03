@@ -270,6 +270,17 @@ class AppConfig(BaseModel):
         return Config.get()._data
 
 
+def _deep_merge(base: dict, overlay: dict) -> dict:
+    """Recursively merge ``overlay`` ONTO ``base`` (overlay wins per-key)."""
+    out = dict(base)
+    for k, v in overlay.items():
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = _deep_merge(out[k], v)
+        else:
+            out[k] = v
+    return out
+
+
 class Config:
     """
     Thread-safe singleton config loader with named profile support.
@@ -461,29 +472,45 @@ class Config:
             pass
 
     def _load_config_files(self, legacy_path: str) -> dict:
+        """Load and MERGE all config layers.
+
+        SHS Code FIX (config shadowing): the old loader returned the FIRST
+        existing file. A partial ``~/.manusclaw/config.yaml`` (e.g. written
+        by the MCP manager containing only ``mcp_servers: []``) silently
+        shadowed the ENTIRE project ``config.toml`` — the LLM provider
+        quietly fell back to mock. Layers are now deep-merged, lowest
+        priority first, so each layer only overrides the keys it defines:
+
+            project config.toml  <  home config.toml  <  home config.yaml
+                                                                    < profile
+        """
         profile = os.getenv("MANUSCLAW_PROFILE", "")
         candidates: list[Path] = []
+        candidates.append(Path(legacy_path))          # lowest priority
+        candidates.append(_HOME / "config.toml")
+        candidates.append(_HOME / "config.yaml")      # home yaml wins over toml
         if profile:
             pd = _HOME / "profiles" / profile
-            candidates.append(pd / "config.yaml")
             candidates.append(pd / "config.toml")
-        candidates.append(_HOME / "config.yaml")
-        candidates.append(_HOME / "config.toml")
-        candidates.append(Path(legacy_path))
+            candidates.append(pd / "config.yaml")     # highest priority
 
+        merged: dict = {}
         for p in candidates:
             if not p.exists():
                 continue
             try:
+                data: dict = {}
                 if p.suffix in (".yaml", ".yml") and _HAS_YAML:
                     with open(p) as f:
-                        return _yaml.safe_load(f) or {}
+                        data = _yaml.safe_load(f) or {}
                 elif p.suffix == ".toml" and tomllib is not None:
                     with open(p, "rb") as f:
-                        return tomllib.load(f)
+                        data = tomllib.load(f)
+                if isinstance(data, dict):
+                    merged = _deep_merge(merged, data)
             except Exception as e:
                 raise ConfigError(f"Failed to parse {p}: {e}") from e
-        return {}
+        return merged
 
     @staticmethod
     def _detect_provider() -> Optional[str]:

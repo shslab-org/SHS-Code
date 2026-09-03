@@ -738,7 +738,7 @@ class LLM:
             "model": self._model,
             "base_url": self._base_url,
             "backend": type(self._backend).__name__,
-            "pool_size": len(self._pool.credentials) if self._pool else 0,
+            "pool_size": (self._pool.size if self._pool else 0),
             "token_budget": self.token_budget.max_tokens,
             "token_used": getattr(self.token_budget, "total_used", 0),
         }

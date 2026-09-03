@@ -256,6 +256,22 @@ tool or different arguments — DO NOT repeat the same failing call.
         remain strictly sequential, exactly as the spec requires."""
         last_msg = self.memory.messages[-1]
         if not last_msg.tool_calls:
+            # SHS Code FIX (final-answer semantics — found live on NVIDIA NIM):
+            # in the function-calling protocol, a response with NO tool calls
+            # IS the model's final answer — the model explicitly chose to stop
+            # calling tools and reply to the user. Previously only
+            # _DONE_PATTERNS ("task complete", "all done"…) could end the
+            # loop, so a direct answer ("NIM_LIVE_OK", "42", an explanation)
+            # NEVER finished the run: the loop re-asked, the model repeated
+            # itself, the duplicate nudge fired, and the agent terminated
+            # WITHOUT ever returning the answer to the user.
+            if (
+                self.state == AgentState.RUNNING
+                and last_msg.role == Role.ASSISTANT
+                and (last_msg.content or "").strip()
+            ):
+                self.state = AgentState.FINISHED
+                return last_msg.content
             return thought or None
 
         calls: list[tuple[str, dict, str]] = []
