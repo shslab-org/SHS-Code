@@ -17,7 +17,7 @@ from app.logger import logger
 async def run(args: argparse.Namespace) -> None:
     agent = MCPAgent(server_url=args.server_url, connection=args.connection)
     if args.interactive:
-        print("ManusClaw MCP Agent — interactive mode. Type 'exit' to quit.")
+        print("SHS Code MCP Agent — interactive mode. Type 'exit' to quit.")
         while True:
             try:
                 prompt = input("\n> ").strip()
@@ -29,6 +29,11 @@ async def run(args: argparse.Namespace) -> None:
                 continue
             result = await agent.run(prompt)
             print(result)
+            # SHS Code FIX: reset state so the second prompt doesn't raise
+            # "Agent not idle" (BaseAgent.run contract) and crash the CLI.
+            from app.schema import AgentState
+            agent.state = AgentState.IDLE
+            agent._step_count = 0
     else:
         prompt = args.prompt or input("Enter task: ").strip()
         result = await agent.run(prompt)
@@ -36,7 +41,7 @@ async def run(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="ManusClaw MCP Agent")
+    parser = argparse.ArgumentParser(description="SHS Code MCP Agent")
     parser.add_argument("--connection", choices=["stdio", "sse"], default="stdio")
     parser.add_argument("--server-url", default=None)
     parser.add_argument("--interactive", action="store_true")

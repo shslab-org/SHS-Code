@@ -119,6 +119,7 @@ class CronScheduler:
         self._jobs: dict[str, CronJob] = {}
         self._running = False
         self._tasks: set[asyncio.Task] = set()
+        self._inflight: set[str] = set()  # in-flight job ids (overlap guard)
         self._webhook_handlers: dict[str, Callable] = {}
         self._load_jobs()
 
@@ -240,9 +241,21 @@ class CronScheduler:
         while self._running:
             due = [j for j in self._jobs.values() if j.is_due]
             for job in due:
+                # SHS Code FIX (overlapping runs): a run that outlasts its
+                # interval fired a SECOND concurrent agent for the same job
+                # (two agents racing on one workspace). In-flight jobs are
+                # skipped this tick and retried on a later one.
+                if job.id in self._inflight:
+                    logger.info(
+                        f"[Cron] Job {job.name!r} still running from a previous "
+                        "tick — skipping to avoid overlapping execution.")
+                    continue
                 # FIX: store task reference to prevent GC mid-execution
                 task = asyncio.create_task(self._run_job(job, output_callback))
                 self._tasks.add(task)
+                self._inflight.add(job.id)
+                task.add_done_callback(
+                    lambda _t, _jid=job.id: self._inflight.discard(_jid))
                 task.add_done_callback(self._tasks.discard)
             await asyncio.sleep(30)
 

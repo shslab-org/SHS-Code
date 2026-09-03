@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import os
 import hmac
 import json
 import sqlite3
@@ -28,7 +29,15 @@ from app.logger import logger
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
-_DB_PATH = Path("workspace/.sessions/manusclaw.db")
+def _default_db_path() -> Path:
+    """SHS Code FIX (CWD split-brain): share the SessionDB location resolved
+    lazily via MANUSCLAW_WORKSPACE — webhook registrations used to land in a
+    CWD-relative file, invisible to a server started from another directory."""
+    workspace = Path(os.getenv("MANUSCLAW_WORKSPACE", "workspace"))
+    return workspace / ".sessions" / "manusclaw.db"
+
+
+_DB_PATH = _default_db_path()
 
 _WEBHOOK_SCHEMA = """
 CREATE TABLE IF NOT EXISTS webhooks (
@@ -127,7 +136,7 @@ class WebhookManager:
     """
 
     def __init__(self, db_path: Optional[Path] = None) -> None:
-        self._db_path = db_path or _DB_PATH
+        self._db_path = db_path or _default_db_path()
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn: Optional[sqlite3.Connection] = None
         self._cache: dict[str, WebhookConfig] = {}

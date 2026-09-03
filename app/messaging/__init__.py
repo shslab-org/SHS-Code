@@ -39,7 +39,7 @@ def main_channels() -> None:
     configured = [a.platform_name for a in gw._adapters if a.is_configured()]
     if not configured:
         print("No messaging channels configured.")
-        print("Set TELEGRAM_TOKEN, DISCORD_TOKEN, etc. to enable.")
+        print("Set TELEGRAM_BOT_TOKEN, DISCORD_BOT_TOKEN, etc. to enable.")
     else:
         print(f"Configured messaging channels ({len(configured)}):")
         for name in configured:

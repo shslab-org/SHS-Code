@@ -111,6 +111,18 @@ class MessagingGateway:
         except Exception as e:
             logger.error(f"[Gateway] Agent error: {e}")
             await self.send(msg.platform, msg.channel_id, f"Error: {e}")
+        finally:
+            # SHS Code FIX (cached-agent lockout): BaseAgent.run raises
+            # "Agent not idle" unless state == IDLE, and nothing reset it
+            # after the first run — every follow-up message in a cached
+            # session replied "Error: Agent not idle". The CLI resets state
+            # after each prompt; the gateway now does the same.
+            try:
+                from app.schema import AgentState
+                agent.state = AgentState.IDLE
+                agent._step_count = 0
+            except Exception:
+                pass
 
     def _get_or_create_agent(self, session_key: str):
         import time

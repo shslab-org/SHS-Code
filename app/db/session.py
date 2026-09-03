@@ -196,8 +196,11 @@ class SessionDB:
 
     async def create_session(self, goal: str, agent_name: str = "manus",
                               mode: str = "build",
-                              parent_session_id: Optional[str] = None) -> str:
-        sid = str(uuid.uuid4())[:12]
+                              parent_session_id: Optional[str] = None,
+                              session_id: Optional[str] = None) -> str:
+        # SHS Code FIX: optional explicit id lets callers (server WebSocket
+        # endpoints) create the row for an id they already published.
+        sid = session_id or str(uuid.uuid4())[:12]
 
         def _create():
             self._execute_query(lambda conn: (

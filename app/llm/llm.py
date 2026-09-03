@@ -17,7 +17,7 @@ import time
 from typing import Any, Optional
 
 from app.config import Config
-from app.exceptions import RateLimitError, TokenLimitExceeded
+from app.exceptions import RateLimitError, TokenLimitExceeded, LLMAuthError
 from app.logger import logger
 from app.schema import Message, Role, ToolCall, Function
 from app.llm.token_tracker import TokenBudget, TokenUsage
@@ -285,6 +285,8 @@ class OpenAIClient:
         # None/0 means "not configured" -> adaptive default.
         configured_timeout = getattr(cfg, 'timeout', None)
         timeout_val = _get_adaptive_timeout(cfg.model, configured_timeout)
+        self._base_url = cfg.base_url or None
+        self._timeout = timeout_val
         self._c = AsyncOpenAI(api_key=cfg.api_key, base_url=cfg.base_url or None, timeout=timeout_val)
         self.model: str = cfg.model
         self.max_tokens: int = cfg.max_tokens
@@ -295,7 +297,16 @@ class OpenAIClient:
         )
 
     async def chat(self, messages: list[dict[str, Any]], tools: Optional[list[dict[str, Any]]] = None,
-                   **_: Any) -> dict[str, Any]:
+                   api_key: Optional[str] = None, **_: Any) -> dict[str, Any]:
+        # SHS Code FIX (credential rotation no-op): rotated keys were passed
+        # but swallowed by **_, so this client always used the constructor
+        # key. A rotated key now gets a one-off client (connection reuse only
+        # for the default key, mirroring AnthropicClient).
+        client = self._c
+        if api_key and api_key != self._c.api_key:
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=api_key, base_url=self._base_url,
+                                 timeout=self._timeout)
         kwargs: dict[str, Any] = dict(
             model=self.model, messages=messages,
             max_tokens=self.max_tokens, temperature=self.temperature,
@@ -303,7 +314,10 @@ class OpenAIClient:
         if tools:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
-        resp = await self._c.chat.completions.create(**kwargs)
+        try:
+            resp = await client.chat.completions.create(**kwargs)
+        except Exception as e:
+            raise _normalize_sdk_error(e) from e
         return resp.model_dump()
 
 
@@ -424,7 +438,10 @@ class AnthropicClient:
                 }
                 for t in tools
             ]
-        resp = await client.messages.create(**kwargs)
+        try:
+            resp = await client.messages.create(**kwargs)
+        except Exception as e:
+            raise _normalize_sdk_error(e) from e
         content_parts: list[str] = []
         tool_calls: list[dict[str, Any]] = []
         for block in resp.content:
@@ -567,6 +584,50 @@ class GoogleClient:
                 "tool_calls": tool_calls_result or None,
             }}]
         }
+
+
+def _backend_accepts_api_key(backend: Any) -> bool:
+    """True when the backend's chat() takes an explicit api_key parameter.
+
+    SDK clients (OpenAI/Anthropic/Google/Mistral/Bedrock) were updated to
+    accept and USE the rotated key; MockLLM and custom backends may not.
+    """
+    try:
+        import inspect
+        sig = inspect.signature(backend.chat)
+        params = sig.parameters
+        return "api_key" in params or any(
+            p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+    except (TypeError, ValueError):
+        return False
+
+
+def _normalize_sdk_error(e: Exception) -> Exception:
+    """Map provider-SDK exceptions to SHS Code's app-level exceptions.
+
+    SHS Code FIX (SDK error bypass): only UniversalClient raised the
+    app-level RateLimitError; SDK 429s (openai/anthropic/google) landed in
+    the generic branch — no retry-after honoring, no pool exhaustion, no
+    health event. Auth errors (401/403) were retried with the SAME dead key
+    instead of rotating. This normalizer maps both classes so the retry loop
+    handles them identically regardless of provider.
+    """
+    status = getattr(e, "status_code", None) or getattr(
+        getattr(e, "response", None), "status_code", None)
+    name = type(e).__name__.lower()
+    msg = str(e).lower()
+    if status == 429 or "rate limit" in name or "rate_limit" in name \
+            or "ratelimiterror" in name or "too many requests" in msg:
+        err = RateLimitError(f"Rate limited (SDK): {e}")
+        ra = getattr(e, "retry_after", None)
+        if isinstance(ra, (int, float)) and ra > 0:
+            err.retry_after = float(ra)  # type: ignore[attr-defined]
+        return err
+    if status in (401, 403) or "authentication" in name or "auth" in name \
+            or "unauthorized" in msg or "invalid api key" in msg \
+            or "permission" in name:
+        return LLMAuthError(f"Authentication failed (SDK): {e}")
+    return e
 
 
 class LLM:
@@ -783,10 +844,16 @@ class LLM:
         from app.provider_health import get_health
         health = get_health()
 
-        # Grace call: allow one extra call after budget exhausted
-        if self.token_budget.is_exhausted:
-            if not self.token_budget.use_grace():
-                raise TokenLimitExceeded("Token budget exhausted and grace call already used.")
+        # Grace call: allow one extra call after budget exhausted.
+        # SHS Code FIX (grace double-consumption): the agent loop activates
+        # grace itself (injecting the "final call — call terminate" message)
+        # before this point; the old code then called use_grace() AGAIN here
+        # (returning False since it was already used) and RAISED — the
+        # designed final wrap-up call could never actually execute. The LLM
+        # layer now only auto-activates grace when NOBODY has yet; it never
+        # raises mid-grace (the agent loop owns the stop decision).
+        if self.token_budget.is_exhausted and not self.token_budget.grace_used:
+            self.token_budget.use_grace()
 
         # FIX: Detect if we're using a long-thinking model — timeouts are expected
         # and should NOT trigger retries. The HTTP client already has an adaptive
@@ -813,8 +880,12 @@ class LLM:
             try:
                 api_key: Optional[str] = cred.api_key if cred else None
                 chat_kwargs: dict[str, Any] = {}
-                # FIX: Pass rotated api_key to ALL backends, not just UniversalClient
-                if api_key:
+                # SHS Code FIX (api_key crash): pass rotated keys only to
+                # backends that ACCEPT the parameter. Mistral/Bedrock raised
+                # TypeError on every call; OpenAI/Google silently ignored it
+                # (rotation was a no-op). All SDK clients now implement the
+                # api_key override; UniversalClient always did.
+                if api_key and _backend_accepts_api_key(self._backend):
                     chat_kwargs["api_key"] = api_key
 
                 # FIX: Long-wait progress heartbeat — start background monitor
@@ -845,6 +916,29 @@ class LLM:
 
             except TokenLimitExceeded:
                 raise
+
+            except LLMAuthError as e:
+                # SHS Code FIX (auth rotation): 401/403 was retried with the
+                # SAME dead key until the generic branch gave up. The failed
+                # credential is now exhausted (long cooldown) so the pool
+                # yields the NEXT key; with no pool there is nothing to
+                # rotate to — fail fast with a clear message.
+                if cred and self._pool:
+                    await self._pool.mark_exhausted(cred, cooldown_s=3600.0)
+                    logger.warning(
+                        f"[LLM] Auth failed for credential (...{cred.api_key[-6:] if len(cred.api_key) > 6 else '***'}). "
+                        f"Rotating to next credential."
+                    )
+                else:
+                    logger.error(f"[LLM] Auth failed and no credential pool to rotate: {e}")
+                    raise
+                try:
+                    health.record_error(self._provider, self._model, error=str(e))
+                except Exception:
+                    pass
+                last_err = e
+                await asyncio.sleep(wait)
+                wait = min(wait * 2, RETRY_MAX_WAIT)
 
             except RateLimitError as e:
                 if cred and self._pool:

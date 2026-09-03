@@ -17,12 +17,22 @@ import hashlib
 import json
 import re
 import sqlite3
+import os
 import time
 from pathlib import Path
 from typing import Optional
 
 
-_DB_PATH = Path("workspace/.memory/long_term.db")
+def _default_db_path() -> Path:
+    """SHS Code FIX (CWD split-brain): lazy resolution honouring
+    MANUSCLAW_WORKSPACE, mirroring SessionDB/task_queue fixes. The old
+    module-level relative constant meant memories stored from one working
+    directory were invisible from another."""
+    workspace = Path(os.getenv("MANUSCLAW_WORKSPACE", "workspace"))
+    return workspace / ".memory" / "long_term.db"
+
+
+_DB_PATH = _default_db_path()
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS entries (
@@ -61,7 +71,7 @@ class LongTermMemory:
     """
 
     def __init__(self, db_path: Optional[Path] = None) -> None:
-        self._db_path = db_path or _DB_PATH
+        self._db_path = db_path or _default_db_path()
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn: Optional[sqlite3.Connection] = None
         self._vector_ok = False

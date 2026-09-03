@@ -189,7 +189,15 @@ class VerificationEngine:
                 res["kind"] = kind
                 results.append(res)
 
-        ok = bool(results) and all(r["ok"] for r in results)
+        # SHS Code FIX: "no applicable checks" is NOT a failure. The old
+        # `ok = bool(results) and all(...)` reported FAILURES for projects
+        # where zero verification commands applied, and the CLI journaled a
+        # FAILED verification for work that was never checked. ok=None now
+        # means "no checks ran".
+        if results:
+            ok: Optional[bool] = all(r["ok"] for r in results)
+        else:
+            ok = None
         report = {
             "kind": "verification", "project_type": ptype, "ok": ok,
             "kinds": kinds, "results": results,
@@ -290,9 +298,11 @@ class VerificationEngine:
 
 def format_verification(report: Dict[str, Any]) -> str:
     """LLM/human-readable verification report."""
+    ok = report.get("ok")
+    verdict = "ALL PASS ✓" if ok is True else ("NO CHECKS RAN —" if ok is None else "FAILURES ✗")
     lines = [f"VERIFICATION — project: {report.get('project', '?')} "
              f"({report.get('project_type', '?')})  "
-             f"{'ALL PASS ✓' if report.get('ok') else 'FAILURES ✗'}"]
+             f"{verdict}"]
     for r in report.get("results", []):
         mark = "✓" if r["ok"] else "✗"
         lines.append(f"  {mark} {r['label']}  [{r['duration_s']}s] {r['cmd'][:100]}")

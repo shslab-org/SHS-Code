@@ -109,6 +109,10 @@ class MultiAgentOrchestrator:
         try:
             order = self._topological_sort()
         except PipelineCycleError as e:
+            # SHS Code FIX (leaked 'running' session): the cycle error raised
+            # BEFORE the session close — the row stayed 'running' forever.
+            await self.db.close_session(session_id, state="error", step_count=0,
+                                        error=str(e)[:2048])
             raise OrchestratorError(str(e), pipeline=self.pipeline) from e
 
         logger.info(
@@ -175,20 +179,25 @@ class MultiAgentOrchestrator:
             await asyncio.gather(*tasks)
 
         try:
-            if hasattr(asyncio, "timeout"):
-                async with asyncio.timeout(self.timeout):
-                    await _run_stages()
-            else:
-                await asyncio.wait_for(_run_stages(), timeout=self.timeout)
-        except asyncio.TimeoutError:
-            logger.warning(f"[Orchestrator:{pipeline_id}] Global timeout reached.")
-            pipeline_result.timed_out = True
-
-        pipeline_result.total_duration_s = round(time.monotonic() - t_pipeline, 2)
-        pipeline_result.verdict = self._derive_verdict(results, pipeline_result.timed_out)
-
-        final_state = "timeout" if pipeline_result.timed_out else "finished"
-        await self.db.close_session(session_id, state=final_state, step_count=len(order))
+            try:
+                if hasattr(asyncio, "timeout"):
+                    async with asyncio.timeout(self.timeout):
+                        await _run_stages()
+                else:
+                    await asyncio.wait_for(_run_stages(), timeout=self.timeout)
+            except asyncio.TimeoutError:
+                logger.warning(f"[Orchestrator:{pipeline_id}] Global timeout reached.")
+                pipeline_result.timed_out = True
+        finally:
+            # SHS Code FIX (leaked 'running' session): ANY exception (or
+            # cancellation) now still closes the orchestrator session with
+            # the real final state.
+            pipeline_result.total_duration_s = round(time.monotonic() - t_pipeline, 2)
+            pipeline_result.verdict = self._derive_verdict(results, pipeline_result.timed_out)
+            final_state = ("timeout" if pipeline_result.timed_out
+                           else "finished")
+            await self.db.close_session(session_id, state=final_state,
+                                        step_count=len(order))
 
         # Fix: await any pending hook tasks before returning
         if self._hook_tasks:
@@ -268,7 +277,11 @@ class MultiAgentOrchestrator:
         if timed_out:
             return "timeout"
         qa_out = results.get("qa", "").upper()
-        # Fix: use word-boundary regex to avoid false positives like "NOT APPROVED"
+        # SHS Code FIX: "\bAPPROVED\b" ALSO matches "NOT APPROVED" (the
+        # space is a word boundary) — rework verdicts were reported as
+        # approved. Negative patterns are checked first.
+        if re.search(r"\bNOT\s+APPROVED\b|\bREJECTED\b|\bDENIED\b", qa_out):
+            return "rework"
         if re.search(r"\bAPPROVED\b", qa_out):
             return "approved"
         if re.search(r"\bREWORK\b", qa_out):

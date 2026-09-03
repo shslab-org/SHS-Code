@@ -31,7 +31,15 @@ try:
 except ImportError:
     _HAS_YAML = False
 
-_DEFAULT_SKILLS_DIR = str(Path.home() / ".manusclaw" / "skills")
+def _default_skills_dir() -> str:
+    """SHS Code FIX: honour MANUSCLAW_HOME like the rest of the app — the
+    old constant always wrote to the real ~/.manusclaw, leaking across
+    profiles/containers/tests."""
+    home = Path(os.getenv("MANUSCLAW_HOME", str(Path.home() / ".manusclaw")))
+    return str(home / "skills")
+
+
+_DEFAULT_SKILLS_DIR = _default_skills_dir()
 _BUILTIN_SKILLS_DIR = Path(__file__).parent / "builtin"
 
 
@@ -43,7 +51,7 @@ def _get_skills_dir() -> Path:
     Previously this was a module-level constant evaluated once at
     import, which silently ignored later env changes.
     """
-    return Path(os.getenv("MANUSCLAW_SKILLS_DIR", _DEFAULT_SKILLS_DIR))
+    return Path(os.getenv("MANUSCLAW_SKILLS_DIR", _default_skills_dir()))
 
 
 @dataclass
@@ -314,6 +322,10 @@ class SkillEngine:
         skill = Skill(
             name=name, description=description, version=version,
             content=content, tags=tags or [],
+            # SHS Code FIX: created skills kept the dataclass default
+            # level="builtin" — they displayed as builtin and became
+            # unremovable until a full process restart.
+            level="user",
             path=skills_dir / f"{name}.md",
         )
         if skill.path:
@@ -355,6 +367,11 @@ class SkillEngine:
         ranked: list[tuple[int, Skill]] = []
         for skill in self._skills.values():
             if not skill.enabled:
+                continue
+            # SHS Code FIX: /skills disable had no effect on automatic
+            # injection — the relevance matcher ignored the persisted
+            # disabled set entirely.
+            if self.is_disabled(skill.name):
                 continue
             skill_text = (skill.description + " " + " ".join(skill.tags)).lower()
             skill_words = set(re.findall(r"\w+", skill_text))

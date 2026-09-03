@@ -38,6 +38,9 @@ class MCPClient:
         self._process: Optional[asyncio.subprocess.Process] = None
         self._stderr_task: Optional[asyncio.Task] = None
         self._connected = False
+        # SHS Code FIX: serialize JSON-RPC round-trips on one client so
+        # concurrent tool calls cannot interleave reads/writes.
+        self._rpc_lock = asyncio.Lock()
 
     async def connect(self) -> ToolCollection:
         if self.transport == "stdio":
@@ -127,21 +130,34 @@ class MCPClient:
             self._tools.add(proxy)
 
     async def _rpc(self, method: str, params: dict) -> dict:
+        # SHS Code FIX (response correlation): the loop returned the FIRST
+        # line containing any "id" — concurrent tool calls swapped responses,
+        # and server-initiated requests were misread as responses. The
+        # response id is now matched to the REQUEST id, and a lock
+        # serializes RPCs on one client.
         if not self._process:
             return {}
-        msg = json.dumps({"jsonrpc": "2.0", "id": str(uuid.uuid4()), "method": method, "params": params})
-        assert self._process.stdin
-        self._process.stdin.write((msg + "\n").encode())
-        await self._process.stdin.drain()
-        assert self._process.stdout
-        # SHS Code FIX: skip notification responses (no "id") that some MCP
-        # servers emit between request responses.
-        for _ in range(8):
-            line = await asyncio.wait_for(self._process.stdout.readline(), timeout=15)
-            if not line:
-                return {}
-            data = json.loads(line)
-            if "id" in data:
+        request_id = str(uuid.uuid4())
+        msg = json.dumps({"jsonrpc": "2.0", "id": request_id, "method": method, "params": params})
+        async with self._rpc_lock:
+            assert self._process.stdin
+            self._process.stdin.write((msg + "\n").encode())
+            await self._process.stdin.drain()
+            assert self._process.stdout
+            for _ in range(16):
+                try:
+                    line = await asyncio.wait_for(self._process.stdout.readline(), timeout=15)
+                except asyncio.TimeoutError:
+                    logger.warning(f"[MCP:{self.name}] RPC timeout waiting for id {request_id}")
+                    return {}
+                if not line:
+                    return {}
+                try:
+                    data = json.loads(line)
+                except json.JSONDecodeError:
+                    continue  # non-JSON noise line
+                if data.get("id") != request_id:
+                    continue  # notification / someone else's response / server request
                 if "error" in data:
                     raise RuntimeError(f"MCP error: {data['error']}")
                 return data.get("result", {})
@@ -162,7 +178,18 @@ class MCPClient:
                         json={"name": name, "arguments": arguments},
                         timeout=aiohttp.ClientTimeout(total=30),
                     ) as resp:
+                        # SHS Code FIX: HTTP status was never checked — a 4xx/5xx
+                        # body became the tool OUTPUT, reporting failures as
+                        # successful calls with garbage content.
+                        if resp.status != 200:
+                            body = (await resp.text())[:300]
+                            return ToolResult(
+                                error=f"MCP SSE call failed: HTTP {resp.status} — {body}")
                         data = await resp.json()
+                if data.get("isError"):
+                    content = data.get("content", [{}])
+                    text = content[0].get("text", "") if content else ""
+                    return ToolResult(error=f"MCP tool error: {text[:500]}")
                 content = data.get("content", [{}])
                 text = content[0].get("text", "") if content else ""
                 return ToolResult(output=text)

@@ -23,12 +23,19 @@ import hmac
 import json
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from app.logger import logger
 from app.server.webhooks import WebhookConfig, WebhookManager, webhook_manager
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+
+# SHS Code FIX (unauthenticated webhooks): every other mutating endpoint is
+# gated by require_api_key, but /webhooks/create|delete|trigger allowed
+# ANYONE full build-mode agent execution when MANUSCLAW_API_KEY was set.
+# Management endpoints now require the key. Triggers additionally require
+# the hook's HMAC secret when one is configured (verified per-hook).
+from app.server.main import require_api_key  # noqa: E402
 
 
 # ─── List Webhooks (declared first — no path collision) ─────────────────────
@@ -49,7 +56,7 @@ async def list_webhooks() -> dict[str, Any]:
 
 # ─── Create Webhook (literal path — must come before /{hook_id}) ────────────
 
-@router.post("/create")
+@router.post("/create", dependencies=[Depends(require_api_key)])
 async def create_webhook(request: Request) -> dict[str, Any]:
     """Create and register a new webhook.
 
@@ -193,7 +200,7 @@ async def trigger_webhook(
 
 # ─── Delete Webhook (DELETE verb — no collision with POST /create) ──────────
 
-@router.delete("/{hook_id}")
+@router.delete("/{hook_id}", dependencies=[Depends(require_api_key)])
 async def delete_webhook(hook_id: str) -> dict[str, str]:
     """Unregister a webhook by ID.
 

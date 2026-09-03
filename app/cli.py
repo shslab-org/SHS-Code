@@ -75,6 +75,8 @@ SLASH_COMMANDS = [
     # Phase 2 (spec §40-§43, §28, §33, §36, §37)
     "/plan", "/usage", "/project", "/env", "/mode", "/profile",
     "/rollback", "/verify",
+    # Stabilization pass: previously-advertised commands that did not exist
+    "/undo", "/retry", "/browser",
 ]
 
 
@@ -529,7 +531,11 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             return "Journal unavailable."
         filt = arg.strip().lower() or "all"
         if filt in ("active", "running"):
-            rows = await j.list_tasks("interrupted") + await j.list_tasks("paused")
+            # SHS Code FIX: 'active'/'running' omitted in_progress — the
+            # actually-running task was invisible to /tasks active.
+            rows = (await j.list_tasks("in_progress")
+                    + await j.list_tasks("interrupted")
+                    + await j.list_tasks("paused"))
         else:
             rows = await j.list_tasks() if filt == "all" else await j.list_tasks(filt)
         if not rows:
@@ -755,10 +761,22 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
                 return ("Usage: /provider add <name> <api_type> <base_url> <model> [api_key] [rpm]\n"
                         f"api_type: {' | '.join(sorted(API_TYPES))}")
             try:
-                rpm = int(sub[5]) if len(sub) > 5 and sub[5].isdigit() else 0
+                # SHS Code FIX: the old parser treated a digit-only API key as
+                # rpm and silently dropped real keys. Parse the tail properly:
+                # first trailing token = api_key, second (if numeric or 'rpm=') = rpm.
+                api_key = ""
+                rpm = 0
+                tail = sub[5:]
+                if tail:
+                    api_key = tail[0]
+                if len(tail) > 1:
+                    tok = tail[1].lower()
+                    if tok.startswith("rpm="):
+                        tok = tok[4:]
+                    if tok.isdigit():
+                        rpm = int(tok)
                 e = reg.add(name=sub[1], api_type=sub[2], base_url=sub[3],
-                            model=sub[4], api_key=sub[5] if len(sub) > 5 and not sub[5].isdigit() else "",
-                            rpm=rpm)
+                            model=sub[4], api_key=api_key, rpm=rpm)
                 return (f"Provider '{e['name']}' registered (persisted to ~/.manusclaw/providers.json).\n"
                         f"Switch to it: /provider {e['name']}")
             except ValueError as ex:
@@ -769,7 +787,12 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             e = reg.get(sub[1])
             if not e:
                 return f"No provider named {sub[1]}."
-            reg.add(**{**e, "api_key": sub[2]})
+            # SHS Code FIX: stored entries carry 'added_at' (and possibly other
+            # bookkeeping keys) which ProviderRegistry.add() does not accept —
+            # spreading them raised TypeError and the key was never updated.
+            ctor_keys = {"name", "api_type", "base_url", "model", "api_key", "rpm"}
+            reg.add(**{**{k: v for k, v in e.items() if k in ctor_keys},
+                       "api_key": sub[2]})
             return f"API key updated for {sub[1]} (masked: {'*' * 8})."
         # /provider <name> [model] — switch
         name = sub[0]
@@ -953,8 +976,11 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
                 return "Usage: /mcp add <name> stdio <command> [args…]  |  /mcp add <name> sse <url>"
             name, transport = toks[0], toks[1].lower()
             if transport == "sse":
-                servers.append(type(servers[0])(name=name, transport="sse", url=toks[2])
-                               if servers else None)
+                # SHS Code FIX: appending None when the list is empty broke
+                # /mcp permanently (persist crashed on None.name; every later
+                # /mcp crashed on None.url). Use MCPServerDef directly.
+                from app.config import MCPServerDef
+                servers.append(MCPServerDef(name=name, transport="sse", url=toks[2]))
             else:
                 from app.config import MCPServerDef
                 servers.append(MCPServerDef(name=name, transport="stdio",
@@ -1217,8 +1243,11 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
         if arg.strip().isdigit():
             n = int(arg.strip())
         try:
-            from app.logger import logger
-            lines = logger.recent_lines(n)
+            # SHS Code FIX: recent_lines is a module-level function, not a
+            # method on the logger object — the old call always raised
+            # AttributeError and /log never worked.
+            from app.logger import recent_lines
+            lines = recent_lines(n)
             if not lines:
                 return "(log capture empty — check workspace/logs/)"
             return "\n".join(lines[-n:])
@@ -1444,6 +1473,101 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             return "\n".join(lines)
         except Exception as e:
             return f"rollback error: {e}"
+
+    # /undo — one-step undo of the LAST agent edit batch (SmartRollback of
+    # the most recent snapshot of the current/last task). Stabilization fix:
+    # the command was advertised but never implemented.
+    if command == "/undo":
+        try:
+            from app.git_intel import SmartRollback
+            j = _journal()
+            tid = arg.strip() or (agent._journal_task_id if agent else None)
+            if not tid and j:
+                t = (await j.current_status()).get("active_task")
+                tid = t["task_id"] if t else None
+            if not tid:
+                return "Nothing to undo: no active task and no task id given. Usage: /undo [task_id]"
+            rb = SmartRollback(tid)
+            snaps = rb.list_snapshots()
+            if not snaps:
+                return f"No snapshots recorded for task {tid} — nothing to undo."
+            latest = snaps[-1]
+            res = rb.restore(latest["id"])
+            if res.get("ok"):
+                return (f"Undid last edit batch: restored {len(res['restored'])} file(s) "
+                        f"from snapshot {res['snapshot']}.\n"
+                        f"Redo manually if needed; verification: /verify fast")
+            return f"Undo failed: {res}"
+        except Exception as e:
+            return f"undo error: {e}"
+
+    # /retry — re-queue a failed/cancelled/interrupted task (task queue or
+    # journal). Stabilization fix: the command was advertised (the crash-loop
+    # parking message even tells users to run it) but never implemented.
+    if command == "/retry":
+        try:
+            tq_arg = arg.strip()
+            tq = runtime.get("task_queue") if runtime else None
+            if tq_arg and tq:
+                ok = await tq.retry_task(tq_arg)
+                if ok:
+                    return (f"Task {tq_arg} re-queued — background workers will pick it up.\n"
+                            "Watch progress: /tasks")
+                return (f"Could not re-queue {tq_arg} (not found, or not in "
+                        "failed/cancelled state).")
+            # Journal path: re-open the most recent failed/interrupted task
+            j = _journal()
+            if j is None:
+                return "Journal unavailable. Usage: /retry [task_id] (background queue) or /retry (journal task)"
+            tid = tq_arg
+            if not tid:
+                rows = (await j.list_tasks("failed") or []) + \
+                       (await j.list_tasks("interrupted") or [])
+                if not rows:
+                    return "No failed or interrupted tasks to retry."
+                rows.sort(key=lambda t: t.get("updated_at") or 0, reverse=True)
+                tid = rows[0]["task_id"]
+            await j.task_update(tid, status="interrupted",
+                                blocked_reason=None)
+            return (f"Task {tid} re-opened as interrupted — it will resume from its "
+                    "checkpoint. Use /resume {tid} to continue it in this session, "
+                    "or /continue to re-run the last prompt.")
+        except Exception as e:
+            return f"retry error: {e}"
+
+    # /browser — browser tool status + quick actions. Stabilization fix:
+    # the command was advertised but never implemented.
+    if command == "/browser":
+        action = arg.strip().lower()
+        try:
+            from app.config import Config
+            bc = Config.get().browser
+            headless = "headless" if bc.headless else "visible"
+            base = (f"Browser tool: crawl enabled (playwright/crawl4ai optional extras), "
+                    f"mode={headless}, max_content={bc.max_content_length} chars")
+            if not action:
+                try:
+                    import playwright  # noqa: F401
+                    deps = "playwright: installed"
+                except ImportError:
+                    deps = "playwright: NOT installed (pip install shscode[browser])"
+                try:
+                    import crawl4ai  # noqa: F401
+                    deps += " | crawl4ai: installed"
+                except ImportError:
+                    deps += " | crawl4ai: NOT installed (aiohttp fallback active)"
+                return base + f"\n{deps}\nUsage: /browser open <url> (crawls the page and returns readable content)"
+            if action in ("open", "search") and len(arg.split()) > 1:
+                target = arg.split(None, 1)[1].strip()
+                from app.tool.crawl4ai import Crawl4AITool
+                tool = Crawl4AITool()
+                res = await tool.execute(url=target)
+                if res.error:
+                    return f"Browser error: {res.error}"
+                return (res.output or "")[:3000]
+            return "Usage: /browser open <url>"
+        except Exception as e:
+            return f"browser error: {e}"
 
     # ------------------------------------------------------------------ legacy
     if command == "/compress":
@@ -1686,7 +1810,7 @@ async def _handle_sessions(arg: str, agent=None, session_id: str = "") -> str:
             db.close()
             return f"Delete failed: {e}"
 
-    return ("Unknown sessions subcommand: {subcmd}. Use: list, history, send, "
+    return (f"Unknown sessions subcommand: {subcmd}. Use: list, history, send, "
             "spawn, switch, rename, archive, delete")
 
 
@@ -1882,33 +2006,37 @@ async def _interactive_loop(skin_name: str = "default") -> None:
             else:
                 continue
 
-        # Regular prompt — run agent in a cancellable task (spec §31)
+        # Regular prompt — run agent as a MONITORED background task (spec §31).
+        # SHS Code FIX (/pause & /stop were dead): the REPL used to block on
+        # `await run_task`, so no input was ever read while a run was in
+        # flight — /pause and /stop could only ever print "No run in
+        # progress.". Prompts now run concurrently with the input loop and
+        # slash commands keep working DURING execution.
         _print_message("user", user_input, skin)
         runtime["last_prompt"] = user_input
 
-        try:
-            run_task = asyncio.create_task(agent.run(user_input))
-            runtime["current_run_task"] = run_task
-            result = await run_task
-            session_id = agent._session_id or ""
-            _print_message("assistant", result or "(no output)", skin)
-            try:
-                info = agent.llm.backend_info()
-                model_name = info.get("model", "")
-            except Exception:
-                model_name = ""
-            _print_header(skin, model_name, session_id, agent._step_count)
-        except asyncio.CancelledError:
+        active = runtime.get("current_run_task")
+        if active is not None and not active.done():
             _print_message("system",
-                           "Run interrupted — state checkpointed. Use /resume or /continue.", skin)
-        except Exception as e:
-            _print_message("error", f"Error: {e}", skin)
+                           "A run is already active. Use /pause, /stop, or /status — "
+                           "or wait for it to finish before sending a new prompt.", skin)
+            continue
 
-        # Reset agent state for next prompt (session context retained)
-        from app.schema import AgentState
-        agent.state = AgentState.IDLE
-        agent._step_count = 0
-        runtime["current_run_task"] = None
+        runtime["current_run_task"] = asyncio.create_task(
+            _run_prompt(agent, user_input, skin, runtime))
+
+    # Wait for any active run to settle before shutdown (bounded).
+    active = runtime.get("current_run_task")
+    if active is not None and not active.done():
+        _print_message("system", "Waiting for the active run to settle (Ctrl+C to force)...", skin)
+        try:
+            await asyncio.wait_for(asyncio.shield(active), timeout=30)
+        except (asyncio.TimeoutError, asyncio.CancelledError, Exception):
+            active.cancel()
+            try:
+                await asyncio.wait_for(asyncio.shield(active), timeout=5)
+            except Exception:
+                pass
 
     # Graceful shutdown
     ActivityBus.unsubscribe_all()
@@ -1916,6 +2044,30 @@ async def _interactive_loop(skin_name: str = "default") -> None:
     await task_queue.stop_workers()
     await agent.cleanup()
     print("Goodbye. SHS Code state is saved — run 'SHSCode' again to resume.")
+
+
+async def _run_prompt(agent, prompt: str, skin: dict, runtime: dict) -> None:
+    """Run one user prompt and print the result (concurrent with input loop)."""
+    try:
+        result = await agent.run(prompt)
+        _print_message("assistant", result or "(no output)", skin)
+        try:
+            info = agent.llm.backend_info()
+            model_name = info.get("model", "")
+        except Exception:
+            model_name = ""
+        _print_header(skin, model_name, agent._session_id or "", agent._step_count)
+    except asyncio.CancelledError:
+        _print_message("system",
+                       "Run interrupted — state checkpointed. Use /resume or /continue.", skin)
+    except Exception as e:
+        _print_message("error", f"Error: {e}", skin)
+    finally:
+        # Reset agent state for next prompt (session context retained)
+        from app.schema import AgentState
+        agent.state = AgentState.IDLE
+        agent._step_count = 0
+        runtime["current_run_task"] = None
 
 
 # ──────────────────────────────────────────────────────────────────────────────

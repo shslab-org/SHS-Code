@@ -46,8 +46,13 @@ class TelegramAdapter(BaseMessagingAdapter):
                                     platform="telegram",
                                     channel_id=str(update["message"]["chat"]["id"]),
                                     user_id=str(update["message"]["from"]["id"]),
+                                    # SHS Code FIX: session_key is a read-only
+                                    # property on IncomingMessage — passing it
+                                    # to the constructor raised TypeError and
+                                    # EVERY inbound Telegram message was
+                                    # silently dropped by the polling error
+                                    # handler.
                                     text=update["message"]["text"],
-                                    session_key=f"tg_{update['message']['chat']['id']}"
                                 )
                                 await on_message(msg)
                 except Exception as e:

@@ -352,7 +352,14 @@ async def run_agent_sync(req: RunRequest):
                 session_id, state="finished", step_count=agent._step_count)
         return RunResponse(session_id=session_id, status="finished", output=output)
     except Exception as e:
-        await db.close_session(session_id, state="error", step_count=0, error=str(e)[:2048])
+        # SHS Code FIX: preserve the REAL step count on the error path (the
+        # agent's own finally already closed the session; only repair if it
+        # somehow stayed open — never clobber progress back to 0).
+        row = await db.get_session(session_id)
+        if row and row.get("state") == "running":
+            await db.close_session(session_id, state="error",
+                                   step_count=row.get("step_count") or 0,
+                                   error=str(e)[:2048])
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -404,11 +411,21 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 
     await manager.connect(websocket, session_id)
     logger.info(f"[Server] WebSocket connected: {session_id}")
+    # SHS Code FIX (registry blind spot): WS agent runs used the URL-supplied
+    # session id but nothing ever created the row — messages/tool_calls were
+    # orphaned and GET /sessions never showed the session. Ensure the row
+    # exists (stable id) before any run.
+    try:
+        if await db.get_session(session_id) is None:
+            await db.create_session("websocket session", agent_name="manus",
+                                    session_id=session_id)
+    except Exception as e:
+        logger.debug(f"[Server] WS session ensure failed: {e}")
     try:
         await websocket.send_text(json.dumps({
             "type": "connected",
             "session_id": session_id,
-            "message": "ManusClaw WebSocket ready. Send {\"prompt\": \"...\"} to start.",
+            "message": "SHS Code WebSocket ready. Send {\"prompt\": \"...\"} to start.",
         }))
         while True:
             data = await websocket.receive_text()
@@ -432,7 +449,14 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 
             await websocket.send_text(json.dumps({"type": "agent_start", "prompt": prompt[:200]}))
 
-            streamer = StreamingManus(session_id=session_id, mode=mode, max_steps=msg.get("max_steps"))
+            # SHS Code FIX: coerce max_steps — a JSON string ("30") crashed the step
+            # loop with TypeError ('<' not supported between str/int).
+            _ms = msg.get("max_steps")
+            try:
+                _ms = int(_ms) if _ms is not None else None
+            except (TypeError, ValueError):
+                _ms = None
+            streamer = StreamingManus(session_id=session_id, mode=mode, max_steps=_ms)
             try:
                 await streamer.run(prompt)
             except Exception as e:
@@ -453,8 +477,15 @@ class MultiAgentRequest(BaseModel):
 async def run_multi_agent(req: MultiAgentRequest):
     from app.agent.orchestrator import MultiAgentOrchestrator
     mode = AgentMode.PLAN if req.mode.lower() == "plan" else AgentMode.BUILD
-    orchestrator = MultiAgentOrchestrator(mode=mode)
-    result = await orchestrator.run(req.goal)
+    # SHS Code FIX: req.roles was accepted but never passed — custom-role
+    # requests silently got the default PM→Architect→Engineer→QA pipeline.
+    # The orchestrator's SessionDB is also closed now (one open sqlite
+    # connection leaked per request).
+    orchestrator = MultiAgentOrchestrator(mode=mode, pipeline=req.roles)
+    try:
+        result = await orchestrator.run(req.goal)
+    finally:
+        orchestrator.db.close()
     return {"result": result}
 
 
@@ -564,7 +595,14 @@ async def chat_websocket_endpoint(websocket: WebSocket, session_id: str):
 
             await websocket.send_text(json.dumps({"type": "agent_start", "prompt": prompt[:200]}))
 
-            streamer = StreamingManus(session_id=session_id, mode=mode, max_steps=msg.get("max_steps"))
+            # SHS Code FIX: coerce max_steps — a JSON string ("30") crashed the step
+            # loop with TypeError ('<' not supported between str/int).
+            _ms = msg.get("max_steps")
+            try:
+                _ms = int(_ms) if _ms is not None else None
+            except (TypeError, ValueError):
+                _ms = None
+            streamer = StreamingManus(session_id=session_id, mode=mode, max_steps=_ms)
             try:
                 await streamer.run(prompt)
             except Exception as e:
@@ -597,6 +635,8 @@ async def canvas_websocket_endpoint(websocket: WebSocket, session_id: str):
 
     # Use the canvas server's handler via its internal pattern
     await websocket.accept()
+    # SHS Code FIX: registration now happens inside try/finally so a
+    # non-WebSocketDisconnect exception no longer leaks the connection entry.
 
     # Register as a canvas connection
     if session_id not in canvas_chat_manager:
@@ -614,8 +654,10 @@ async def canvas_websocket_endpoint(websocket: WebSocket, session_id: str):
     logger.info("[Server] Canvas WebSocket connected: %s", session_id)
 
     # Send initial state sync
-    state = await canvas_srv.get_state(session_id)
+    # SHS Code FIX: get_state() used to run BEFORE the try/finally — an
+    # exception there leaked the registered connection until LRU eviction.
     try:
+        state = await canvas_srv.get_state(session_id)
         await websocket.send_text(json.dumps({
             "message_type": "sync",
             "session_id": session_id,

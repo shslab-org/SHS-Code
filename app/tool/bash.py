@@ -58,8 +58,8 @@ def _sentinel_cmd(sentinel: str) -> str:
 
 def _exit_cmd() -> str:
     if IS_WINDOWS:
-        return r'Write-Host "EXIT:$LASTEXITCODE"'
-    return 'echo "EXIT:$?"'
+        return r'Write-Host "__SHS_EXIT__:$LASTEXITCODE"'
+    return 'echo "__SHS_EXIT__:$?"'
 
 
 def _wrap(command: str, sentinel: str) -> str:
@@ -198,12 +198,19 @@ class Bash(BaseTool):
                 nonlocal exit_code
                 while True:
                     raw  = await proc.stdout.readline()
+                    # SHS Code FIX (EOF busy-loop): when the persistent shell
+                    # dies (agent killed it, OOM, crash), readline() returns
+                    # b"" forever and each await completes synchronously —
+                    # the loop never yields, starving the event loop (no
+                    # timeouts, no cancellation, frozen activity feed).
+                    if not raw:
+                        raise BrokenPipeError("shell EOF")
                     line = raw.decode(errors="replace").rstrip("\r\n")
                     if line.strip() == sentinel:
                         break
-                    if line.startswith("EXIT:"):
+                    if line.startswith("__SHS_EXIT__:"):
                         try:
-                            exit_code = int(line[5:].strip())
+                            exit_code = int(line[len("__SHS_EXIT__:"):].strip())
                         except ValueError:
                             pass
                         continue

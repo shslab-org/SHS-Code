@@ -72,9 +72,11 @@ class CredentialPool:
                 return None
             return available[0]
 
-    async def mark_exhausted(self, cred: Credential) -> None:
+    async def mark_exhausted(self, cred: Credential, cooldown_s: Optional[float] = None) -> None:
+        """SHS Code FIX (auth rotation): optional per-call cooldown — auth
+        failures cool a key for an hour instead of the rate-limit default."""
         async with self._lock:
-            cred.mark_exhausted(self._cooldown)
+            cred.mark_exhausted(self._cooldown if cooldown_s is None else cooldown_s)
 
     async def mark_success(self, cred: Credential) -> None:
         async with self._lock:

@@ -16,7 +16,11 @@ class MistralClient:
         self.max_tokens = cfg.max_tokens
         self.temperature = cfg.temperature
 
-    async def chat(self, messages: list[dict], tools: Optional[list[dict]] = None) -> dict:
+    async def chat(self, messages: list[dict], tools: Optional[list[dict]] = None,
+                   api_key: Optional[str] = None) -> dict:
+        # SHS Code FIX (api_key crash): _call_with_retry passes rotated keys
+        # to every backend; this client raised TypeError on the kwarg.
+        from app.llm.llm import _normalize_sdk_error
         import asyncio
         kwargs: dict[str, Any] = dict(
             model=self.model,
@@ -28,9 +32,12 @@ class MistralClient:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
 
-        resp = await asyncio.to_thread(
-            lambda: self._c.chat.complete(**kwargs)
-        )
+        try:
+            resp = await asyncio.to_thread(
+                lambda: self._c.chat.complete(**kwargs)
+            )
+        except Exception as e:
+            raise _normalize_sdk_error(e) from e
         choice = resp.choices[0]
         msg = choice.message
         tool_calls = None

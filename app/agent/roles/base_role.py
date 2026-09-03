@@ -144,7 +144,17 @@ class BaseRole(ABC):
             )
 
         # 2 — Main work loop (with retries)
-        result = await self._think_act_publish(initial_input)
+        # SHS Code FIX (aiohttp session leak): each role creates its own
+        # LLM() backend but nothing ever closed it — ~3 unclosed
+        # ClientSessions per pipeline run. The backend is closed in finally.
+        try:
+            result = await self._think_act_publish(initial_input)
+        finally:
+            try:
+                if self.llm is not None and hasattr(self.llm, "cleanup_backend"):
+                    await self.llm.cleanup_backend()
+            except Exception:
+                pass
 
         elapsed = time.monotonic() - t0
         logger.info(f"[{self.role_name}] ■ Done in {elapsed:.1f}s")

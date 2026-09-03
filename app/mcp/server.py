@@ -92,8 +92,20 @@ def build_mcp_server() -> FastAPI:
         tool = _tools.get(req.name)
         if tool is None:
             raise HTTPException(status_code=404, detail=f"Tool '{req.name}' not found.")
-        result = await tool.execute(**req.arguments)
-        return {"content": [{"type": "text", "text": str(result)}]}
+        # SHS Code FIX (error envelope): tool exceptions propagated as raw
+        # 500s and ToolResult errors were stringified into 200 "content" —
+        # remote clients could not distinguish failure from success.
+        try:
+            result = await tool.execute(**req.arguments)
+        except Exception as e:
+            return {"content": [{"type": "text", "text": str(e)[:2000]}],
+                    "isError": True}
+        text = str(result)
+        is_error = bool(getattr(result, "error", None))
+        if is_error:
+            text = str(getattr(result, "error", ""))
+        return {"content": [{"type": "text", "text": text[:2000]}],
+                "isError": is_error}
 
     @app.get("/healthz")
     async def health() -> dict:

@@ -81,6 +81,14 @@ class StrReplaceEditor(BaseTool):
         if command == "create":
             if file_text is None:
                 return ToolResult(error="file_text is required for create.")
+            # SHS Code FIX (silent overwrite): the classic str_replace_editor
+            # contract ERRORS when the file already exists — silently
+            # overwriting destroyed user/agent work on the common "create a
+            # file that already exists" mistake.
+            if p.exists():
+                return ToolResult(
+                    error=f"File already exists: {path}. Use 'view' to inspect it, "
+                          "then 'str_replace' or 'insert' to edit it deliberately.")
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(file_text, encoding="utf-8")
             return ToolResult(output=f"Created {path} ({len(file_text)} bytes).")
@@ -93,6 +101,15 @@ class StrReplaceEditor(BaseTool):
             content = p.read_text(encoding="utf-8")
             if old_str not in content:
                 return ToolResult(error=f"old_str not found in {path}.")
+            # SHS Code FIX (wrong-instance edit): replacing only the FIRST
+            # occurrence silently edited the wrong location when old_str
+            # matched multiple places. The contract is: unique match, else
+            # error asking for more context.
+            n_matches = content.count(old_str)
+            if n_matches > 1:
+                return ToolResult(
+                    error=f"old_str matches {n_matches} locations in {path}. "
+                          "Include surrounding lines to make it unique.")
             self._history.setdefault(path, []).append(content)
             new_content = content.replace(old_str, new_str, 1)
             p.write_text(new_content, encoding="utf-8")

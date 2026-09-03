@@ -171,6 +171,31 @@ def build_compact_state(extracted: Dict[str, List[str]],
     return "\n".join(parts)
 
 
+def _repair_boundaries(recent: List[dict]) -> List[dict]:
+    """Make a message slice structurally valid for every provider.
+
+    * Drops leading TOOL messages (their parent assistant was compacted).
+    * Drops trailing assistant tool_calls whose TOOL results were cut off.
+    * Keeps everything else verbatim.
+    """
+    out = list(recent)
+    # leading tool results without their parent assistant
+    while out and out[0].get("role") == "tool":
+        out.pop(0)
+    # trailing assistant tool_calls without their results
+    while out:
+        last = out[-1]
+        if last.get("role") == "assistant" and last.get("tool_calls") \
+                and not (len(out) >= 2 and out[-2].get("role") == "tool"):
+            # the assistant requested tools but results are gone — drop the
+            # call markers so the text-only assistant message stays valid
+            trimmed = {k: v for k, v in last.items() if k != "tool_calls"}
+            out[-1] = trimmed
+            break
+        break
+    return out
+
+
 def compact_messages(messages: List[dict], keep_last: int = 6,
                      plan_text: str = "",
                      task_state: Optional[Dict[str, Any]] = None,
@@ -193,7 +218,20 @@ def compact_messages(messages: List[dict], keep_last: int = 6,
     extracted = extract_structured(middle, plan_text=plan_text,
                                    task_state=task_state,
                                    architecture=architecture)
-    state_msg = {"role": "system", "content": build_compact_state(extracted, recent)}
+    # SHS Code FIX (orphaned tool messages): emit the compacted state block
+    # as a USER message, not system — (a) AnthropicClient drops every system
+    # message except the head one, silently discarding all extracted state
+    # for that provider; (b) providers reject mid-conversation system blocks
+    # less predictably than user blocks.
+    state_msg = {"role": "user",
+                 "content": "[COMPACTED CONTEXT — SHS Code structured state]\n"
+                            + build_compact_state(extracted, recent)}
+
+    # SHS Code FIX (orphaned tool messages): the verbatim tail can START with
+    # a tool result whose parent assistant (with tool_calls) was compacted
+    # away — OpenAI/Anthropic both reject that history (400). Drop leading
+    # TOOL messages, and assistant tool_calls whose results fell off the tail.
+    recent = _repair_boundaries(recent)
 
     new_messages = head + [state_msg] + recent
     before_chars = sum(len(str(m.get("content") or "")) for m in messages)

@@ -21,7 +21,13 @@ class BedrockClient:
         self.max_tokens = cfg.max_tokens
         self.temperature = cfg.temperature
 
-    async def chat(self, messages: list[dict], tools: Optional[list[dict]] = None) -> dict:
+    async def chat(self, messages: list[dict], tools: Optional[list[dict]] = None,
+                   api_key: Optional[str] = None) -> dict:
+        # SHS Code FIX (api_key crash): _call_with_retry passes rotated keys
+        # to every backend; this client raised TypeError on the kwarg.
+        # (Bedrock auth is sigv4-based; the kwarg is accepted for interface
+        # compatibility and recorded for future session-token support.)
+        _ = api_key
         import asyncio
         system_msg = next((m["content"] for m in messages if m["role"] == "system"), None)
         conv = [m for m in messages if m["role"] != "system"]

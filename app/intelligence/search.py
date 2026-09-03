@@ -145,9 +145,52 @@ class SemanticSearch:
         return out
 
 
+def _all_files_bounded(root: Path, max_files: int = 20000) -> List[str]:
+    """Walk the REAL filesystem (same ignore rules as the indexer) and return
+    relative paths of ALL files — not just code files.
+
+    SHS Code FIX (filename search blindness): the indexer intentionally
+    indexes only source files (LANGUAGE_BY_EXT), so `search_filename` and
+    text/regex modes were blind to config files (pyproject.toml, *.yaml,
+    Dockerfile, LICENSE...). Filename search now merges the index with a
+    bounded real-tree walk so "pyproject.toml" actually matches."""
+    from app.intelligence.indexer import should_skip_path
+    root = Path(root)
+    out: List[str] = []
+    stack = [root]
+    while stack and len(out) < max_files:
+        cur = stack.pop()
+        try:
+            entries = sorted(cur.iterdir(), reverse=True)
+        except OSError:
+            continue
+        for e in entries:
+            if len(out) >= max_files:
+                break
+            if should_skip_path(e):
+                continue
+            if e.is_dir():
+                stack.append(e)
+            elif e.is_file():
+                out.append(str(e.relative_to(root)))
+    return out
+
+
 def search_filename(cache, pattern: str, limit: int = 25) -> List[str]:
     p = pattern.lower().strip()
     files = cache.indexed_files()
+    # SHS Code FIX: merge with the real filesystem so non-code files are
+    # findable too (the index only covers source files).
+    try:
+        real = _all_files_bounded(Path(cache.root))
+        merged, seen = list(files), set(files)
+        for f in real:
+            if f not in seen:
+                seen.add(f)
+                merged.append(f)
+        files = merged
+    except Exception:
+        pass
     exact = [f for f in files if Path(f).name.lower() == p]
     startswith = [f for f in files if Path(f).name.lower().startswith(p)]
     contains = [f for f in files if p in f.lower()]

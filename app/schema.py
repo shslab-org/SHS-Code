@@ -67,6 +67,17 @@ class Message(BaseModel):
     def tool(cls, content: str, tool_call_id: str, name: str) -> "Message":
         return cls(role=Role.TOOL, content=content, tool_call_id=tool_call_id, name=name)
 
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> "Message":
+        """Reconstruct a Message from its to_dict() form.
+
+        SHS Code FIX (checkpoint-restore crash): /resume, /compress and
+        background-task checkpoint restore all called Message.from_dict,
+        which did not exist — every memory restore raised AttributeError
+        and the flagship exact-resume never worked.
+        """
+        return cls.model_validate(d)
+
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"role": self.role.value}
         if self.content is not None:

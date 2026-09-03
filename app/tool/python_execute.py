@@ -26,6 +26,7 @@ Permitted (everything else):
   filesystem operations, subprocesses, long computations.
 """
 
+import asyncio
 import multiprocessing
 import queue
 import sys
@@ -122,8 +123,15 @@ class PythonExecute(BaseTool):
         )
         proc.start()
 
-        # timeout=None → join waits forever until the subprocess finishes
-        proc.join(timeout=timeout)
+        # SHS Code FIX (event-loop starvation): proc.join() is SYNCHRONOUS —
+        # a long-running worker (timeout=None allows hours) blocked the whole
+        # asyncio loop: parallel tool batches serialized, the activity feed
+        # froze and cancellation stopped responding. The join now runs in a
+        # worker thread; the event loop keeps servicing everything else.
+        if timeout is None:
+            await asyncio.to_thread(proc.join)
+        else:
+            await asyncio.to_thread(proc.join, timeout)
 
         if proc.is_alive():
             proc.terminate()
