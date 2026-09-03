@@ -1,5 +1,5 @@
 """
-ManusClaw Conversation System — BaseConversation ABC
+SHS Code Conversation System — BaseConversation ABC
 ======================================================
 
 The abstract base class that defines the public contract for all

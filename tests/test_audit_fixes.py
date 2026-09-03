@@ -17,6 +17,7 @@ os.environ.setdefault("APP_ENV", "test")
 import pytest
 
 from app.config import Config
+from app import env
 Config.reset()
 
 
@@ -80,7 +81,7 @@ class TestLogCommand:
 class TestMcpAddSse:
     @pytest.mark.asyncio
     async def test_add_sse_first_server_is_valid(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "home"))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "home"))
         from app.config import Config
         Config.reset()
         from app.cli import _handle_slash
@@ -103,7 +104,7 @@ class TestMcpAddSse:
 class TestProviderSetKey:
     @pytest.mark.asyncio
     async def test_set_key_updates(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "home"))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "home"))
         from app.providers import ProviderRegistry
         from app.config import Config
         Config.reset()
@@ -339,36 +340,36 @@ class TestPathResolution:
         lt._DB_PATH  # module constant exists (back-compat)
         # fresh instance resolves lazily
         import importlib
-        monkey_env = {"MANUSCLAW_WORKSPACE": str(tmp_path)}
-        old = os.environ.get("MANUSCLAW_WORKSPACE")
-        os.environ["MANUSCLAW_WORKSPACE"] = str(tmp_path)
+        monkey_env = {"SHSCODE_WORKSPACE": str(tmp_path)}
+        old = env.getenv("WORKSPACE")
+        os.environ["SHSCODE_WORKSPACE"] = str(tmp_path)
         try:
             m = lt.LongTermMemory()
             assert str(tmp_path) in str(m._db_path), (
-                f"long-term memory must follow MANUSCLAW_WORKSPACE, got {m._db_path}")
+                f"long-term memory must follow SHSCODE_WORKSPACE, got {m._db_path}")
         finally:
             if old:
-                os.environ["MANUSCLAW_WORKSPACE"] = old
+                os.environ["SHSCODE_WORKSPACE"] = old
             else:
-                os.environ.pop("MANUSCLAW_WORKSPACE", None)
+                os.environ.pop("SHSCODE_WORKSPACE", None)
 
     def test_webhooks_path_honours_workspace(self, tmp_path):
         import app.server.webhooks as wh
-        old = os.environ.get("MANUSCLAW_WORKSPACE")
-        os.environ["MANUSCLAW_WORKSPACE"] = str(tmp_path)
+        old = env.getenv("WORKSPACE")
+        os.environ["SHSCODE_WORKSPACE"] = str(tmp_path)
         try:
             mgr = wh.WebhookManager()
             assert str(tmp_path) in str(mgr._db_path)
         finally:
             if old:
-                os.environ["MANUSCLAW_WORKSPACE"] = old
+                os.environ["SHSCODE_WORKSPACE"] = old
             else:
-                os.environ.pop("MANUSCLAW_WORKSPACE", None)
+                os.environ.pop("SHSCODE_WORKSPACE", None)
 
     def test_session_db_honours_workspace(self, tmp_path):
         from app.db.session import SessionDB, _default_db_path
-        old = os.environ.get("MANUSCLAW_WORKSPACE")
-        os.environ["MANUSCLAW_WORKSPACE"] = str(tmp_path)
+        old = env.getenv("WORKSPACE")
+        os.environ["SHSCODE_WORKSPACE"] = str(tmp_path)
         try:
             assert str(tmp_path) in str(_default_db_path())
             db = SessionDB()
@@ -376,22 +377,22 @@ class TestPathResolution:
             db.close()
         finally:
             if old:
-                os.environ["MANUSCLAW_WORKSPACE"] = old
+                os.environ["SHSCODE_WORKSPACE"] = old
             else:
-                os.environ.pop("MANUSCLAW_WORKSPACE", None)
+                os.environ.pop("SHSCODE_WORKSPACE", None)
 
     def test_skills_dir_honours_home(self, tmp_path):
         import app.skills.skill_engine as se
-        old = os.environ.get("MANUSCLAW_HOME")
-        os.environ["MANUSCLAW_HOME"] = str(tmp_path / "mh")
+        old = env.getenv("HOME")
+        os.environ["SHSCODE_HOME"] = str(tmp_path / "mh")
         try:
             d = se._get_skills_dir()
             assert str(tmp_path / "mh") in str(d)
         finally:
             if old:
-                os.environ["MANUSCLAW_HOME"] = old
+                os.environ["SHSCODE_HOME"] = old
             else:
-                os.environ.pop("MANUSCLAW_HOME", None)
+                os.environ.pop("SHSCODE_HOME", None)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -420,7 +421,7 @@ class TestFilenameSearch:
 
 class TestSkillEngineFixes:
     def test_create_marks_user_level(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_SKILLS_DIR", str(tmp_path / "skills"))
+        monkeypatch.setenv("SHSCODE_SKILLS_DIR", str(tmp_path / "skills"))
         from app.skills.skill_engine import SkillEngine
         eng = SkillEngine()
         s = eng.create("myskill", "desc", "content body")
@@ -429,7 +430,7 @@ class TestSkillEngineFixes:
         assert eng.remove("myskill") is True
 
     def test_disabled_skill_not_injected(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_SKILLS_DIR", str(tmp_path / "skills"))
+        monkeypatch.setenv("SHSCODE_SKILLS_DIR", str(tmp_path / "skills"))
         from app.skills.skill_engine import SkillEngine
         eng = SkillEngine()
         eng.create("py_skill", "python scripting helper", "python content")
@@ -570,7 +571,7 @@ class TestCliPolish:
 
     def test_sessions_unknown_subcmd_interpolates(self, tmp_path, monkeypatch):
         async def go():
-            monkeypatch.setenv("MANUSCLAW_WORKSPACE", str(tmp_path))
+            monkeypatch.setenv("SHSCODE_WORKSPACE", str(tmp_path))
             from app.cli import _handle_slash
             return await _handle_slash("/sessions frobnicate")
         out = asyncio.run(go())

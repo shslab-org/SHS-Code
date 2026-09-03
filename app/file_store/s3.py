@@ -27,7 +27,7 @@ Usage::
 
     from app.file_store.s3 import S3FileStore
 
-    store = S3FileStore(bucket="my-manusclaw-bucket", prefix="files/")
+    store = S3FileStore(bucket="my-shscode-bucket", prefix="files/")
     await store.write("report.pdf", pdf_bytes, content_type="application/pdf")
     url = await store.get_url("report.pdf", expires_in=3600)
 """
@@ -51,6 +51,7 @@ from app.file_store.base import (
     FileStorePermissionError,
 )
 from app.logger import logger
+from app import env
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -140,7 +141,7 @@ class S3FileStore(FileStore):
         endpoint_url: Optional[str] = None,
         max_retries: int = 3,
     ) -> None:
-        self._bucket = bucket or os.getenv("MANUSCLAW_S3_BUCKET", "manusclaw-files")
+        self._bucket = bucket or env.getenv("S3_BUCKET", "shscode-files")
         self._prefix = prefix.rstrip("/") + "/" if prefix else ""
         self._region = region or os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         self._endpoint_url = endpoint_url or os.getenv("AWS_ENDPOINT_URL")

@@ -2,7 +2,7 @@
 Alembic Migration Environment
 ================================
 
-Configures Alembic to use manusclaw's configuration system for database
+Configures Alembic to use SHS Code's configuration system for database
 connection.  Supports both online migrations (connected to the database)
 and offline migrations (SQL script generation).
 
@@ -10,9 +10,9 @@ This file is referenced by ``alembic.ini`` as the ``script_location.env``
 module.
 
 Configuration sources (in priority order):
-    1. ``MANUSCLAW_DB_URL`` environment variable
-    2. manusclaw's :class:`app.config.Config` (reads from config files)
-    3. Default SQLite path: ``workspace/.sessions/manusclaw.db``
+    1. ``SHSCODE_DB_URL`` environment variable
+    2. SHS Code's :class:`app.config.Config` (reads from config files)
+    3. Default SQLite path: ``workspace/.sessions/shscode.db``
 
 Usage::
 
@@ -30,6 +30,7 @@ import sys
 from logging.config import fileConfig
 
 from alembic import context
+from app import env
 
 # ---------------------------------------------------------------------------
 # Ensure the project root is on sys.path so that ``app.*`` imports work
@@ -64,16 +65,16 @@ def _get_database_url() -> str:
     """Resolve the database URL from environment, config, or default.
 
     Priority:
-        1. ``MANUSCLAW_DB_URL`` environment variable
+        1. ``SHSCODE_DB_URL`` environment variable
         2. ``sqlalchemy.url`` in alembic.ini
-        3. manusclaw's config system
+        3. SHS Code's config system
         4. Default SQLite path
 
     Returns:
         A SQLAlchemy-compatible database URL string.
     """
     # 1. Environment variable (highest priority)
-    env_url = os.getenv("MANUSCLAW_DB_URL", "")
+    env_url = env.getenv("DB_URL", "")
     if env_url:
         return env_url
 
@@ -82,19 +83,23 @@ def _get_database_url() -> str:
     if ini_url and not ini_url.startswith("%"):
         return ini_url
 
-    # 3. manusclaw config
+    # 3. SHS Code config
     try:
         from app.config import Config
 
         cfg = Config.get()
-        # Try to get a DB URL from config — currently manusclaw uses SQLite
-        db_path = os.path.join(cfg.workspace_dir, ".sessions", "manusclaw.db")
+        # Try to get a DB URL from config — currently SHS Code uses SQLite
+        sessions = Path(cfg.workspace_dir) / ".sessions"
+        db_file = "shscode.db"
+        if not (sessions / "shscode.db").exists() and (sessions / "manusclaw.db").exists():
+            db_file = "manusclaw.db"  # legacy pre-rename database
+        db_path = os.path.join(cfg.workspace_dir, ".sessions", db_file)
         return f"sqlite:///{db_path}"
     except Exception:
         pass
 
     # 4. Default
-    default_path = os.path.join("workspace", ".sessions", "manusclaw.db")
+    default_path = os.path.join("workspace", ".sessions", "shscode.db")
     return f"sqlite:///{default_path}"
 
 

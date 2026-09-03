@@ -1,5 +1,5 @@
 """
-ManusClaw Conversation System — FIFO Lock
+SHS Code Conversation System — FIFO Lock
 ============================================
 
 Fair, starvation-free locks that grant access in first-in-first-out order.

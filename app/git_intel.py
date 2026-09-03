@@ -9,7 +9,7 @@ recent history, merge state, conflicts — captured from the REAL repo.
 here is the output of an actual git subprocess.
 
 SmartRollback: file-level safety net BEFORE significant changes.
-Snapshots copy agent-touched files into ~/.manusclaw/rollback/<task_id>/
+Snapshots copy agent-touched files into ~/.shscode/rollback/<task_id>/
 (with a manifest + git HEAD). Restore only touches the files the agent
 changed — unrelated user work is never destroyed (spec §33 rule 5).
 Falls back to no-op when git is absent or the dir isn't a repo.
@@ -25,8 +25,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.logger import logger
+from app import env
 
-HOME = Path(os.getenv("MANUSCLAW_HOME", str(Path.home() / ".manusclaw")))
+HOME = env.home_dir()
 ROLLBACK_DIR = HOME / "rollback"
 
 

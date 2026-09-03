@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 """
-ManusClaw Context-Aware Logger
+SHS Code Context-Aware Logger
 ===============================
 Every log record is automatically tagged with four context fields:
 
   trace_id  — unique ID for the agent run (set once per run)
-  agent     — agent name (manus, orchestrator, product_manager, …)
+  agent     — agent name (shscode, orchestrator, product_manager, …)
   step      — current PAORR step number within the run
   task_id   — short task UUID
 
@@ -136,7 +136,7 @@ try:
 except Exception:
     pass
 
-_logger = logging.getLogger("manusclaw")
+_logger = logging.getLogger("shscode")
 _logger.setLevel(getattr(logging, _log_level, logging.DEBUG))
 
 _logger.trace = lambda msg, *args, **kwargs: _logger.log(logging.TRACE, msg, *args, **kwargs)

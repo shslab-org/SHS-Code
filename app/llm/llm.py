@@ -126,7 +126,7 @@ class MockLLM:
                         type="function",
                         function=Function(
                             name="python_execute",
-                            arguments='{"code": "print(\\"Hello from ManusClaw!\\")"}',
+                            arguments='{"code": "print(\\"Hello from SHS Code!\\")"}',
                         ),
                     )
                 ],
@@ -160,7 +160,7 @@ class MockLLM:
                             "type": "function",
                             "function": {
                                 "name": "python_execute",
-                                "arguments": '{"code": "print(\\"Hello from ManusClaw!\\")"}'
+                                "arguments": '{"code": "print(\\"Hello from SHS Code!\\")"}'
                             }
                         }]
                     }

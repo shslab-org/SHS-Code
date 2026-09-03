@@ -8,7 +8,7 @@ files, build/test/run commands, important files — from the actual
 filesystem (never from documentation claims).
 
 Result is a ProjectProfile dict persisted by the manager layer
-(~/.manusclaw/intel/<hash>/profile.json) so /project can show it and
+(~/.shscode/intel/<hash>/profile.json) so /project can show it and
 the verification engine can pick project-aware commands.
 """
 

@@ -28,7 +28,7 @@ class AskHuman(BaseTool):
                       "Re-run in interactive terminal mode or provide all needed info in the initial prompt."
             )
         
-        print(f"\n[ManusClaw asks]: {question}")
+        print(f"\n[SHS Code asks]: {question}")
         try:
             loop = asyncio.get_event_loop()
             if timeout and timeout > 0:

@@ -18,13 +18,13 @@ Dependencies:
 
 Environment Variables:
     * ``GOOGLE_APPLICATION_CREDENTIALS`` — Path to service account JSON key file
-    * ``MANUSCLAW_GCS_BUCKET``          — Default GCS bucket name
+    * ``SHSCODE_GCS_BUCKET``          — Default GCS bucket name
 
 Usage::
 
     from app.file_store.gcs import GoogleCloudFileStore
 
-    store = GoogleCloudFileStore(bucket="my-manusclaw-bucket", prefix="files/")
+    store = GoogleCloudFileStore(bucket="my-shscode-bucket", prefix="files/")
     await store.write("report.pdf", pdf_bytes, content_type="application/pdf")
     url = await store.get_url("report.pdf", expires_in=3600)
 """
@@ -49,6 +49,7 @@ from app.file_store.base import (
     FileStorePermissionError,
 )
 from app.logger import logger
+from app import env
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -133,7 +134,7 @@ class GoogleCloudFileStore(FileStore):
         credentials: Any = None,
         max_retries: int = 3,
     ) -> None:
-        self._bucket_name = bucket or os.getenv("MANUSCLAW_GCS_BUCKET", "manusclaw-files")
+        self._bucket_name = bucket or env.getenv("GCS_BUCKET", "shscode-files")
         self._prefix = prefix.rstrip("/") + "/" if prefix else ""
         self._project = project or os.getenv("GOOGLE_CLOUD_PROJECT")
         self._max_retries = max_retries

@@ -1,5 +1,5 @@
 """
-ManusClaw Event System — Serialization / Deserialization
+SHS Code Event System — Serialization / Deserialization
 =========================================================
 
 Handles converting events to/from JSON with type discrimination via the
@@ -29,7 +29,7 @@ from app.events.types import (
     EventUnion,
 )
 
-logger = logging.getLogger("manusclaw.events.serialization")
+logger = logging.getLogger("shscode.events.serialization")
 
 
 # ──────────────────────────────────────────────────────────────────────────────

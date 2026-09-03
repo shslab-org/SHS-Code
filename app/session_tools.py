@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 """
-ManusClaw Session Tools — Standalone CLI for session management.
+SHS Code Session Tools — Standalone CLI for session management.
 
 Provides commands for listing, inspecting, injecting messages into,
 creating, deleting, and exporting sessions from the SessionDB.
 
 Usage from shell::
 
-    manusclaw sessions list
-    manusclaw sessions history <session_id>
-    manusclaw sessions send <session_id> --message "text"
-    manusclaw sessions spawn --prompt "do something"
-    manusclaw sessions delete <session_id>
-    manusclaw sessions export <session_id> [--output file.json]
+    shscode sessions list
+    shscode sessions history <session_id>
+    shscode sessions send <session_id> --message "text"
+    shscode sessions spawn --prompt "do something"
+    shscode sessions delete <session_id>
+    shscode sessions export <session_id> [--output file.json]
 
 Can also be used programmatically:
 
@@ -83,8 +83,8 @@ class SessionToolsCLI:
     def _build_parser(self) -> argparse.ArgumentParser:
         """Build the argument parser."""
         parser = argparse.ArgumentParser(
-            prog="manusclaw sessions",
-            description="ManusClaw Session Management Tools",
+            prog="shscode sessions",
+            description="SHS Code Session Management Tools",
         )
         sub = parser.add_subparsers(dest="command", help="Command to execute")
 
@@ -109,8 +109,8 @@ class SessionToolsCLI:
         spawn = sub.add_parser("spawn", help="Create a new session and run a task")
         spawn.add_argument("--prompt", "-p", required=True,
                            help="Task prompt for the new session")
-        spawn.add_argument("--agent", default="manus",
-                           help="Agent name (default: manus)")
+        spawn.add_argument("--agent", default="shscode",
+                           help="Agent name (default: shscode)")
         spawn.add_argument("--mode", default="build",
                            choices=["build", "plan"],
                            help="Agent mode (default: build)")
@@ -146,7 +146,7 @@ class SessionToolsCLI:
         print("-" * 80)
         for s in sessions:
             goal = (s.get("goal") or "")[:45]
-            agent = s.get("agent_name", "manus")
+            agent = s.get("agent_name", "shscode")
             state = s.get("state", "unknown")
             steps = s.get("step_count", 0)
             print(f"{s['id']:<14} {agent:<10} {state:<10} {steps:>5}  {goal}")
@@ -209,7 +209,7 @@ class SessionToolsCLI:
         found = any(s["id"] == session_id for s in sessions)
         if not found:
             print(f"Session {session_id} not found.")
-            print("Use 'manusclaw sessions list' to see available sessions.")
+            print("Use 'shscode sessions list' to see available sessions.")
             return
 
         # Log the message
@@ -220,7 +220,7 @@ class SessionToolsCLI:
         # Optionally run the agent with this message
         # (This is a simple injection — the agent would need to pick it up
         # on next run. For immediate execution, use spawn instead.)
-        print("\nNote: Message logged. Use 'manusclaw sessions spawn' to run a task,")
+        print("\nNote: Message logged. Use 'shscode sessions spawn' to run a task,")
         print("or reconnect to this session for the agent to process it.")
 
     async def _cmd_spawn(self, db, args) -> None:
@@ -235,8 +235,8 @@ class SessionToolsCLI:
         print(f"  Prompt: {prompt[:80]}...\n")
 
         try:
-            from app.agent.manus import Manus
-            agent = Manus()
+            from app.agent.shscode import SHSCode
+            agent = SHSCode()
             result = await agent.run(prompt)
             session_id = agent._session_id or "unknown"
             print(f"Session {session_id} completed.")
@@ -302,14 +302,14 @@ class SessionToolsCLI:
 
 
 def main() -> None:
-    """Entry point for ``manusclaw sessions`` command."""
+    """Entry point for ``shscode sessions`` command."""
     cli = SessionToolsCLI()
     if len(sys.argv) > 1 and sys.argv[1] != "sessions":
-        # If called as `manusclaw sessions list`, strip the "sessions" prefix
+        # If called as `shscode sessions list`, strip the "sessions" prefix
         # If called as `python -m app.session_tools list`, pass all args
         asyncio.run(cli.run(sys.argv[1:]))
     else:
-        # Called as `manusclaw sessions list` — sys.argv[1] is "sessions"
+        # Called as `shscode sessions list` — sys.argv[1] is "sessions"
         asyncio.run(cli.run(sys.argv[2:]))
 
 

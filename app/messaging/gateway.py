@@ -2,7 +2,7 @@ from __future__ import annotations
 """MessagingGateway — manages all platform adapters and agent instance cache.
 
 Updated to use AgentRouter for per-channel multi-agent routing.
-Backward compatible — falls back to direct Manus creation when
+Backward compatible — falls back to direct SHSCode creation when
 AgentRouter is not configured.
 """
 import asyncio
@@ -126,7 +126,7 @@ class MessagingGateway:
 
     def _get_or_create_agent(self, session_key: str):
         import time
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         now = time.monotonic()
 
         # Evict idle agents — FIX: call cleanup on evicted agents
@@ -158,7 +158,7 @@ class MessagingGateway:
                     logger.warning(f"[Gateway] Cleanup error for LRU-evicted agent {k}: {e}")
 
         if session_key not in self._agent_cache:
-            self._agent_cache[session_key] = Manus()
+            self._agent_cache[session_key] = SHSCode()
         self._last_active[session_key] = now
         return self._agent_cache[session_key]
 

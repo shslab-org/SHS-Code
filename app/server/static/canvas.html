@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ManusClaw Canvas</title>
+<title>SHS Code Canvas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
@@ -308,7 +308,7 @@ html, body {
 <body data-theme="dark">
 
 <div class="header">
-  <h1>📊 ManusClaw Canvas</h1>
+  <h1>📊 SHS Code Canvas</h1>
   <span class="header-status" id="status">Connecting...</span>
   <div class="header-actions">
     <button onclick="requestSync()">🔄 Sync</button>
@@ -741,14 +741,14 @@ function toggleTheme() {
   const btn = document.querySelector('.header-actions button:last-child');
   btn.textContent = next === 'dark' ? '🌙' : '☀️';
 
-  localStorage.setItem('manusclaw-canvas-theme', next);
+  localStorage.setItem('shscode-canvas-theme', next);
 
   // Re-render charts with new theme
   requestSync();
 }
 
 (function() {
-  const saved = localStorage.getItem('manusclaw-canvas-theme');
+  const saved = localStorage.getItem('shscode-canvas-theme');
   if (saved) {
     document.body.setAttribute('data-theme', saved);
     const btn = document.querySelector('.header-actions button:last-child');

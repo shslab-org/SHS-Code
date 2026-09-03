@@ -26,7 +26,7 @@ Usage::
 
     from app.secrets.store import FileSecretsStore
 
-    store = FileSecretsStore(base_dir="/var/lib/manusclaw/secrets")
+    store = FileSecretsStore(base_dir="/var/lib/shscode/secrets")
     store.set("openai_key", value="sk-abc123", source=SecretSource.STATIC)
     secret = store.get("openai_key")  # returns SecretStr
     secret.get_secret_value()         # "sk-abc123"
@@ -46,6 +46,7 @@ from typing import Optional
 
 from app.logger import logger
 from app.secrets.models import SecretEntry, SecretSource, SecretStr
+from app import env
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -224,7 +225,7 @@ class FileSecretsStore(SecretsStore):
     def __init__(self, base_dir: str = "") -> None:
         if not base_dir:
             base_dir = os.path.join(
-                os.getenv("MANUSCLAW_HOME", str(Path.home() / ".manusclaw")),
+                str(env.home_dir()),
                 "secrets",
             )
         self._base_dir = Path(base_dir)

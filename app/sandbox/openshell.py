@@ -140,7 +140,7 @@ class OpenShellSandbox:
 
             # Read output with timeout
             # For interactive mode, we use a marker to detect end of output
-            marker = "__MANUSCLAW_EXEC_END__"
+            marker = "__SHSCODE_EXEC_END__"
             self._process.stdin.write(
                 f"print('{marker}')\n".encode()
             )

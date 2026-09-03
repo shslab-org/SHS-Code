@@ -16,12 +16,12 @@ RUN pip install --upgrade pip && \
 # ─── Stage 2: runtime ────────────────────────────────────────────────────────
 FROM python:3.11-slim AS runtime
 
-LABEL org.opencontainers.image.title="ManusClaw"
+LABEL org.opencontainers.image.title="SHS Code"
 LABEL org.opencontainers.image.description="Autonomous AI Agent Framework by The-JDdev (SHS Shobuj)"
-LABEL org.opencontainers.image.source="https://github.com/The-JDdev/ManusClaw"
+LABEL org.opencontainers.image.source="https://github.com/The-JDdev/SHS Code"
 LABEL org.opencontainers.image.licenses="MIT"
 
-WORKDIR /manusclaw
+WORKDIR /shscode
 
 # Runtime system packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -38,9 +38,9 @@ COPY . .
 RUN mkdir -p workspace/output workspace/.memory workspace/.sessions logs
 
 # Non-root user for safety
-RUN useradd -m -s /bin/bash manusclaw && \
-    chown -R manusclaw:manusclaw /manusclaw
-USER manusclaw
+RUN useradd -m -s /bin/bash shscode && \
+    chown -R shscode:shscode /shscode
+USER shscode
 
 # Default: interactive CLI agent
 ENTRYPOINT ["python", "main.py"]

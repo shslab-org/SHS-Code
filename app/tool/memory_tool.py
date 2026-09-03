@@ -5,17 +5,18 @@ import threading
 from pathlib import Path
 from app.tool.base import BaseTool
 from app.schema import ToolResult
+from app import env
 
 
 def _get_workspace() -> Path:
     """Resolve the workspace directory lazily.
 
-    Reads ``MANUSCLAW_WORKSPACE`` each call so runtime env changes
+    Reads ``SHSCODE_WORKSPACE`` each call so runtime env changes
     (tests via ``monkeypatch.setenv``, profile switching, CLI overrides)
     are honoured. Previously this was a module-level constant evaluated
     once at import, which silently ignored later env changes.
     """
-    return Path(os.getenv("MANUSCLAW_WORKSPACE", "workspace"))
+    return Path(env.getenv("WORKSPACE", "workspace"))
 
 
 def _memory_file() -> Path:

@@ -13,7 +13,7 @@ from app.planner import (
 
 @pytest.fixture
 def journal(tmp_path, monkeypatch):
-    monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "home"))
     j = Journal(tmp_path / "journal.db")
     yield j
     j.close()
@@ -132,7 +132,7 @@ class TestExactResume:
     def test_duplicate_work_prevention(self, journal, tmp_path, monkeypatch):
         async def run():
             # index the tmp project so symbol search can see it
-            monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "home2"))
+            monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "home2"))
             from app.intelligence.cache import IntelligenceCache
             from app.intelligence.manager import Intelligence
             self._mk_project(tmp_path)

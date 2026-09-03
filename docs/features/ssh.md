@@ -8,11 +8,11 @@ SSH server for remote gateway control with public key auth and restricted shell.
 ## Configuration
 | Variable | Description |
 |---|---|
-| `MANUSCLAW_SSH_ENABLED` | Enable (default: `false`) |
-| `MANUSCLAW_SSH_PORT` | Port (default: `2222`) |
-| `MANUSCLAW_SSH_HOST` | Bind address (default: `0.0.0.0`) |
-| `MANUSCLAW_SSH_HOST_KEY` | Host key path |
-| `MANUSCLAW_SSH_AUTH_KEYS` | Authorized keys path |
+| `SHSCODE_SSH_ENABLED` | Enable (default: `false`) |
+| `SHSCODE_SSH_PORT` | Port (default: `2222`) |
+| `SHSCODE_SSH_HOST` | Bind address (default: `0.0.0.0`) |
+| `SHSCODE_SSH_HOST_KEY` | Host key path |
+| `SHSCODE_SSH_AUTH_KEYS` | Authorized keys path |
 
 ## Commands
 `status`, `restart`, `logs [N]`, `agent --message MSG`, `channels list`, `cron list`, `help`, `exit`
@@ -27,5 +27,5 @@ Uses `asyncssh` SSHServer callbacks. Restricted shell validates and dispatches. 
 
 ## Install
 ```
-pip install manusclaw[ssh]
+pip install shscode[ssh]
 ```

@@ -1,6 +1,6 @@
-"""ManusClaw Windows System Tray Hub.
+"""SHS Code Windows System Tray Hub.
 
-Provides a system tray icon with menu actions for interacting with the ManusClaw
+Provides a system tray icon with menu actions for interacting with the SHS Code
 server. Connects via WebSocket and shows desktop notifications for new messages.
 
 Requirements:
@@ -18,6 +18,7 @@ import uuid
 import webbrowser
 from pathlib import Path
 from typing import Callable, Optional
+from app import env
 
 try:
     import pystray
@@ -39,11 +40,11 @@ except ImportError:
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
-_SERVER_URL: str = os.getenv("MANUSCLAW_SERVER_URL", "ws://localhost:8765")
-_API_KEY: str = os.getenv("MANUSCLAW_API_KEY", "")
-_DEVICE_ID: str = os.getenv("MANUSCLAW_DEVICE_ID", "") or f"win-{uuid.uuid4().hex[:8]}"
+_SERVER_URL: str = env.getenv("SERVER_URL", "ws://localhost:8765")
+_API_KEY: str = env.getenv("API_KEY", "")
+_DEVICE_ID: str = env.getenv("DEVICE_ID", "") or f"win-{uuid.uuid4().hex[:8]}"
 _CHAT_URL: str = f"http://localhost:8765/chat"
-_CONFIG_DIR: Path = Path.home() / ".manusclaw"
+_CONFIG_DIR: Path = Path.home() / ".shscode"
 
 _RECONNECT_BASE_DELAY: float = 1.0
 _RECONNECT_MAX_DELAY: float = 60.0
@@ -74,7 +75,7 @@ def _create_icon_image() -> Image.Image:
     return img
 
 
-def _notification(text: str, title: str = "ManusClaw") -> None:
+def _notification(text: str, title: str = "SHS Code") -> None:
     """Show a Windows desktop notification via the tray icon."""
     if _tray_icon:
         _tray_icon.notify(text, title)
@@ -101,9 +102,9 @@ async def _ws_loop(on_message: Callable[[dict], None]) -> None:
                 delay = _RECONNECT_BASE_DELAY
                 attempt = 0
                 _tray_icon.icon = _create_icon_image()  # force refresh
-                _tray_icon.title = "ManusClaw — Connected"
+                _tray_icon.title = "SHS Code — Connected"
 
-                _notification("Connected to ManusClaw server")
+                _notification("Connected to SHS Code server")
 
                 async for raw in ws:
                     if _stop_event.is_set():
@@ -121,12 +122,12 @@ async def _ws_loop(on_message: Callable[[dict], None]) -> None:
             ConnectionRefusedError,
         ) as exc:
             _connected = False
-            _tray_icon.title = "ManusClaw — Disconnected"
+            _tray_icon.title = "SHS Code — Disconnected"
             if attempt < _MAX_RECONNECT_ATTEMPTS:
                 _notification(f"Disconnected: {exc}. Reconnecting in {delay:.0f}s…",
-                             "ManusClaw")
+                             "SHS Code")
             else:
-                _notification("Disconnected. Max retries reached.", "ManusClaw")
+                _notification("Disconnected. Max retries reached.", "SHS Code")
                 break
 
             _stop_event.wait(delay)
@@ -143,15 +144,15 @@ def _handle_ws_message(msg: dict, on_message: Callable[[dict], None]) -> None:
 
     elif msg_type == "agent_done":
         output = msg.get("output", "")[:200]
-        _notification(output, "ManusClaw — Agent Done")
+        _notification(output, "SHS Code — Agent Done")
 
     elif msg_type == "agent_error":
         error = msg.get("error", "Unknown error")
-        _notification(error, "ManusClaw — Error")
+        _notification(error, "SHS Code — Error")
 
     elif msg_type == "agent_start":
         prompt = msg.get("prompt", "")[:60]
-        _notification(f"Processing: {prompt}", "ManusClaw — Working")
+        _notification(f"Processing: {prompt}", "SHS Code — Working")
 
     # Forward all messages to the callback
     on_message(msg)
@@ -167,18 +168,18 @@ async def _send_prompt(prompt: str) -> None:
 # ─── Menu Actions ──────────────────────────────────────────────────────────────
 
 def _open_chat(icon: pystray.Icon, item: pystray.MenuItem) -> None:
-    """Open the ManusClaw web chat in the default browser."""
+    """Open the SHS Code web chat in the default browser."""
     webbrowser.open(_CHAT_URL)
 
 
 def _start_node(icon: pystray.Icon, item: pystray.MenuItem) -> None:
     """Start a compute node registration (placeholder action)."""
-    _notification("Node registration initiated — feature coming soon", "ManusClaw")
+    _notification("Node registration initiated — feature coming soon", "SHS Code")
     print("[Hub] Start Node clicked (not yet implemented)")
 
 
 def _open_settings(icon: pystray.Icon, item: pystray.MenuItem) -> None:
-    """Open the ManusClaw configuration directory in Explorer."""
+    """Open the SHS Code configuration directory in Explorer."""
     _CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     if sys.platform == "win32":
         os.startfile(str(_CONFIG_DIR))  # type: ignore[attr-defined]
@@ -238,10 +239,10 @@ def main() -> None:
 
     # Create and run the tray icon (blocking call)
     _tray_icon = pystray.Icon(
-        name="ManusClaw Hub",
+        name="SHS Code Hub",
         icon=_create_icon_image(),
         menu=_build_menu(),
-        title="ManusClaw — Starting…",
+        title="SHS Code — Starting…",
     )
 
     print(f"[Hub] Device ID: {_DEVICE_ID}")

@@ -1,19 +1,19 @@
 """
-ManusClaw Database Migrations
+SHS Code Database Migrations
 ================================
 
-Alembic-based database migration infrastructure for manusclaw.
+Alembic-based database migration infrastructure for SHS Code.
 
 This package provides:
     - Standard Alembic setup with auto-generation support
-    - Environment that uses manusclaw's config for DB connection
+    - Environment that uses SHS Code's config for DB connection
     - Support for both online and offline migrations
     - Initial migration creating core tables
 
 Usage::
 
     # Generate a new migration
-    cd /path/to/manusclaw
+    cd /path/to/shscode
     alembic -c app/migrations/alembic.ini revision --autogenerate -m "description"
 
     # Apply migrations

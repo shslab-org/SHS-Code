@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-#  ManusClaw — Linux & macOS Installer
+#  SHS Code — Linux & macOS Installer
 #  Works on: Ubuntu, Debian, Fedora, Arch, macOS (Intel + Apple Silicon)
 #  Usage:  bash install.sh
 # ─────────────────────────────────────────────────────────────────────────────
@@ -9,9 +9,9 @@ set -e
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 
-REPO="https://github.com/The-JDdev/ManusClaw.git"
-INSTALL_DIR="$HOME/ManusClaw"
-BIN_LINK="/usr/local/bin/manusclaw"
+REPO="https://github.com/The-JDdev/SHS Code.git"
+INSTALL_DIR="$HOME/SHS Code"
+BIN_LINK="/usr/local/bin/shscode"
 
 echo -e "${CYAN}${BOLD}"
 echo "  ███╗   ███╗ █████╗ ███╗   ██╗██╗   ██╗███████╗"
@@ -20,7 +20,7 @@ echo "  ██╔████╔██║███████║██╔██
 echo "  ██║╚██╔╝██║██╔══██║██║╚██╗██║██║   ██║╚════██║"
 echo "  ██║ ╚═╝ ██║██║  ██║██║ ╚████║╚██████╔╝███████║"
 echo "  ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝"
-echo -e "  ManusClaw Installer — by The-JDdev (SHS Shobuj)${NC}"
+echo -e "  SHS Code Installer — by The-JDdev (SHS Shobuj)${NC}"
 echo ""
 
 # ── Python check ─────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ fi
 echo -e "  ${GREEN}✓ git found${NC}"
 
 # ── clone / update ───────────────────────────────────────────────────────────
-echo -e "${BOLD}[3/5] Cloning ManusClaw...${NC}"
+echo -e "${BOLD}[3/5] Cloning SHS Code...${NC}"
 if [ -d "$INSTALL_DIR/.git" ]; then
     echo -e "  Existing install found — pulling latest..."
     git -C "$INSTALL_DIR" pull --ff-only
@@ -100,13 +100,13 @@ exec python -m app.cli "\$@"
 LAUNCHER
 chmod +x "$LAUNCHER"
 # Legacy alias so existing users keep their muscle memory
-ln -sf "$LAUNCHER" "$INSTALL_DIR/.venv/bin/manusclaw"
+ln -sf "$LAUNCHER" "$INSTALL_DIR/.venv/bin/shscode"
 
 # Try to symlink to /usr/local/bin
 if [ -w "/usr/local/bin" ] || sudo -n true 2>/dev/null; then
     sudo ln -sf "$LAUNCHER" "$BIN_LINK" 2>/dev/null || ln -sf "$LAUNCHER" "$HOME/.local/bin/SHSCode" 2>/dev/null || true
-    sudo ln -sf "$LAUNCHER" "/usr/local/bin/manusclaw" 2>/dev/null || ln -sf "$LAUNCHER" "$HOME/.local/bin/manusclaw" 2>/dev/null || true
-    echo -e "  ${GREEN}✓ 'SHSCode' (and legacy 'manusclaw') command available globally${NC}"
+    sudo ln -sf "$LAUNCHER" "/usr/local/bin/shscode" 2>/dev/null || ln -sf "$LAUNCHER" "$HOME/.local/bin/shscode" 2>/dev/null || true
+    echo -e "  ${GREEN}✓ 'SHSCode' command available globally${NC}"
 else
     echo -e "  ${YELLOW}Add to PATH manually:${NC}"
     echo "    export PATH=\"$INSTALL_DIR/.venv/bin:\$PATH\""
@@ -114,11 +114,11 @@ fi
 
 echo ""
 echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  SHS Code installed successfully! (predecessor: ManusClaw)"
+echo "  SHS Code installed successfully! (predecessor: SHS Code)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo -e "  ${BOLD}Quick start:${NC}"
-echo -e "    manusclaw \"Write a Python web scraper\""
+echo -e "    shscode \"Write a Python web scraper\""
 echo ""
 echo -e "  ${BOLD}Edit config:${NC}"
 echo -e "    nano $INSTALL_DIR/config.toml"
@@ -127,5 +127,5 @@ echo -e "  ${BOLD}Start server:${NC}"
 echo -e "    cd $INSTALL_DIR && source .venv/bin/activate"
 echo -e "    python run_server.py"
 echo ""
-echo -e "  ${BOLD}Support:${NC} https://github.com/The-JDdev/ManusClaw"
+echo -e "  ${BOLD}Support:${NC} https://github.com/The-JDdev/SHS Code"
 echo ""

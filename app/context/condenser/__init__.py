@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-ManusClaw Context Condensers
+SHS Code Context Condensers
 ==============================
 
 Condensers reduce the size of the LLM context window by removing

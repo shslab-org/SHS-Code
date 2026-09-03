@@ -1,4 +1,4 @@
-"""ManusClaw Webhook Router.
+"""SHS Code Webhook Router.
 
 FastAPI router for incoming webhook management endpoints.
 
@@ -32,7 +32,7 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 # SHS Code FIX (unauthenticated webhooks): every other mutating endpoint is
 # gated by require_api_key, but /webhooks/create|delete|trigger allowed
-# ANYONE full build-mode agent execution when MANUSCLAW_API_KEY was set.
+# ANYONE full build-mode agent execution when SHSCODE_API_KEY was set.
 # Management endpoints now require the key. Triggers additionally require
 # the hook's HMAC secret when one is configured (verified per-hook).
 from app.server.main import require_api_key  # noqa: E402

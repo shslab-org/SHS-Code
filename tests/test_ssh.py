@@ -6,8 +6,8 @@ import pytest
 # ── Ensure stub mode ────────────────────────────────────────────────────────
 @pytest.fixture(autouse=True)
 def _clear_ssh_env(monkeypatch):
-    monkeypatch.delenv("MANUSCLAW_SSH_ENABLED", raising=False)
-    monkeypatch.delenv("MANUSCLAW_SSH_PORT", raising=False)
+    monkeypatch.delenv("SHSCODE_SSH_ENABLED", raising=False)
+    monkeypatch.delenv("SHSCODE_SSH_PORT", raising=False)
 
 
 # ── SSHServer stub mode ────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ async def test_shell_allowed_command_status():
     shell = RestrictedShell()
     result = await shell.execute("status")
     assert result.success
-    assert "ManusClaw Server" in result.stdout
+    assert "SHS Code Server" in result.stdout
 
 
 @pytest.mark.asyncio
@@ -136,10 +136,10 @@ async def test_shell_reject_bash_exploits():
 def test_shell_motd():
     from app.ssh.shell import RestrictedShell
     shell = RestrictedShell()
-    assert "ManusClaw" in shell.motd
+    assert "SHS Code" in shell.motd
 
 
 def test_shell_prompt():
     from app.ssh.shell import RestrictedShell
     shell = RestrictedShell()
-    assert shell.prompt == "manusclaw> "
+    assert shell.prompt == "shscode> "

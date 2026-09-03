@@ -27,7 +27,7 @@ async def _search_bing(query: str, max_results: int) -> list[dict]:
         import aiohttp
         encoded = urllib.parse.quote(query)
         url = f"https://www.bing.com/search?q={encoded}&count={max_results}"
-        headers = {"User-Agent": "Mozilla/5.0 (compatible; ManusClawBot/1.0)"}
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; SHSCodeBot/1.0)"}
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 html = await resp.text()

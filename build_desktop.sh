@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# ManusClaw Desktop Builder
+# SHS Code Desktop Builder
 # Compiles the GUI into a standalone executable for Linux, macOS, or Windows.
 # Usage:
 #   bash build_desktop.sh              # auto-detect current platform
@@ -31,12 +31,12 @@ case "$(uname -s 2>/dev/null || echo Windows)" in
 esac
 
 ARCH="$(uname -m 2>/dev/null || echo amd64)"
-OUT_NAME="manusclaw-v${VERSION}-${OS}-${ARCH}${EXT}"
+OUT_NAME="shscode-v${VERSION}-${OS}-${ARCH}${EXT}"
 RELEASE_DIR="release"
 mkdir -p "$RELEASE_DIR"
 
 echo "════════════════════════════════════════════"
-echo " ManusClaw Desktop Builder v${VERSION}"
+echo " SHS Code Desktop Builder v${VERSION}"
 echo " Platform : $OS / $ARCH"
 echo " Mode     : $MODE"
 echo " Bundle   : $BUNDLE"
@@ -138,21 +138,21 @@ cat <<'NOTES'
 ────────────────────────────────────────────────────────
 
  LINUX
-   chmod +x release/manusclaw-*-linux-*
-   ./release/manusclaw-*-linux-*
+   chmod +x release/shscode-*-linux-*
+   ./release/shscode-*-linux-*
 
  macOS
-   chmod +x release/manusclaw-*-macos-*
-   ./release/manusclaw-*-macos-*
+   chmod +x release/shscode-*-macos-*
+   ./release/shscode-*-macos-*
    # If Gatekeeper blocks it:
-   xattr -cr ./release/manusclaw-*-macos-*
+   xattr -cr ./release/shscode-*-macos-*
 
  WINDOWS
    Double-click the .exe  OR  run in PowerShell:
-   .\release\manusclaw-*-windows-*.exe
+   .\release\shscode-*-windows-*.exe
    # If SmartScreen warns: click "More info" → "Run anyway"
    # To sign the exe (removes warning permanently):
-   signtool sign /fd SHA256 /a release\manusclaw-*.exe
+   signtool sign /fd SHA256 /a release\shscode-*.exe
 
 ────────────────────────────────────────────────────────
  CROSS-COMPILE (build all 3 from one machine)

@@ -1,6 +1,6 @@
-"""ManusClaw Mobile Node Client.
+"""SHS Code Mobile Node Client.
 
-Reference Python WebSocket client that connects to the ManusClaw server as a
+Reference Python WebSocket client that connects to the SHS Code server as a
 mobile node. Handles device registration, Canvas updates, voice forwarding,
 and screen capture transmission.
 
@@ -23,6 +23,7 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
+from app import env
 
 try:
     import websockets
@@ -34,12 +35,12 @@ except ImportError:
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
-_SERVER_URL: str = os.getenv("MANUSCLAW_SERVER_URL", "ws://localhost:8765")
-_API_KEY: str = os.getenv("MANUSCLAW_API_KEY", "")
-_DEVICE_ID: str = os.getenv("MANUSCLAW_DEVICE_ID", "") or f"mobile-{uuid.uuid4().hex[:8]}"
-_DEVICE_TYPE: str = os.getenv("MANUSCLAW_DEVICE_TYPE", "mobile")
+_SERVER_URL: str = env.getenv("SERVER_URL", "ws://localhost:8765")
+_API_KEY: str = env.getenv("API_KEY", "")
+_DEVICE_ID: str = env.getenv("DEVICE_ID", "") or f"mobile-{uuid.uuid4().hex[:8]}"
+_DEVICE_TYPE: str = env.getenv("DEVICE_TYPE", "mobile")
 _CAPABILITIES: list[str] = os.getenv(
-    "MANUSCLAW_CAPABILITIES", "voice,screen"
+    "SHSCODE_CAPABILITIES", "voice,screen"
 ).split(",")
 
 _RECONNECT_BASE_DELAY: float = 1.0
@@ -52,7 +53,7 @@ _PING_INTERVAL: float = 15.0
 
 @dataclass
 class DeviceInfo:
-    """Device registration information sent to the ManusClaw server."""
+    """Device registration information sent to the SHS Code server."""
     device_id: str = field(default_factory=lambda: _DEVICE_ID)
     device_type: str = _DEVICE_TYPE
     capabilities: list[str] = field(default_factory=lambda: list(_CAPABILITIES))
@@ -193,8 +194,8 @@ class ScreenCapture:
 
 # ─── Node Client ───────────────────────────────────────────────────────────────
 
-class ManusClawNodeClient:
-    """WebSocket client that registers as a mobile node with the ManusClaw server.
+class SHSCodeNodeClient:
+    """WebSocket client that registers as a mobile node with the SHS Code server.
 
     Handles:
     - Device registration and heartbeat
@@ -423,11 +424,11 @@ def _on_command(command: dict) -> None:
 def main() -> None:
     """Parse CLI arguments and run the node client."""
     parser = argparse.ArgumentParser(
-        description="ManusClaw Mobile Node Client",
+        description="SHS Code Mobile Node Client",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--server", default=_SERVER_URL,
-                        help="WebSocket URL of ManusClaw server")
+                        help="WebSocket URL of SHS Code server")
     parser.add_argument("--device-id", default=_DEVICE_ID,
                         help="Unique device identifier")
     parser.add_argument("--api-key", default=_API_KEY,
@@ -435,7 +436,7 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    client = ManusClawNodeClient(
+    client = SHSCodeNodeClient(
         server_url=args.server,
         device_id=args.device_id,
         api_key=args.api_key,
@@ -443,7 +444,7 @@ def main() -> None:
     client.on_canvas_update(_on_canvas)
     client.on_command(_on_command)
 
-    print(f"[Node] Starting ManusClaw node client")
+    print(f"[Node] Starting SHS Code node client")
     print(f"[Node] Device ID:   {client.device_id}")
     print(f"[Node] Device Type: {client.device_info.device_type}")
     print(f"[Node] Server:      {client.server_url}")

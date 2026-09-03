@@ -29,7 +29,7 @@ Continuous conversation loop: listen → transcribe → agent → speak. Exits o
 
 ## Install
 ```
-pip install manusclaw[voice]
+pip install shscode[voice]
 ```
 
 ## Factory

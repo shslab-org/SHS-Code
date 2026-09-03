@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Optional
 
 from app.logger import logger
+from app import env
 
 try:
     import yaml as _yaml
@@ -32,10 +33,10 @@ except ImportError:
     _HAS_YAML = False
 
 def _default_skills_dir() -> str:
-    """SHS Code FIX: honour MANUSCLAW_HOME like the rest of the app — the
-    old constant always wrote to the real ~/.manusclaw, leaking across
+    """SHS Code FIX: honour SHSCODE_HOME like the rest of the app — the
+    old constant always wrote to the real ~/.shscode, leaking across
     profiles/containers/tests."""
-    home = Path(os.getenv("MANUSCLAW_HOME", str(Path.home() / ".manusclaw")))
+    home = env.home_dir()
     return str(home / "skills")
 
 
@@ -46,12 +47,12 @@ _BUILTIN_SKILLS_DIR = Path(__file__).parent / "builtin"
 def _get_skills_dir() -> Path:
     """Resolve the user skills directory lazily.
 
-    Reads ``MANUSCLAW_SKILLS_DIR`` each call so runtime changes
+    Reads ``SHSCODE_SKILLS_DIR`` each call so runtime changes
     (tests, profile switching, CLI overrides) are honoured.
     Previously this was a module-level constant evaluated once at
     import, which silently ignored later env changes.
     """
-    return Path(os.getenv("MANUSCLAW_SKILLS_DIR", _default_skills_dir()))
+    return Path(env.getenv("SKILLS_DIR", _default_skills_dir()))
 
 
 @dataclass
@@ -173,7 +174,7 @@ class SkillEngine:
         return name in self._disabled
 
     def set_disabled(self, name: str, disabled: bool) -> bool:
-        """Enable/disable a skill; persists to ~/.manusclaw/skills_state.json.
+        """Enable/disable a skill; persists to ~/.shscode/skills_state.json.
         Returns False when the skill doesn't exist."""
         self._ensure_loaded()
         if name not in self._skills:
@@ -239,7 +240,7 @@ class SkillEngine:
     # Phase 2 (spec §35): install from a local path or git URL; remove
     def install(self, source: str, name: Optional[str] = None) -> Skill:
         """Install a skill from a path (file/dir with .md files) or a git URL
-        into ~/.manusclaw/skills/installed/. Returns the installed skill."""
+        into ~/.shscode/skills/installed/. Returns the installed skill."""
         import shutil
         import tempfile
         dest_root = _get_skills_dir() / "installed"

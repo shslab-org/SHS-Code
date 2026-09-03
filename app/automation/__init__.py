@@ -1,4 +1,4 @@
-"""ManusClaw Automation Module.
+"""SHS Code Automation Module.
 
 Provides email automation via Gmail Pub/Sub and the EmailTool agent tool.
 

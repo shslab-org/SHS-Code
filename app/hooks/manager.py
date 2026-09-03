@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-ManusClaw Hooks — Hook Manager
+SHS Code Hooks — Hook Manager
 ================================
 Central orchestrator for hook registration, execution, and lifecycle.
 

@@ -1,8 +1,8 @@
 """
-ManusClaw Observability Subsystem
+SHS Code Observability Subsystem
 ===================================
 
-Enterprise-grade observability for the manusclaw agent framework,
+Enterprise-grade observability for the SHS Code agent framework,
 inspired by OpenHands's observability architecture.
 
 Modules:

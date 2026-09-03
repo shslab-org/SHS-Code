@@ -137,7 +137,7 @@ class TestCompaction:
 
 class TestModes:
     def test_default_is_coding(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path))
         from app.modes import get_active_mode, set_active_mode, get_mode_config
         assert get_active_mode() == "coding"
         assert set_active_mode("autonomous") is True
@@ -149,20 +149,20 @@ class TestModes:
         set_active_mode("coding")
 
     def test_mode_prompt_only_for_nondefault(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path))
         from app.modes import mode_prompt, set_active_mode
         assert mode_prompt("coding") == ""
         assert "debugging" in mode_prompt("debugging")
         set_active_mode("coding")
 
     def test_modes_affect_agent(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "h"))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "h"))
         from app.modes import set_active_mode
         from app.config import Config
         Config.reset()
         set_active_mode("autonomous")
-        from app.agent.manus import Manus
-        agent = Manus()
+        from app.agent.shscode import SHSCode
+        agent = SHSCode()
         base_steps = agent._max_steps
         agent._apply_mode_and_profile()
         assert agent._max_steps == base_steps * 2   # autonomous scale
@@ -174,7 +174,7 @@ class TestModes:
 
 class TestAgentProfiles:
     def test_crud_and_activation(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path))
         from app.agent_profiles import (
             create_profile, get_profile, update_profile, remove_profile,
             set_active_profile, effective_profile, list_profiles)
@@ -196,7 +196,7 @@ class TestAgentProfiles:
         assert get_profile("testprof") is None
 
     def test_builtin_examples_immutable_and_seeded(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path))
         from app.agent_profiles import list_profiles, remove_profile
         names = [p["name"] for p in list_profiles()]
         assert "android-expert" in names
@@ -205,8 +205,8 @@ class TestAgentProfiles:
 
 class TestSkills2:
     def test_levels_and_create_remove(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path))
-        monkeypatch.setenv("MANUSCLAW_SKILLS_DIR", str(tmp_path / "skills"))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path))
+        monkeypatch.setenv("SHSCODE_SKILLS_DIR", str(tmp_path / "skills"))
         from app.skills.skill_engine import SkillEngine
         e = SkillEngine()
         e.create("my-custom", "custom skill", content="custom guidance")
@@ -222,8 +222,8 @@ class TestSkills2:
         assert e3.remove(any_builtin.name) is False
 
     def test_project_level_skills(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "h"))
-        monkeypatch.setenv("MANUSCLAW_SKILLS_DIR", str(tmp_path / "h" / "skills"))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "h"))
+        monkeypatch.setenv("SHSCODE_SKILLS_DIR", str(tmp_path / "h" / "skills"))
         proj = tmp_path / "proj"
         (proj / ".shscode" / "skills").mkdir(parents=True)
         (proj / ".shscode" / "skills" / "deploy.md").write_text(
@@ -241,8 +241,8 @@ class TestSkills2:
             os.chdir(old)
 
     def test_install_from_path(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path))
-        monkeypatch.setenv("MANUSCLAW_SKILLS_DIR", str(tmp_path / "skills"))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path))
+        monkeypatch.setenv("SHSCODE_SKILLS_DIR", str(tmp_path / "skills"))
         src = tmp_path / "src_skill.md"
         src.write_text("---\nname: remote-skill\ndescription: installed\n---\n"
                        "# remote\n")
@@ -258,7 +258,7 @@ class TestSkills2:
 class TestSubagentState:
     def test_subagent_lifecycle_persisted(self, tmp_path, monkeypatch):
         async def run():
-            monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path))
+            monkeypatch.setenv("SHSCODE_HOME", str(tmp_path))
             from app.state import Journal
             from app.subagents import (start_subagent, finish_subagent,
                                        list_subagents, incomplete_subagents,

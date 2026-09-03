@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-ManusClaw WebSocket / REST Server
+SHS Code WebSocket / REST Server
 
 Usage:
     python run_server.py [--host HOST] [--port PORT] [--reload]
 
-Then connect from manusclaw-web or any HTTP/WS client:
+Then connect from the SHS Code web client or any HTTP/WS client:
     http://localhost:8765/healthz
     ws://localhost:8765/ws/<session_id>
 """
@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="ManusClaw Agent Server")
+    parser = argparse.ArgumentParser(description="SHS Code Agent Server")
     parser.add_argument("--host", default="0.0.0.0", help="Bind host (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8765, help="Bind port (default: 8765)")
     parser.add_argument("--reload", action="store_true", help="Enable hot-reload (dev mode)")
@@ -37,7 +37,7 @@ def main() -> None:
     print(f"  ██║╚██╔╝██║██╔══██║██║╚██╗██║██║   ██║╚════██║")
     print(f"  ██║ ╚═╝ ██║██║  ██║██║ ╚████║╚██████╔╝███████║")
     print(f"  ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝")
-    print(f"  ManusClaw v5.1.1 — Agent Server  by The-JDdev (SHS Shobuj)")  # Fix: sync version
+    print(f"  SHS Code v5.1.1 — Agent Server  by The-JDdev (SHS Shobuj)")  # Fix: sync version
     print(f"\n  Listening: http://{args.host}:{args.port}")
     print(f"  REST:      http://{args.host}:{args.port}/run")
     print(f"  WebSocket: ws://{args.host}:{args.port}/ws/<session_id>")  # Fix: ws:// not wss:// (no TLS)

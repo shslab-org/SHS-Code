@@ -51,9 +51,9 @@ from typing import Any, Dict, List, Optional
 # Module logger
 # ---------------------------------------------------------------------------
 
-# Use a separate logger namespace to avoid inheriting the manusclaw root
+# Use a separate logger namespace to avoid inheriting the shscode root
 # logger's handlers (which require ContextFilter attributes).
-_logger = logging.getLogger("manusclaw_observability.health")
+_logger = logging.getLogger("shscode_observability.health")
 
 # ---------------------------------------------------------------------------
 # Health status enum
@@ -184,7 +184,10 @@ class DatabaseHealthChecker(HealthChecker):
     """
 
     def __init__(self, db_path: Optional[str] = None) -> None:
-        self._db_path = db_path or "workspace/.sessions/manusclaw.db"
+        if db_path is None:
+            from app.db.session import _default_db_path
+            db_path = str(_default_db_path())
+        self._db_path = db_path
 
     @property
     def name(self) -> str:

@@ -46,7 +46,7 @@ from app.context.condenser.base import (
 # ──────────────────────────────────────────────────────────────────────────────
 
 CONDENSER_SYSTEM_PROMPT = """\
-You are a context condensation assistant for the ManusClaw AI operating environment.
+You are a context condensation assistant for the SHS Code AI operating environment.
 Your task is to summarize a sequence of conversation events that are being removed
 from the LLM's context window.
 

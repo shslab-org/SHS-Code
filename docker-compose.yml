@@ -1,7 +1,7 @@
 version: "3.9"
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  ManusClaw — Docker Compose
+#  SHS Code — Docker Compose
 #
 #  Profiles:
 #    cli      — single interactive run (default)
@@ -11,25 +11,25 @@ version: "3.9"
 #  Usage:
 #    docker compose up                                 # CLI mode
 #    docker compose --profile server up -d            # server mode
-#    docker compose run --rm manusclaw "your task"    # one-shot task
+#    docker compose run --rm shscode "your task"    # one-shot task
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
 
   # ── CLI agent ──────────────────────────────────────────────────────────────
-  manusclaw:
+  shscode:
     build:
       context: .
       dockerfile: Dockerfile
       target: runtime
-    image: manusclaw:latest
-    container_name: manusclaw-agent
+    image: shscode:latest
+    container_name: shscode-agent
     stdin_open: true
     tty: true
     volumes:
-      - ./config.toml:/manusclaw/config.toml:ro
-      - manusclaw-workspace:/manusclaw/workspace
-      - manusclaw-logs:/manusclaw/logs
+      - ./config.toml:/shscode/config.toml:ro
+      - shscode-workspace:/shscode/workspace
+      - shscode-logs:/shscode/logs
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
@@ -42,15 +42,15 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runtime
-    image: manusclaw:latest
-    container_name: manusclaw-server
+    image: shscode:latest
+    container_name: shscode-server
     command: ["python", "run_server.py", "--host", "0.0.0.0", "--port", "8765"]
     ports:
       - "8765:8765"
     volumes:
-      - ./config.toml:/manusclaw/config.toml:ro
-      - manusclaw-workspace:/manusclaw/workspace
-      - manusclaw-logs:/manusclaw/logs
+      - ./config.toml:/shscode/config.toml:ro
+      - shscode-workspace:/shscode/workspace
+      - shscode-logs:/shscode/logs
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
@@ -71,15 +71,15 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runtime
-    image: manusclaw:latest
-    container_name: manusclaw-multi
+    image: shscode:latest
+    container_name: shscode-multi
     command: ["python", "run_multi_agent.py"]
     stdin_open: true
     tty: true
     volumes:
-      - ./config.toml:/manusclaw/config.toml:ro
-      - manusclaw-workspace:/manusclaw/workspace
-      - manusclaw-logs:/manusclaw/logs
+      - ./config.toml:/shscode/config.toml:ro
+      - shscode-workspace:/shscode/workspace
+      - shscode-logs:/shscode/logs
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
@@ -89,5 +89,5 @@ services:
     restart: "no"
 
 volumes:
-  manusclaw-workspace:
-  manusclaw-logs:
+  shscode-workspace:
+  shscode-logs:

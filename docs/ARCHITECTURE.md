@@ -1,8 +1,8 @@
 # Architecture
 
-## What is ManusClaw
+## What is SHS Code
 
-ManusClaw is a production-grade, uncensored, autonomous AI agent ecosystem written entirely in Python. It provides a self-reasoning, self-correcting, multi-agent AI pipeline that can:
+SHS Code is a production-grade, uncensored, autonomous AI agent ecosystem written entirely in Python. It provides a self-reasoning, self-correcting, multi-agent AI pipeline that can:
 
 - Execute real shell commands (bash, PowerShell, Termux) with a persistent session that holds state across calls
 - Run isolated Python code in its own subprocess with 2 GB memory protection, full imports, and full output
@@ -20,7 +20,7 @@ It runs on Linux, macOS, Windows, Docker, and Termux (Android). It ships with a 
 
 ## Multi-Agent Brain
 
-ManusClaw implements a full DAG-orchestrated multi-agent pipeline modelled on the MetaGPT philosophy. Four specialist roles execute in strict dependency order, each building on the verified output of the last.
+SHS Code implements a full DAG-orchestrated multi-agent pipeline modelled on the MetaGPT philosophy. Four specialist roles execute in strict dependency order, each building on the verified output of the last.
 
 ### The Four Roles
 
@@ -64,7 +64,7 @@ The implementation plan is a real directed acyclic graph — every task declares
 
 #### EngineerRole (`app/agent/roles/engineer.py`)
 
-The Engineer does not just write code. It delegates to a full Manus agent instance with access to the complete tool arsenal: `python_execute`, `bash`, `str_replace_editor`, `browser_use`, `web_search`, and more. Its loop for every task:
+The Engineer does not just write code. It delegates to a full SHS Code agent instance with access to the complete tool arsenal: `python_execute`, `bash`, `str_replace_editor`, `browser_use`, `web_search`, and more. Its loop for every task:
 
 ```
 1. Read the task description from the Architect's plan
@@ -77,7 +77,7 @@ The Engineer does not just write code. It delegates to a full Manus agent instan
 
 #### QARole (`app/agent/roles/qa.py`)
 
-Like the Engineer, QA delegates to a full Manus agent so it can actually run tests, not just describe them. Its report format:
+Like the Engineer, QA delegates to a full SHS Code agent so it can actually run tests, not just describe them. Its report format:
 
 ```
 QA REPORT
@@ -146,7 +146,7 @@ This architecture means roles are fully decoupled. New roles can be added, exist
 
 ## Tool Arsenal
 
-ManusClaw's Manus agent is loaded with 8 core tools at startup. Every tool is a `BaseTool` subclass with a name, description, JSON Schema parameters, and an async `execute()` method.
+The SHS Code agent is loaded with 8 core tools at startup. Every tool is a `BaseTool` subclass with a name, description, JSON Schema parameters, and an async `execute()` method.
 
 ### `bash` — Persistent Shell
 
@@ -265,7 +265,7 @@ result = await platform_control.execute(
     credentials={"token": "ghp_..."},
     method="POST",
     path="/user/repos",
-    body={"name": "my-project", "description": "Built by ManusClaw", "private": False},
+    body={"name": "my-project", "description": "Built by SHS Code", "private": False},
 )
 
 # Deploy to Vercel
@@ -286,7 +286,7 @@ result = await platform_control.execute(
     },
     method="POST",
     path="/posts",
-    body={"title": "ManusClaw: AI That Actually Works", "content": "...", "status": "publish"},
+    body={"title": "SHS Code: AI That Actually Works", "content": "...", "status": "publish"},
 )
 
 # Any REST API (e.g. Stripe)
@@ -366,7 +366,7 @@ The agent monitors for two types of loops:
 
 ### Self-Check Every 3 Steps
 
-Every 3 steps, the Manus agent injects a structured self-check prompt:
+Every 3 steps, the SHS Code agent injects a structured self-check prompt:
 
 ```
 [SELF-CHECK]

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 """
-ManusClaw Hooks — Type Definitions
+SHS Code Hooks — Type Definitions
 ====================================
 Core types for the hook system, inspired by OpenHands's hook architecture
-but adapted for manusclaw's PAORR agent loop.
+but adapted for SHS Code's PAORR agent loop.
 
 Hook Event Flow:
     SESSION_START → [USER_PROMPT_SUBMIT → PRE_TOOL_USE → tool exec → POST_TOOL_USE]* → STOP → SESSION_END

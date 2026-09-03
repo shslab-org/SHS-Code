@@ -43,7 +43,7 @@ class Event(BaseModel):
     """
     A single event in the context view.
 
-    Wraps a manusclaw Message with a unique ID and metadata for
+    Wraps a SHS Code Message with a unique ID and metadata for
     manipulation tracking.  The `role` mirrors Message.role so that
     property checks can work with Events directly without unpacking.
     """

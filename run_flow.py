@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ManusClaw — PlanningFlow entry point.
+SHS Code — PlanningFlow entry point.
 Decomposes the goal into steps and runs each with an appropriate agent.
 
 Usage:

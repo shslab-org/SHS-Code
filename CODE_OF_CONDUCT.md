@@ -1,8 +1,8 @@
-# Code of Conduct — ManusClaw
+# Code of Conduct — SHS Code
 
 ## Our Vibe
 
-ManusClaw is built by people who eat logic for breakfast and ship production code for dinner. This is a space for **hardcore builders**, **system architects**, and **autonomous agent enthusiasts**. We are respectful, collaborative, and laser-focused on building the most powerful AI agent framework on the planet.
+SHS Code is built by people who eat logic for breakfast and ship production code for dinner. This is a space for **hardcore builders**, **system architects**, and **autonomous agent enthusiasts**. We are respectful, collaborative, and laser-focused on building the most powerful AI agent framework on the planet.
 
 ---
 
@@ -13,7 +13,7 @@ ManusClaw is built by people who eat logic for breakfast and ship production cod
 - **Respectful Communication**: We debate ideas, not people. Critique code, not contributors. Constructive feedback is always welcome; personal attacks are never tolerated.
 - **Collaborative Building**: Great software is a team effort. Help newcomers, share knowledge, review PRs generously, and celebrate wins together.
 - **Logic-First Thinking**: We value clear reasoning, evidence-based decisions, and well-documented code. Opinions are great; data-driven conclusions are better.
-- **Inclusive Excellence**: ManusClaw is for everyone — regardless of background, experience level, language, or platform. A Termux user building on Android is as valuable as a kernel engineer on bare metal.
+- **Inclusive Excellence**: SHS Code is for everyone — regardless of background, experience level, language, or platform. A Termux user building on Android is as valuable as a kernel engineer on bare metal.
 - **Production Mindset**: We build for the real world. Security, reliability, performance, and maintainability are not afterthoughts — they are requirements.
 - **Open Knowledge**: Share what you learn. Document your decisions. Write tests that teach. Code that cannot be explained is code that should be refactored.
 
@@ -29,12 +29,12 @@ ManusClaw is built by people who eat logic for breakfast and ship production cod
 
 ## Scope
 
-This Code of Conduct applies to all ManusClaw community spaces:
+This Code of Conduct applies to all SHS Code community spaces:
 - GitHub repositories (`ManusAgents/manusclaw`, `The-JDdev/manusclaw-setup`)
 - GitHub Issues, Pull Requests, Discussions, and Actions
 - Telegram community chat ([@singularityos](https://t.me/singularityos))
 - Email communications with maintainers
-- Any other official ManusClaw community channels
+- Any other official SHS Code community channels
 
 ---
 
@@ -44,7 +44,7 @@ This Code of Conduct applies to all ManusClaw community spaces:
 
 If you experience or witness behavior that violates this Code of Conduct, report it to:
 - **Email**: [thejddev.official@gmail.com](mailto:thejddev.official@gmail.com)
-- **Subject**: `[ManusClaw CoC] Brief description of the issue`
+- **Subject**: `[SHS Code CoC] Brief description of the issue`
 
 All reports are treated confidentially. The maintainers will investigate promptly and take appropriate action.
 
@@ -56,7 +56,7 @@ Violations will be addressed based on severity:
 |----------|--------|
 | **Minor** (first offense) | Private warning and reminder of standards |
 | **Moderate** | Temporary suspension from community spaces (7-30 days) |
-| **Severe** (harassment, malicious code, repeated violations) | Permanent ban from all ManusClaw community spaces |
+| **Severe** (harassment, malicious code, repeated violations) | Permanent ban from all SHS Code community spaces |
 
 All decisions are final and made at the discretion of the maintainers (The-JDdev / SHS Lab).
 
@@ -64,8 +64,8 @@ All decisions are final and made at the discretion of the maintainers (The-JDdev
 
 ## Attribution
 
-This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org) version 2.1, customized for the ManusClaw project ethos.
+This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org) version 2.1, customized for the SHS Code project ethos.
 
 ---
 
-*ManusClaw — where logic meets autonomy. Built by The-JDdev (SHS Lab).*
+*SHS Code — where logic meets autonomy. Built by The-JDdev (SHS Lab).*

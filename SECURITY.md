@@ -14,12 +14,12 @@
 
 **Do NOT open a public issue for security vulnerabilities.** Public disclosures can put all users at risk before a fix is available.
 
-If you discover a security vulnerability in ManusClaw, report it responsibly:
+If you discover a security vulnerability in SHS Code, report it responsibly:
 
 ### How to Report
 
 1. **Email**: Send a detailed report to [thejddev.official@gmail.com](mailto:thejddev.official@gmail.com)
-2. **Subject Line**: Use `[ManusClaw SECURITY]` as the prefix (e.g., `[ManusClaw SECURITY] Credential Leak in SessionDB`)
+2. **Subject Line**: Use `[SHS Code SECURITY]` as the prefix (e.g., `[SHS Code SECURITY] Credential Leak in SessionDB`)
 3. **Include**:
    - A clear description of the vulnerability
    - Steps to reproduce the issue
@@ -40,7 +40,7 @@ If you discover a security vulnerability in ManusClaw, report it responsibly:
 ### Scope
 
 This security policy covers:
-- The ManusClaw core framework (`app/` directory)
+- The SHS Code core framework (`app/` directory)
 - All LLM provider integrations (`app/llm/`)
 - Session database and memory systems (`app/db/`, `app/memory/`)
 - Sandbox execution environments (`app/sandbox/`)
@@ -51,9 +51,9 @@ This security policy covers:
 
 Out of scope: Third-party LLM provider APIs (OpenAI, Anthropic, Groq, etc.), user-deployed infrastructure, user-created config files with exposed credentials.
 
-## Security Features in ManusClaw
+## Security Features in SHS Code
 
-ManusClaw includes several built-in security mechanisms:
+SHS Code includes several built-in security mechanisms:
 - **IdentityGuard**: 30+ anti-jailbreak regex patterns protecting against prompt injection
 - **Permission Gate**: Three-tier tool authorization (Allow / Ask / Deny)
 - **Credential Pool**: API key rotation with 60s cooldown on exhaustion

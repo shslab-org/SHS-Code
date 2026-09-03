@@ -90,7 +90,7 @@ class IRCAdapter(BaseMessagingAdapter):
             while self._running:
                 await asyncio.sleep(60)
                 if self._writer and not self._writer.is_closing():
-                    self._write("PING :manusclaw")
+                    self._write("PING :shscode")
 
         asyncio.create_task(_ping_loop())
 
@@ -153,7 +153,7 @@ class IRCAdapter(BaseMessagingAdapter):
     async def disconnect(self) -> None:
         self._running = False
         if self._writer and not self._writer.is_closing():
-            self._write("QUIT :ManusClaw IRC adapter shutting down")
+            self._write("QUIT :SHS Code IRC adapter shutting down")
             self._writer.close()
             try:
                 await self._writer.wait_closed()

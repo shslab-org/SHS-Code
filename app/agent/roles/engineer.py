@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-EngineerRole — implements code from the Architect's task DAG using Manus.
+EngineerRole — implements code from the Architect's task DAG using SHSCode.
 
 Decision logic:
   validate_input  → input must contain [TASK- or "IMPLEMENTATION PLAN"
@@ -20,11 +20,11 @@ _MIN_OUTPUT_LEN       = 200
 
 class EngineerRole(BaseRole):
     role_name        = "engineer"
-    role_description = "Implements code from the Architect's plan using Manus tools"
-    max_retries      = 1    # Manus is expensive — only one retry attempt
+    role_description = "Implements code from the Architect's plan using SHSCode tools"
+    max_retries      = 1    # SHSCode is expensive — only one retry attempt
 
     specialist_prompt = """\
-You are the Engineer agent of ManusClaw. You receive an implementation plan
+You are the Engineer agent of SHS Code. You receive an implementation plan
 from the Architect and execute each task using available tools.
 
 Your process for EVERY task:
@@ -79,18 +79,18 @@ Rules:
     # ──────────────────────────────────────────────────────────────────────────
 
     async def _think_act_publish(self, context: str) -> str:
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
 
         # Pull design from bus if available; fall back to context
         msgs = await self.bus.drain(self.role_name)
         design = next((m.artefact for m in msgs if m.artefact), context)
 
         logger.info(
-            f"[{self.role_name}] Delegating implementation to Manus "
+            f"[{self.role_name}] Delegating implementation to SHSCode "
             f"({design[:80].strip()!r}…)."
         )
 
-        engineer_agent = Manus()
+        engineer_agent = SHSCode()
         try:
             implementation_result = await engineer_agent.run(
                 f"You are implementing code based on this design plan.\n\n"
@@ -107,7 +107,7 @@ Rules:
         decision, reason = self.decide(implementation_result)
         if decision == RoleDecision.RETRY:
             logger.warning(f"[{self.role_name}] First pass thin: {reason}. Retrying.")
-            engineer_agent2 = Manus()
+            engineer_agent2 = SHSCode()
             try:
                 implementation_result = await engineer_agent2.run(
                     f"The previous implementation attempt was incomplete. {reason}.\n\n"
@@ -128,12 +128,12 @@ Rules:
 
     @staticmethod
     async def _cleanup_agent(agent: object) -> None:
-        """Clean up a Manus agent to release its Bash subprocess and resources.
+        """Clean up a SHSCode agent to release its Bash subprocess and resources.
 
         Without this, every Engineer invocation leaks a persistent bash
         subprocess (and any other tool resources) for the lifetime of the
         process. This is especially important when retries create multiple
-        Manus instances per role run.
+        SHSCode instances per role run.
         """
         try:
             cleanup = getattr(agent, "cleanup", None)

@@ -33,7 +33,7 @@ __all__ = [
 
 
 def main_channels() -> None:
-    """Entry point for ``manusclaw-channels`` — list configured messaging channels."""
+    """Entry point for ``shscode-channels`` — list configured messaging channels."""
     from app.messaging.gateway import MessagingGateway
     gw = MessagingGateway(use_router=False)
     configured = [a.platform_name for a in gw._adapters if a.is_configured()]

@@ -8,19 +8,19 @@ from app.agent.router import RouteRule, AgentConfig, AgentRegistry
 # ── RouteRule matching ─────────────────────────────────────────────────────
 
 def test_route_rule_exact_channel():
-    rule = RouteRule(channel="telegram", agent_name="manus")
+    rule = RouteRule(channel="telegram", agent_name="shscode")
     assert rule.matches("telegram", "user1", "chat1") is True
     assert rule.matches("discord", "user1", "chat1") is False
 
 
 def test_route_rule_user_pattern():
-    rule = RouteRule(user_id=r"admin_.*", agent_name="manus")
+    rule = RouteRule(user_id=r"admin_.*", agent_name="shscode")
     assert rule.matches("telegram", "admin_001", "chat1") is True
     assert rule.matches("telegram", "user_001", "chat1") is False
 
 
 def test_route_rule_chat_id_pattern():
-    rule = RouteRule(chat_id=r"general", agent_name="manus")
+    rule = RouteRule(chat_id=r"general", agent_name="shscode")
     assert rule.matches("telegram", "user1", "general") is True
     assert rule.matches("telegram", "user1", "random") is False
 
@@ -42,8 +42,8 @@ def test_route_rule_priority():
 
 def test_agent_config_defaults():
     config = AgentConfig()
-    assert config.name == "manus"
-    assert config.class_path == "app.agent.manus.Manus"
+    assert config.name == "shscode"
+    assert config.class_path == "app.agent.shscode.SHSCode"
     assert config.tools == []
     assert config.sandbox_mode is False
 
@@ -53,7 +53,7 @@ def test_agent_config_custom():
         name="coder",
         system_prompt="You are a coder",
         tools=["python_execute", "bash"],
-        class_path="app.agent.manus.Manus",
+        class_path="app.agent.shscode.SHSCode",
     )
     assert config.name == "coder"
     assert len(config.tools) == 2
@@ -117,16 +117,16 @@ def test_agent_router_default_config():
     from app.agent.router import AgentRouter
     router = AgentRouter()
     agents = router.list_agents()
-    assert "manus" in agents
+    assert "shscode" in agents
     assert len(router.list_routes()) == 0  # No routes by default
 
 
 def test_agent_router_resolve_route_default():
     from app.agent.router import AgentRouter
     router = AgentRouter()
-    # No routes → falls back to "manus"
+    # No routes → falls back to "shscode"
     route = router._resolve_route("telegram", "user1", "chat1")
-    assert route == "manus"
+    assert route == "shscode"
 
 
 def test_agent_router_resolve_route_with_custom_rules():

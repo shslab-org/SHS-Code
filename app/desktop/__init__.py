@@ -1,1 +1,1 @@
-# ManusClaw Desktop GUI
+# SHS Code Desktop GUI

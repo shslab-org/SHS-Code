@@ -1,8 +1,8 @@
-# ManusClaw Mobile Node Client
+# SHS Code Mobile Node Client
 
-Reference implementation of a WebSocket-based mobile node client for ManusClaw.
+Reference implementation of a WebSocket-based mobile node client for SHS Code.
 
-This client acts as a remote sensor/input device that connects to the ManusClaw
+This client acts as a remote sensor/input device that connects to the SHS Code
 server and can:
 - Register as a compute or sensor node
 - Receive Canvas UI updates and display them
@@ -35,16 +35,16 @@ python node_client.py [--server ws://localhost:8765] [--device-id my-phone]
 
 | Variable                  | Default                  | Description                      |
 |---------------------------|--------------------------|----------------------------------|
-| `MANUSCLAW_SERVER_URL`   | `ws://localhost:8765`    | WebSocket URL of ManusClaw server |
-| `MANUSCLAW_API_KEY`       |                          | API key for authentication         |
-| `MANUSCLAW_DEVICE_ID`     | `auto-generated`         | Unique device identifier          |
-| `MANUSCLAW_DEVICE_TYPE`   | `mobile`                 | Device type classification         |
-| `MANUSCLAW_CAPABILITIES`  | `voice,screen`           | Comma-separated capabilities      |
+| `SHSCODE_SERVER_URL`   | `ws://localhost:8765`    | WebSocket URL of SHS Code server |
+| `SHSCODE_API_KEY`       |                          | API key for authentication         |
+| `SHSCODE_DEVICE_ID`     | `auto-generated`         | Unique device identifier          |
+| `SHSCODE_DEVICE_TYPE`   | `mobile`                 | Device type classification         |
+| `SHSCODE_CAPABILITIES`  | `voice,screen`           | Comma-separated capabilities      |
 
 ## Architecture
 
 ```
-Mobile Device                          ManusClaw Server
+Mobile Device                          SHS Code Server
     │                                        │
     │  ─── WebSocket /ws/nodes ──→          │
     │  register(device_id, type, caps)       │

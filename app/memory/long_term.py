@@ -21,14 +21,15 @@ import os
 import time
 from pathlib import Path
 from typing import Optional
+from app import env
 
 
 def _default_db_path() -> Path:
     """SHS Code FIX (CWD split-brain): lazy resolution honouring
-    MANUSCLAW_WORKSPACE, mirroring SessionDB/task_queue fixes. The old
+    SHSCODE_WORKSPACE, mirroring SessionDB/task_queue fixes. The old
     module-level relative constant meant memories stored from one working
     directory were invisible from another."""
-    workspace = Path(os.getenv("MANUSCLAW_WORKSPACE", "workspace"))
+    workspace = Path(env.getenv("WORKSPACE", "workspace"))
     return workspace / ".memory" / "long_term.db"
 
 

@@ -1,5 +1,5 @@
 """
-ManusClaw Conversation System — LocalConversation
+SHS Code Conversation System — LocalConversation
 ====================================================
 
 A conversation that runs the agent locally with direct tool execution,
@@ -122,7 +122,7 @@ class LocalConversation(BaseConversation):
         self._preloaded: bool = False
 
         # Set up the event log
-        log_dir = event_log_dir or tempfile.mkdtemp(prefix="manusclaw_conv_")
+        log_dir = event_log_dir or tempfile.mkdtemp(prefix="shscode_conv_")
         os.makedirs(log_dir, exist_ok=True)
         log_path = os.path.join(log_dir, self._id)
         self._event_log: EventLog = EventLog(log_path)
@@ -508,7 +508,7 @@ class LocalConversation(BaseConversation):
         Events from the original are copied to the fork's log.
         """
         # Create a new event log for the fork
-        log_dir = os.path.dirname(self._event_log._path) if hasattr(self._event_log, '_path') else tempfile.mkdtemp(prefix="manusclaw_fork_")
+        log_dir = os.path.dirname(self._event_log._path) if hasattr(self._event_log, '_path') else tempfile.mkdtemp(prefix="shscode_fork_")
         os.makedirs(log_dir, exist_ok=True)
         # Compose the expected log path for diagnostics (the LocalConversation
         # constructor uses ``event_log_dir`` + conversation_id to name the file).

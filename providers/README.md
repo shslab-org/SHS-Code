@@ -1,6 +1,6 @@
 # AI Providers Configuration Templates
 
-This directory contains configuration templates for various free and paid AI providers supported by ManusClaw.
+This directory contains configuration templates for various free and paid AI providers supported by SHS Code.
 
 ## How to use
 
@@ -11,11 +11,11 @@ You can use these templates in several ways:
    cp providers/ollama.toml config.toml
    ```
 
-2. **As Profiles**: Move them to your ManusClaw profiles directory and use the `MANUSCLAW_PROFILE` environment variable.
+2. **As Profiles**: Move them to your SHS Code profiles directory and use the `SHSCODE_PROFILE` environment variable.
    ```bash
-   mkdir -p ~/.manusclaw/profiles/ollama
-   cp providers/ollama.toml ~/.manusclaw/profiles/ollama/config.toml
-   MANUSCLAW_PROFILE=ollama manusclaw "Your task"
+   mkdir -p ~/.shscode/profiles/ollama
+   cp providers/ollama.toml ~/.shscode/profiles/ollama/config.toml
+   SHSCODE_PROFILE=ollama shscode "Your task"
    ```
 
 ## Included Providers

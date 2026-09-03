@@ -14,16 +14,16 @@ agents:
     workspace_dir: workspace
   definitions:
     coder:
-      class_path: app.agent.manus.Manus
+      class_path: app.agent.shscode.SHSCode
       system_prompt: "You are a coding specialist..."
       tools: [python_execute, str_replace_editor, bash]
   routes:
     - channel: discord
       agent_name: coder
       user_id: "admin_.*"
-      agent_name: manus
+      agent_name: shscode
     - chat_id: "general"
-      agent_name: manus
+      agent_name: shscode
 ```
 
 ## Route Rule Matching
@@ -33,4 +33,4 @@ Priority-ordered evaluation. Supports exact string and regex patterns for channe
 LRU cache (64 agents, 300s idle TTL). Automatic eviction. Session key: `{route}:{platform}:{user_id}:{channel_id}`.
 
 ## Integration
-Used by `MessagingGateway` when `use_router=True` (default). Falls back to legacy direct Manus creation.
+Used by `MessagingGateway` when `use_router=True` (default). Falls back to legacy direct SHSCode creation.

@@ -15,7 +15,7 @@ os.environ.setdefault("APP_ENV", "test")
 
 @pytest.fixture
 def journal(tmp_path, monkeypatch):
-    monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "home"))
     from app.state import Journal
     j = Journal(db_path=tmp_path / "home" / "state" / "journal.db")
     yield j
@@ -167,7 +167,7 @@ class TestInterruptionRecovery:
 
 class TestStateStore:
     def test_kv_layers_persist(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "h"))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "h"))
         from app.state import StateStore
         s = StateStore(root=tmp_path / "h" / "state")
         s.set("provider", {"active": "nvidia-nim", "model": "llama-3.1"})
@@ -206,7 +206,7 @@ class TestConnectors:
     def test_git_provider_injection(self, tmp_path, monkeypatch):
         from app.connectors import ConnectorRegistry
         from app.config import Config
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "h"))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "h"))
         Config.reset()
         try:
             reg = ConnectorRegistry(path=tmp_path / "c.json")
@@ -223,7 +223,7 @@ class TestConnectors:
 
 class TestSkillsEnableDisable:
     def test_persisted_disabled_state(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "h"))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "h"))
         from app.skills.skill_engine import SkillEngine, get_skill_engine
         get_skill_engine().reload()
         engine = SkillEngine()

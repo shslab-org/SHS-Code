@@ -37,6 +37,7 @@ import os
 import time
 from contextvars import ContextVar
 from typing import Any, Callable, Optional, Union
+from app import env
 
 # ---------------------------------------------------------------------------
 # Try importing OpenTelemetry — graceful degradation if missing
@@ -64,25 +65,25 @@ except ImportError:
 # Module logger
 # ---------------------------------------------------------------------------
 
-# Use a separate logger namespace to avoid inheriting the manusclaw root
+# Use a separate logger namespace to avoid inheriting the SHS Code root
 # logger's handlers (which require ContextFilter attributes like 'agent'
 # and 'trace_id' that child loggers won't have set on their records).
-_logger = logging.getLogger("manusclaw_observability.tracing")
+_logger = logging.getLogger("shscode_observability.tracing")
 
 # ---------------------------------------------------------------------------
 # Current span context variable
 # ---------------------------------------------------------------------------
 
 _current_span: ContextVar[Optional[Any]] = ContextVar(
-    "manusclaw_current_span", default=None
+    "shscode_current_span", default=None
 )
 
 # ---------------------------------------------------------------------------
 # Tracer initialization
 # ---------------------------------------------------------------------------
 
-_SERVICE_NAME = os.getenv("MANUSCLAW_SERVICE_NAME", "manusclaw")
-_tracer_name = "manusclaw.tracer"
+_SERVICE_NAME = env.getenv("SERVICE_NAME", "shscode")
+_tracer_name = "shscode.tracer"
 
 
 def init_tracing(
@@ -94,7 +95,7 @@ def init_tracing(
 
     Args:
         service_name: Service name for traces. Defaults to
-            ``MANUSCLAW_SERVICE_NAME`` env var or ``"manusclaw"``.
+            ``SHSCODE_SERVICE_NAME`` env var or ``"shscode"``.
         endpoint: OTLP exporter endpoint. If ``None``, uses the
             ``OTEL_EXPORTER_OTLP_ENDPOINT`` env var. If neither is set,
             tracing outputs to the console.

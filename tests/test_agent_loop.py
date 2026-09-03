@@ -10,9 +10,9 @@ Config.reset()
 @pytest.mark.asyncio
 async def test_agent_runs_to_completion():
     """Agent should complete a simple task using MockLLM."""
-    from app.agent.manus import Manus
+    from app.agent.shscode import SHSCode
     from app.schema import AgentState
-    agent = Manus()
+    agent = SHSCode()
     agent._max_steps = 5
     result = await agent.run("Say hello")
     assert isinstance(result, str)
@@ -23,9 +23,9 @@ async def test_agent_runs_to_completion():
 @pytest.mark.asyncio
 async def test_agent_respects_max_steps():
     """Agent should stop at max_steps."""
-    from app.agent.manus import Manus
+    from app.agent.shscode import SHSCode
     Config.reset()
-    agent = Manus()
+    agent = SHSCode()
     agent._max_steps = 2
     await agent.run("Do an infinite task")
     assert agent._step_count <= 2
@@ -33,9 +33,9 @@ async def test_agent_respects_max_steps():
 
 @pytest.mark.asyncio
 async def test_agent_state_is_idle_before_run():
-    from app.agent.manus import Manus
+    from app.agent.shscode import SHSCode
     from app.schema import AgentState
-    agent = Manus()
+    agent = SHSCode()
     assert agent.state == AgentState.IDLE
 
 
@@ -56,9 +56,9 @@ async def test_token_budget_grace_call():
 @pytest.mark.asyncio
 async def test_duplicate_detection():
     """Agent should detect duplicate responses."""
-    from app.agent.manus import Manus
+    from app.agent.shscode import SHSCode
     from app.schema import Message, Role
-    agent = Manus()
+    agent = SHSCode()
     for _ in range(4):
         agent.memory.add(Message(role=Role.ASSISTANT, content="same response"))
     assert agent._is_stuck_by_duplicates()

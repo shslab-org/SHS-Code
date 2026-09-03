@@ -5,7 +5,7 @@ import asyncio
 
 @pytest.mark.asyncio
 async def test_create_and_close_session(tmp_db):
-    sid = await tmp_db.create_session("test goal", "manus", "build")
+    sid = await tmp_db.create_session("test goal", "shscode", "build")
     assert len(sid) == 12
     await tmp_db.close_session(sid, state="finished", step_count=3)
     sessions = await tmp_db.get_sessions(limit=5)

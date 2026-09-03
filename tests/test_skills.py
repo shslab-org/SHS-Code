@@ -4,7 +4,7 @@ import os
 
 
 def _fresh_engine(tmp_path):
-    os.environ["MANUSCLAW_SKILLS_DIR"] = str(tmp_path / "skills")
+    os.environ["SHSCODE_SKILLS_DIR"] = str(tmp_path / "skills")
     import app.skills.skill_engine as se
     se._engine = None
     return se.get_skill_engine()

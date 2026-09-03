@@ -2,7 +2,7 @@
 Secrets Management — Data Models
 ==================================
 
-Core data models for the ManusClaw secrets management subsystem.
+Core data models for the SHS Code secrets management subsystem.
 
 **SecretSource** defines how a secret's value is obtained:
 

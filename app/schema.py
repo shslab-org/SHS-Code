@@ -491,7 +491,7 @@ class PipelineResult(BaseModel):
     def to_summary(self) -> str:
         lines = [
             "═══════════════════════════════════════════════════",
-            "  ManusClaw Multi-Agent Pipeline — Final Report",
+            "  SHS Code Multi-Agent Pipeline — Final Report",
             "═══════════════════════════════════════════════════",
             f"  Pipeline ID : {self.pipeline_id}",
             f"  Goal        : {self.goal[:80]}",

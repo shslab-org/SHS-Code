@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-ManusClaw — Local Release Builder
+SHS Code — Local Release Builder
 Builds standalone executables for the current platform using PyInstaller.
 
 Usage:
     python build_release.py
 
 Output:
-    release/manusclaw          (Linux/macOS)
-    release/manusclaw.exe      (Windows)
+    release/shscode          (Linux/macOS)
+    release/shscode.exe      (Windows)
 
 Requirements:
     pip install pyinstaller
@@ -32,7 +32,7 @@ BUILD   = ROOT / "build"
 OS      = platform.system()           # Linux | Darwin | Windows
 ARCH    = platform.machine().lower()  # x86_64 | arm64 | amd64
 
-EXE_NAME = "manusclaw.exe" if OS == "Windows" else "manusclaw"
+EXE_NAME = "shscode.exe" if OS == "Windows" else "shscode"
 TAG_NAME = f"v5.1.1-{OS.lower()}-{ARCH}"
 
 
@@ -59,7 +59,7 @@ def clean() -> None:
 
 def build() -> None:
     print(f"\n{'='*60}")
-    print(f"  Building ManusClaw {TAG_NAME}")
+    print(f"  Building SHS Code {TAG_NAME}")
     print(f"  Platform: {OS} / {ARCH}")
     print(f"{'='*60}\n")
 
@@ -92,7 +92,7 @@ def build() -> None:
     cmd = [
         sys.executable, "-m", "PyInstaller",
         "main.py",
-        "--name", "manusclaw",
+        "--name", "shscode",
         "--onefile",
         "--clean",
         "--noconfirm",
@@ -109,7 +109,7 @@ def build() -> None:
 
     # Move to release/
     src = DIST / EXE_NAME
-    dst = RELEASE / f"manusclaw-{TAG_NAME}{'.exe' if OS == 'Windows' else ''}"
+    dst = RELEASE / f"shscode-{TAG_NAME}{'.exe' if OS == 'Windows' else ''}"
     shutil.copy2(src, dst)
 
     # Also copy config example and README
@@ -117,7 +117,7 @@ def build() -> None:
     shutil.copy2(ROOT / "README.md",   RELEASE / "README.md")
 
     # Create a zip archive
-    archive = RELEASE / f"manusclaw-{TAG_NAME}"
+    archive = RELEASE / f"shscode-{TAG_NAME}"
     shutil.make_archive(str(archive), "zip", RELEASE, dst.name)
 
     print(f"\n{'='*60}")
@@ -126,7 +126,7 @@ def build() -> None:
     print(f"  Archive    : {archive}.zip")
     print(f"{'='*60}\n")
     print("  Upload these files to your GitHub Release manually:")
-    print(f"    https://github.com/ManusAgents/ManusClaw/releases/new")
+    print(f"    https://github.com/shslab-org/SHS-Code/releases/new")
     print(f"\n  Tag: {TAG_NAME}\n")
 
 

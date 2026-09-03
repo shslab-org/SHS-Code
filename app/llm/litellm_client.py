@@ -9,7 +9,7 @@ Provides a production-grade LLM client built on litellm that supports:
 - Fallback to existing custom implementation when litellm is not installed
 - Support for both Chat Completions and Responses API
 - Image handling with automatic resizing per provider
-- Proper error mapping from provider-specific to manusclaw exceptions
+- Proper error mapping from provider-specific to SHS Code exceptions
 - Thread-safe with connection reuse
 - Integrated streaming, retry, fallback, and metrics
 
@@ -41,7 +41,7 @@ from typing import Any, AsyncIterator, Optional
 from app.config import Config
 from app.exceptions import (
     LLMAuthError,
-    ManusClawError,
+    SHSCodeError,
     NonRetryableError,
     RateLimitError,
     RetryableError,

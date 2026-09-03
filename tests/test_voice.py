@@ -114,14 +114,14 @@ def test_get_tts_provider_preferred_openai():
 
 def test_wakeword_detector_stub_mode():
     from app.voice.wake import VoiceWakeDetector
-    detector = VoiceWakeDetector(wake_word="hey manus")
+    detector = VoiceWakeDetector(wake_word="hey shs code")
     assert detector.backend == "stub"
 
 
 def test_wakeword_detector_properties():
     from app.voice.wake import VoiceWakeDetector
-    detector = VoiceWakeDetector(wake_word="hey manus", sensitivity=0.7)
-    assert detector._wake_word == "hey manus"
+    detector = VoiceWakeDetector(wake_word="hey shs code", sensitivity=0.7)
+    assert detector._wake_word == "hey shs code"
     assert detector._sensitivity == 0.7
     assert not detector._running
 
@@ -129,7 +129,7 @@ def test_wakeword_detector_properties():
 @pytest.mark.asyncio
 async def test_wakeword_detector_start_stop():
     from app.voice.wake import VoiceWakeDetector
-    detector = VoiceWakeDetector(wake_word="hey manus")
+    detector = VoiceWakeDetector(wake_word="hey shs code")
     fired = asyncio.Event()
 
     async def callback():

@@ -50,7 +50,7 @@ async def test_cmd_list_empty(cli, tmp_db):
 @pytest.mark.asyncio
 async def test_cmd_list_with_sessions(cli, tmp_db):
     # Create a session
-    await tmp_db.create_session(goal="Test goal", agent_name="manus")
+    await tmp_db.create_session(goal="Test goal", agent_name="shscode")
     with patch.object(cli, '_get_db', return_value=tmp_db):
         await cli.run(["list"])  # Should print sessions
 

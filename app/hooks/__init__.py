@@ -1,7 +1,7 @@
 """
-ManusClaw Hooks System
+SHS Code Hooks System
 =======================
-OpenHands-style hook system adapted for manusclaw's PAORR agent loop.
+OpenHands-style hook system adapted for SHS Code's PAORR agent loop.
 
 Quick start::
 

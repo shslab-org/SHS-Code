@@ -1,5 +1,5 @@
 """
-ManusClaw Conversation System — CancellationToken
+SHS Code Conversation System — CancellationToken
 ====================================================
 
 A thread-safe cancellation primitive for graceful shutdown of conversations

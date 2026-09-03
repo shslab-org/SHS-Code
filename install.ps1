@@ -1,13 +1,13 @@
 # ─────────────────────────────────────────────────────────────────────────────
-#  ManusClaw — Windows Installer (PowerShell)
+#  SHS Code — Windows Installer (PowerShell)
 #  Works on: Windows 10/11 (PowerShell 5.1+)
 #  Usage: Right-click → Run with PowerShell
 #         Or: powershell -ExecutionPolicy Bypass -File install.ps1
 # ─────────────────────────────────────────────────────────────────────────────
 
 $ErrorActionPreference = "Stop"
-$REPO       = "https://github.com/The-JDdev/ManusClaw.git"
-$InstallDir = "$env:USERPROFILE\ManusClaw"
+$REPO       = "https://github.com/The-JDdev/SHS Code.git"
+$InstallDir = "$env:USERPROFILE\SHS Code"
 
 function Write-Banner {
     Write-Host ""
@@ -17,7 +17,7 @@ function Write-Banner {
     Write-Host "  ██║╚██╔╝██║██╔══██║██║╚██╗██║██║   ██║╚════██║" -ForegroundColor Cyan
     Write-Host "  ██║ ╚═╝ ██║██║  ██║██║ ╚████║╚██████╔╝███████║" -ForegroundColor Cyan
     Write-Host "  ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝" -ForegroundColor Cyan
-    Write-Host "  ManusClaw Installer — by The-JDdev (SHS Shobuj)" -ForegroundColor White
+    Write-Host "  SHS Code Installer — by The-JDdev (SHS Shobuj)" -ForegroundColor White
     Write-Host ""
 }
 
@@ -48,7 +48,7 @@ try {
 }
 
 # ── clone / update ───────────────────────────────────────────────────────────
-Write-Host "[3/5] Cloning ManusClaw..." -ForegroundColor Yellow
+Write-Host "[3/5] Cloning SHS Code..." -ForegroundColor Yellow
 if (Test-Path "$InstallDir\.git") {
     Write-Host "  Existing install found — pulling latest..."
     git -C $InstallDir pull --ff-only
@@ -87,11 +87,11 @@ max_steps = 50
 
 # ── launcher batch file ───────────────────────────────────────────────────────
 Write-Host "[5/5] Creating launcher..." -ForegroundColor Yellow
-$LauncherDir = "$env:USERPROFILE\AppData\Local\Programs\ManusClaw"
+$LauncherDir = "$env:USERPROFILE\AppData\Local\Programs\SHS Code"
 New-Item -ItemType Directory -Force -Path $LauncherDir | Out-Null
 
 $BatchContent = "@echo off`r`ncall `"$InstallDir\.venv\Scripts\activate.bat`"`r`ncd /d `"$InstallDir`"`r`npython main.py %*`r`n"
-$BatchContent | Out-File -FilePath "$LauncherDir\manusclaw.bat" -Encoding ascii
+$BatchContent | Out-File -FilePath "$LauncherDir\shscode.bat" -Encoding ascii
 
 # Add to user PATH
 $UserPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
@@ -101,18 +101,18 @@ if ($UserPath -notlike "*$LauncherDir*") {
         "$UserPath;$LauncherDir",
         "User"
     )
-    Write-Host "  ✓ Added to PATH (restart terminal to use 'manusclaw' command)" -ForegroundColor Green
+    Write-Host "  ✓ Added to PATH (restart terminal to use 'shscode' command)" -ForegroundColor Green
 } else {
     Write-Host "  ✓ Already in PATH" -ForegroundColor Green
 }
 
 Write-Host ""
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Green
-Write-Host "  ManusClaw installed successfully!" -ForegroundColor Green
+Write-Host "  SHS Code installed successfully!" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Quick start (restart terminal first):" -ForegroundColor White
-Write-Host "    manusclaw `"Write a Python web scraper`"" -ForegroundColor Cyan
+Write-Host "    shscode `"Write a Python web scraper`"" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Or use directly:" -ForegroundColor White
 Write-Host "    cd $InstallDir" -ForegroundColor Cyan
@@ -120,7 +120,7 @@ Write-Host "    .venv\Scripts\activate" -ForegroundColor Cyan
 Write-Host "    python main.py `"your task`"" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Edit config: $InstallDir\config.toml" -ForegroundColor White
-Write-Host "  Support:     https://github.com/The-JDdev/ManusClaw" -ForegroundColor White
+Write-Host "  Support:     https://github.com/The-JDdev/SHS Code" -ForegroundColor White
 Write-Host ""
 
 Read-Host "Press Enter to close"

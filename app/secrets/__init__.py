@@ -1,8 +1,8 @@
 """
-Secrets Management — manusclaw Secrets Subsystem
+Secrets Management — SHS Code Secrets Subsystem
 ==================================================
 
-Enterprise-grade secrets management for the ManusClaw agent framework,
+Enterprise-grade secrets management for the SHS Code agent framework,
 inspired by OpenHands' approach to secure credential handling.
 
 Components:

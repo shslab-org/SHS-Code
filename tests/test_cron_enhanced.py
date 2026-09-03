@@ -90,7 +90,7 @@ def test_parse_output_target_invalid():
 # ── CronScheduler job management ──────────────────────────────────────────
 
 def test_scheduler_add_and_list(tmp_path, monkeypatch):
-    monkeypatch.setenv("MANUSCLAW_CRON_FILE", str(tmp_path / "unique_test_cron.yaml"))
+    monkeypatch.setenv("SHSCODE_CRON_FILE", str(tmp_path / "unique_test_cron.yaml"))
     scheduler = CronScheduler()
     job = scheduler.add_job(
         "job-1", "Test Job", "0 * * * *", "run something",
@@ -105,7 +105,7 @@ def test_scheduler_add_and_list(tmp_path, monkeypatch):
 
 
 def test_scheduler_remove_job(tmp_path, monkeypatch):
-    monkeypatch.setenv("MANUSCLAW_CRON_FILE", str(tmp_path / "test_cron.yaml"))
+    monkeypatch.setenv("SHSCODE_CRON_FILE", str(tmp_path / "test_cron.yaml"))
     scheduler = CronScheduler()
     scheduler.add_job("job-1", "Test", "* * * * *", "prompt")
     assert scheduler.remove_job("job-1") is True
@@ -114,7 +114,7 @@ def test_scheduler_remove_job(tmp_path, monkeypatch):
 
 def test_scheduler_trigger_job(tmp_path, monkeypatch):
     import time
-    monkeypatch.setenv("MANUSCLAW_CRON_FILE", str(tmp_path / "test_cron.yaml"))
+    monkeypatch.setenv("SHSCODE_CRON_FILE", str(tmp_path / "test_cron.yaml"))
     scheduler = CronScheduler()
     job = scheduler.add_job("job-1", "Test", "* * * * *", "prompt")
     original_next = job.next_run
@@ -125,7 +125,7 @@ def test_scheduler_trigger_job(tmp_path, monkeypatch):
 
 
 def test_scheduler_add_job_with_webhook(tmp_path, monkeypatch):
-    monkeypatch.setenv("MANUSCLAW_CRON_FILE", str(tmp_path / "test_cron.yaml"))
+    monkeypatch.setenv("SHSCODE_CRON_FILE", str(tmp_path / "test_cron.yaml"))
     scheduler = CronScheduler()
     job = scheduler.add_job(
         "web-job", "Webhook Test", "0 */2 * * *", "check status",
@@ -137,7 +137,7 @@ def test_scheduler_add_job_with_webhook(tmp_path, monkeypatch):
 
 
 def test_scheduler_add_job_with_output_targets(tmp_path, monkeypatch):
-    monkeypatch.setenv("MANUSCLAW_CRON_FILE", str(tmp_path / "test_cron.yaml"))
+    monkeypatch.setenv("SHSCODE_CRON_FILE", str(tmp_path / "test_cron.yaml"))
     scheduler = CronScheduler()
     job = scheduler.add_job(
         "multi-out", "Multi Output", "* * * * *", "report",
@@ -149,7 +149,7 @@ def test_scheduler_add_job_with_output_targets(tmp_path, monkeypatch):
 
 
 def test_scheduler_register_webhook_handler(tmp_path, monkeypatch):
-    monkeypatch.setenv("MANUSCLAW_CRON_FILE", str(tmp_path / "test_cron.yaml"))
+    monkeypatch.setenv("SHSCODE_CRON_FILE", str(tmp_path / "test_cron.yaml"))
     scheduler = CronScheduler()
     handler = lambda job, result: None
     scheduler.register_webhook_handler("job-1", handler)

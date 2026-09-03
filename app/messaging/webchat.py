@@ -2,7 +2,7 @@ from __future__ import annotations
 """WebChat adapter — internal WebSocket-based chat for the built-in web UI.
 
 This adapter manages lightweight WebSocket connections originating from the
-ManusClaw web interface.  It does not connect to any external service.
+SHS Code web interface.  It does not connect to any external service.
 """
 import asyncio
 import json

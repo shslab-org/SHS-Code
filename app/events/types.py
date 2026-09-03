@@ -1,8 +1,8 @@
 """
-ManusClaw Event System — Concrete Event Types
+SHS Code Event System — Concrete Event Types
 ===============================================
 
-All event types used by the manusclaw agent runtime.  Each type sets a unique
+All event types used by the SHS Code agent runtime.  Each type sets a unique
 ``kind`` literal that serves as the discriminator in a discriminated union,
 enabling type-safe pattern matching and serialization/deserialization.
 

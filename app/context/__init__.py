@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 """
-ManusClaw Context Management System
+SHS Code Context Management System
 ======================================
 
-This module provides OpenHands-style context management for the manusclaw
+This module provides OpenHands-style context management for the SHS Code
 AI operating environment.  It consists of two main components:
 
 1. **View**: A linearly ordered projection of events for LLM consumption.

@@ -62,7 +62,7 @@ class TalkMode:
         language: str = "en-US",
         silence_threshold: float = 0.3,
         tts_provider: Optional[TTSProvider] = None,
-        wake_word: str = "hey manus",
+        wake_word: str = "hey shs code",
     ) -> None:
         self._stt_engine = stt_engine
         self._language = language

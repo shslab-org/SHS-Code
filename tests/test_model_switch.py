@@ -14,7 +14,7 @@ os.environ.setdefault("APP_ENV", "test")
 
 @pytest.fixture
 def fresh_llm(monkeypatch, tmp_path):
-    monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "home"))
     from app.config import Config
     Config.reset()
     from app.llm.llm import LLM
@@ -56,14 +56,14 @@ class TestAgentContextSurvivesSwitch:
     """Spec §40 end-to-end: Model A works → switch → Model B continues."""
 
     def test_agent_memory_untouched_by_llm_switch(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "home"))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "home"))
         from app.config import Config
         Config.reset()
         try:
-            from app.agent.manus import Manus
+            from app.agent.shscode import SHSCode
             from app.schema import Message, AgentState
 
-            agent = Manus()
+            agent = SHSCode()
             # Simulate a task in progress: user + assistant + tool result
             agent.memory.add(Message.user("Build a complete e-commerce website"))
             agent.memory.add(Message.assistant(
@@ -88,7 +88,7 @@ class TestAgentContextSurvivesSwitch:
             Config.reset()
 
     def test_custom_provider_registry_overlay(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "home"))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "home"))
         from app.config import Config
         Config.reset()
         try:

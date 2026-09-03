@@ -16,7 +16,7 @@ async def test_react_reflect_recovers_on_parse_error():
     agent = ReActAgent(mode=AgentMode.BUILD)
     obs = Observation(
         tool_name="python_execute", args={},
-        output="Hello from ManusClaw!", error=None, success=True,
+        output="Hello from SHS Code!", error=None, success=True,
     )
     reflection = await agent.reflect("Say hello", obs)
     assert reflection is not None
@@ -25,9 +25,9 @@ async def test_react_reflect_recovers_on_parse_error():
 
 @pytest.mark.asyncio
 async def test_observation_recording():
-    from app.agent.manus import Manus
+    from app.agent.shscode import SHSCode
     from app.schema import TaskHistory
-    agent = Manus()
+    agent = SHSCode()
     agent._task_history = TaskHistory(task_id="t1", original_goal="test")
     agent._task_history.add_step("step 1")
     agent._session_id = None  # skip DB writes
@@ -61,9 +61,9 @@ def test_task_history_no_loop_when_diverse():
 @pytest.mark.asyncio
 async def test_effective_budget_uses_llm_budget():
     """BaseAgent._effective_budget should delegate to LLM budget when available."""
-    from app.agent.manus import Manus
+    from app.agent.shscode import SHSCode
     from app.llm.token_tracker import TokenBudget
-    agent = Manus()
+    agent = SHSCode()
     # The LLM is created in ReActAgent.__init__
     assert hasattr(agent, "llm")
     assert hasattr(agent.llm, "token_budget")

@@ -13,7 +13,7 @@
 
 **SHS Code** (by Sazzad Hussain Shobuj, SHS Lab) is a persistent, model-independent, autonomous coding agent. It remembers across restarts, switches providers/models **without losing context**, journals every step of every task, checkpoints continuously, and resumes interrupted work automatically.
 
-> **Lineage:** SHS Code evolved from **ManusClaw v5.1.1** — its predecessor and original project foundation. Everything that worked in ManusClaw still works here.
+> **Lineage:** SHS Code evolved from **SHS Code v5.1.1** — its predecessor and original project foundation. Everything that worked in SHS Code still works here.
 
 ```text
 $ SHSCode
@@ -35,13 +35,13 @@ SHS Code initialized.
 | 📓 **Task journal** | Every tool call, file change, command, error is journaled with checkpoints |
 | 🔁 **Interruption recovery** | Crash / Ctrl+C / terminal closed → `/resume` continues from the checkpoint |
 | ⏳ **Rolling-window rate limiter** | NVIDIA NIM (40 RPM default, configurable) paced by true timestamps — waits preserve all state |
-| 🛠️ **29 builtin skills** | + custom skills in `~/.manusclaw/skills`, enable/disable persisted |
+| 🛠️ **29 builtin skills** | + custom skills in `~/.shscode/skills`, enable/disable persisted |
 | 🔌 **Custom providers** | `/provider add my-nim openai-compat https://integrate.api.nvidia.com/v1 model key 40` |
 | 🔗 **Connectors** | GitHub/GitLab tokens feed real git-provider tools automatically |
 | 🩺 **`/doctor`** | Full diagnostics with actionable hints |
 | 🖥️ **Stable terminal** | Live activity feed (thinking / tools / rate-limit waits), no input flicker |
 
-**Everything below (PAORR loop, multi-agent DAG, 12+ channels, GGUF/offline, canvas, SSH, cron, 244 tests) is inherited from ManusClaw and still fully functional.**
+**Everything below (PAORR loop, multi-agent DAG, 12+ channels, GGUF/offline, canvas, SSH, cron, 244 tests) is inherited from SHS Code and still fully functional.**
 
 <p>
   <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows%20%7C%20Docker-informational?style=flat-square" alt="Platforms">
@@ -95,7 +95,7 @@ exit                  # clean exit — state saved, /resume next time
 **NVIDIA NIM rate limiting (rolling window):**
 
 ```toml
-# ~/.manusclaw/config.yaml
+# ~/.shscode/config.yaml
 llm:
   provider: universal
   base_url: "https://integrate.api.nvidia.com/v1"
@@ -106,7 +106,7 @@ llm:
 
 Rate-limit waits use a **true rolling timestamp window** (4 RPM example: requests at 12:00:05/15/30/50 → the 5th waits only until 12:01:05, not a fixed 60s) and **never destroy task context** — conversation, tool results and progress all survive the wait.
 
-**Persistent state lives in `~/.manusclaw/`:** `state/journal.db` (task journal) · `state/checkpoints/` (atomic memory snapshots) · `.memory/long_term.db` (long-term memory) · `providers.json` (custom providers) · `connectors.json` (platform connectors) · `skills_state.json` (skill toggles).
+**Persistent state lives in `~/.shscode/`:** `state/journal.db` (task journal) · `state/checkpoints/` (atomic memory snapshots) · `.memory/long_term.db` (long-term memory) · `providers.json` (custom providers) · `connectors.json` (platform connectors) · `skills_state.json` (skill toggles).
 
 ---
 
@@ -174,7 +174,7 @@ unit tests:**
 - **Any-directory universal provider**: `LLM_BASE_URL` + `LLM_API_KEY`/
   `NVIDIA_API_KEY` env config now works in ANY cwd — previously a directory
   without a project `config.toml` silently fell back to MockLLM.
-- **Config layer deep-merge**: a partial `~/.manusclaw/config.yaml` (e.g.
+- **Config layer deep-merge**: a partial `~/.shscode/config.yaml` (e.g.
   only `mcp_servers: []`) no longer shadows the entire project config —
   layers merge per-key instead of first-file-wins.
 - **Bash heredoc fix**: commands containing heredocs no longer hang until
@@ -206,7 +206,7 @@ and a full CLI/tools/LLM/memory/server/MCP/skills/messaging audit pass.
 
 **Project Intelligence Layer** — SHS Code now *understands* codebases:
 - AST/structural symbol indexing (Python, JS/TS, Kotlin, Java, PHP, Go)
-- Persistent incremental index (`~/.manusclaw/intel/`) — only changed files reindex
+- Persistent incremental index (`~/.shscode/intel/`) — only changed files reindex
 - Semantic concept search: "where is authentication handled" → ranked files+symbols
 - Structural search: usages, callers, importers, dependency hubs
 - Project profile detection: type, frameworks, entry points, build/test commands
@@ -248,7 +248,7 @@ See `SHS_CODE_IMPLEMENTATION_STATE.md` for the full implementation ledger.
 
 ## 🆕 What's New in v5.1
 
-ManusClaw v5.1 introduces enterprise-grade capabilities that transform it from a powerful agent framework into a production-ready AI operations platform.
+SHS Code v5.1 introduces enterprise-grade capabilities that transform it from a powerful agent framework into a production-ready AI operations platform.
 
 | Category | Highlights |
 |---|---|
@@ -293,7 +293,7 @@ v5.1.1 is a maintenance release that closes 32 bugs across the agent core, secur
 | # | Component | Bug | Fix |
 |---|---|---|---|
 | 11 | `app/cron.py` | `_JOBS_FILE = Path(os.getenv(...))` was evaluated ONCE at module import. Runtime changes to `MANUSCLAW_CRON_FILE` (tests, profile switching, CLI overrides) were silently ignored. | Replaced with `_get_jobs_file()` lazy resolver called inside `_load_jobs` / `_save_jobs`. |
-| 12 | `app/cron.py` | `manusclaw-cron --trigger JOB` did not `return` after triggering → fell through to `asyncio.run(scheduler.run_forever())` and blocked the terminal forever. | Added `return`. |
+| 12 | `app/cron.py` | `shscode-cron --trigger JOB` did not `return` after triggering → fell through to `asyncio.run(scheduler.run_forever())` and blocked the terminal forever. | Added `return`. |
 | 13 | `app/cron.py` | `--list` output overwrote `output` on every loop iteration (`output = f"{t}"`) instead of appending, so only the LAST output_target was ever shown. | Use `output += f" {t}"` and strip. |
 | 14 | `app/skills/skill_engine.py` | Same module-level-eval bug as cron.py: `_SKILLS_DIR` was set at import time and ignored subsequent `MANUSCLAW_SKILLS_DIR` changes. | Replaced with `_get_skills_dir()` lazy resolver; updated `_load_user()` and `create()` to call it. |
 | 15 | `app/tool/memory_tool.py` | Same bug: `_WORKSPACE` / `MEMORY_FILE` / `USER_FILE` frozen at import. The `tmp_workspace` pytest fixture set `MANUSCLAW_WORKSPACE` at runtime, but `MemoryTool.execute()` still wrote to the import-time path — tests passed only because they manually monkey-patched `mt.MEMORY_FILE`. | Added `_get_workspace()` / `_memory_file()` / `_user_file()` lazy resolvers; rewrote `execute()` to use them. |
@@ -347,13 +347,13 @@ v5.1.1 is a maintenance release that closes 32 bugs across the agent core, secur
 
 ## 🌟 Overview
 
-ManusClaw is an enterprise-grade autonomous AI agent framework that empowers Large Language Models to **plan**, **execute code**, **browse the web**, **manage files**, **resolve issues**, and **complete complex multi-step tasks** — all autonomously.
+SHS Code is an enterprise-grade autonomous AI agent framework that empowers Large Language Models to **plan**, **execute code**, **browse the web**, **manage files**, **resolve issues**, and **complete complex multi-step tasks** — all autonomously.
 
-At its core is the **PAORR reasoning loop** (Plan → Act → Observe → Reflect → Retry), a self-correcting execution model. Combined with **DAG-based multi-agent orchestration**, **defense-in-depth security**, **offline LLM support (GGUF/HuggingFace/Ollama)**, and **enterprise observability**, ManusClaw runs anywhere — cloud, local, or fully air-gapped.
+At its core is the **PAORR reasoning loop** (Plan → Act → Observe → Reflect → Retry), a self-correcting execution model. Combined with **DAG-based multi-agent orchestration**, **defense-in-depth security**, **offline LLM support (GGUF/HuggingFace/Ollama)**, and **enterprise observability**, SHS Code runs anywhere — cloud, local, or fully air-gapped.
 
-**Why ManusClaw?**
+**Why SHS Code?**
 
-| Challenge | ManusClaw Solution |
+| Challenge | SHS Code Solution |
 |---|---|
 | Vendor lock-in | 100+ cloud providers + offline GGUF/HuggingFace/Ollama with credential rotation and model failover |
 | No internet access | Fully offline: GGUF via llama-cpp-python, HuggingFace local, Ollama local — zero cloud dependency |
@@ -411,7 +411,7 @@ At its core is the **PAORR reasoning loop** (Plan → Act → Observe → Reflec
 
 ### 🤖 Agent System — PAORR Loop + Multi-Agent + Roles
 
-The PAORR loop is the heart of ManusClaw — a self-correcting reasoning cycle that plans, acts, observes, reflects, and retries until the task is complete.
+The PAORR loop is the heart of SHS Code — a self-correcting reasoning cycle that plans, acts, observes, reflects, and retries until the task is complete.
 
 | Feature | Description |
 |---|---|
@@ -660,7 +660,7 @@ LLM-powered automated resolution for issues, PRs, and merge conflicts.
 
 | Feature | Description |
 |---|---|
-| **Wake Word Detection** | Pvporcupine or STT-based wake word ("Hey ManusClaw") |
+| **Wake Word Detection** | Pvporcupine or STT-based wake word ("Hey SHS Code") |
 | **Talk Mode** | Continuous mic → STT → agent → TTS conversation loop |
 | **Text-to-Speech** | 3 backends: OpenAI TTS, ElevenLabs, System TTS (espeak/piper) |
 | **Speech-to-Text** | 3 engines: OpenAI Whisper, Google STT, Vosk (fully offline) |
@@ -836,7 +836,7 @@ curl -fsSL https://raw.githubusercontent.com/manusagents/manusclaw/main/install.
 
 ## ⚙️ Configuration
 
-ManusClaw uses `config.toml` for all configuration. Key sections:
+SHS Code uses `config.toml` for all configuration. Key sections:
 
 ```toml
 [llm]
@@ -982,15 +982,15 @@ curl http://localhost:8765/ready     # Readiness probe (checks DB, LLM, sandbox)
 
 ## 📟 Entry Points
 
-ManusClaw installs several CLI commands:
+SHS Code installs several CLI commands:
 
 | Command | Description |
 |---|---|
 | `manusclaw` | Interactive CLI agent with slash commands |
-| `manusclaw-server` | FastAPI + WebSocket server |
-| `manusclaw-cron` | Cron scheduler daemon |
-| `manusclaw-multi` | Multi-agent pipeline runner |
-| `manusclaw-sessions` | Session management tool |
+| `shscode-server` | FastAPI + WebSocket server |
+| `shscode-cron` | Cron scheduler daemon |
+| `shscode-multi` | Multi-agent pipeline runner |
+| `shscode-sessions` | Session management tool |
 
 ### CLI Slash Commands
 
@@ -1050,6 +1050,6 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 <div align="center">
 
-**ManusClaw v5.1.1** — Built by [The-JDdev (SHS Lab)](https://github.com/The-JDdev)
+**SHS Code v5.1.1** — Built by [The-JDdev (SHS Lab)](https://github.com/The-JDdev)
 
 </div>

@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from app.logger import logger
+from app import env
 
 
 # ---------------------------------------------------------------------------
@@ -104,12 +105,12 @@ class TaskEntry:
 def _get_db_path() -> Path:
     """Resolve the task-queue DB path lazily.
 
-    Reads ``MANUSCLAW_WORKSPACE`` each call so runtime env changes
+    Reads ``SHSCODE_WORKSPACE`` each call so runtime env changes
     (tests, profile switching, CLI overrides) are honoured.
     Previously this was a module-level constant evaluated once at
     import, which silently ignored later env changes.
     """
-    workspace = Path(os.getenv("MANUSCLAW_WORKSPACE", "workspace"))
+    workspace = Path(env.getenv("WORKSPACE", "workspace"))
     return workspace / ".task_queue" / "tasks.db"
 
 
@@ -117,7 +118,7 @@ def _get_db_path() -> Path:
 # TaskQueue itself calls ``_get_db_path()`` so runtime env changes
 # take effect; these constants remain for any external code that
 # still imports them.
-_WORKSPACE = Path(os.getenv("MANUSCLAW_WORKSPACE", "workspace"))
+_WORKSPACE = Path(env.getenv("WORKSPACE", "workspace"))
 _DB_PATH = _WORKSPACE / ".task_queue" / "tasks.db"
 
 

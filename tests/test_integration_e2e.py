@@ -89,8 +89,8 @@ def e2e(tmp_path, monkeypatch):
     proj = tmp_path / "proj"
     home.mkdir()
     proj.mkdir()
-    monkeypatch.setenv("MANUSCLAW_HOME", str(home))
-    monkeypatch.setenv("MANUSCLAW_WORKSPACE", str(proj / "workspace"))
+    monkeypatch.setenv("SHSCODE_HOME", str(home))
+    monkeypatch.setenv("SHSCODE_WORKSPACE", str(proj / "workspace"))
     monkeypatch.chdir(proj)
 
     from app.config import Config
@@ -134,8 +134,8 @@ def _git_init(proj):
 
 
 async def _run_agent(script, max_steps=8):
-    from app.agent.manus import Manus
-    agent = Manus()
+    from app.agent.shscode import SHSCode
+    agent = SHSCode()
     agent.llm = ScriptedLLM(script)
     agent._max_steps = max_steps
     result = await agent.run("E2E test task")
@@ -363,8 +363,8 @@ class TestEndToEndSuite:
         _mk_project(e2e.proj)
 
         async def run_with_interrupt():
-            from app.agent.manus import Manus
-            agent = Manus()
+            from app.agent.shscode import SHSCode
+            agent = SHSCode()
             slow = ScriptedLLM([
                 ("tool", ("code_search", {"mode": "symbol", "query": "add"})),
                 ("tool", ("str_replace_editor", {
@@ -473,8 +473,8 @@ class TestCrashRecovery:
         _mk_project(e2e.proj)
 
         async def crash_mid_run():
-            from app.agent.manus import Manus
-            agent = Manus()
+            from app.agent.shscode import SHSCode
+            agent = SHSCode()
             agent.llm = ScriptedLLM([
                 ("tool", ("str_replace_editor", {
                     "command": "create", "path": "calc/partial.py",
@@ -521,8 +521,8 @@ class TestParallelTools:
         import asyncio as aio
 
         async def run():
-            from app.agent.manus import Manus
-            agent = Manus()
+            from app.agent.shscode import SHSCode
+            agent = SHSCode()
             # three read-only calls in ONE response → parallel path
             agent.llm = ScriptedLLM([
                 ("tool", ("code_search", {"mode": "symbol", "query": "add"})),
@@ -544,8 +544,8 @@ class TestParallelTools:
         _mk_project(e2e.proj)
 
         async def run():
-            from app.agent.manus import Manus
-            agent = Manus()
+            from app.agent.shscode import SHSCode
+            agent = SHSCode()
             agent.llm = ScriptedLLM([
                 ("tool", ("str_replace_editor", {
                     "command": "create", "path": "calc/seq.py",

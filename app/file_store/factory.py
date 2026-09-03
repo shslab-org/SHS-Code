@@ -15,7 +15,7 @@ Supported backends:
 Configuration sources (in priority order):
 
     1. Explicit ``backend`` parameter to :meth:`create`
-    2. ``MANUSCLAW_FILE_STORE_BACKEND`` environment variable
+    2. ``SHSCODE_FILE_STORE_BACKEND`` environment variable
     3. Application config (``file_store.backend``)
     4. Default: ``local``
 
@@ -40,6 +40,7 @@ from typing import Any, Optional
 
 from app.file_store.base import FileStore, FileStoreConnectionError, FileStoreError
 from app.logger import logger
+from app import env
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -233,12 +234,12 @@ class FileStoreFactory:
         Detect the configured backend from environment or config.
 
         Priority:
-            1. ``MANUSCLAW_FILE_STORE_BACKEND`` environment variable
+            1. ``SHSCODE_FILE_STORE_BACKEND`` environment variable
             2. Application config
             3. Default: ``local``
         """
         # Environment variable
-        env_backend = os.getenv("MANUSCLAW_FILE_STORE_BACKEND", "").strip().lower()
+        env_backend = env.getenv("FILE_STORE_BACKEND", "").strip().lower()
         if env_backend:
             return env_backend
 

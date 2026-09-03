@@ -26,7 +26,7 @@ Key features:
 
 Environment:
     The encryption key can be provided directly or via the
-    ``MANUSCLAW_FERNET_KEY`` environment variable.  If neither is
+    ``SHSCODE_FERNET_KEY`` environment variable.  If neither is
     available, a new key is generated at startup and logged (with a
     warning) so that the system works in development without
     configuration.
@@ -61,7 +61,7 @@ values without attempting decryption.  Example encrypted value::
     FNT:gAAAAABoZXRf...
 """
 
-_ENV_KEY_NAME = "MANUSCLAW_FERNET_KEY"
+_ENV_KEY_NAME = "SHSCODE_FERNET_KEY"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -108,7 +108,7 @@ class Cipher:
 
     Args:
         key:        Base64-encoded 32-byte Fernet key.  If ``None``,
-                    the key is read from ``MANUSCLAW_FERNET_KEY`` env
+                    the key is read from ``SHSCODE_FERNET_KEY`` env
                     var; if that is also unset, a new key is generated
                     (suitable for development only).
         prefix:     Token prefix (default: ``FERNET_TOKEN_PREFIX``).
@@ -321,7 +321,7 @@ def get_default_cipher() -> Cipher:
     """
     Get or create the module-level default :class:`Cipher`.
 
-    The default cipher reads its key from ``MANUSCLAW_FERNET_KEY`` or
+    The default cipher reads its key from ``SHSCODE_FERNET_KEY`` or
     generates one if the env var is not set.  This is safe for
     development but a key should be provided in production.
     """

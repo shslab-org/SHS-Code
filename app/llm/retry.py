@@ -23,7 +23,7 @@ from enum import Enum
 from typing import Any, Callable, Optional, Type
 
 from app.exceptions import (
-    ManusClawError,
+    SHSCodeError,
     RateLimitError,
     RetryableError,
     NonRetryableError,
@@ -92,7 +92,7 @@ def classify_error(error: Exception, provider: str = "") -> ErrorCategory:
     Returns:
         The ErrorCategory for this error.
     """
-    # Check for manusclaw-specific exceptions first
+    # Check for SHS Code-specific exceptions first
     if isinstance(error, TokenLimitExceeded):
         return ErrorCategory.CONTEXT_WINDOW
     if isinstance(error, RateLimitError):
@@ -177,11 +177,11 @@ def map_provider_exception(
     error: Exception,
     provider: str = "",
     model: str = "",
-) -> ManusClawError:
-    """Map a provider-specific exception to a manusclaw exception.
+) -> SHSCodeError:
+    """Map a provider-specific exception to a SHS Code exception.
 
     This function inspects the raw exception from a provider SDK and
-    converts it to the appropriate manusclaw exception type, preserving
+    converts it to the appropriate SHS Code exception type, preserving
     the original error as the cause.
 
     Args:
@@ -190,7 +190,7 @@ def map_provider_exception(
         model: The model name (for context in error messages).
 
     Returns:
-        A ManusClawError subclass instance.
+        A SHSCodeError subclass instance.
     """
     category = classify_error(error, provider)
     msg = str(error)

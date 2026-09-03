@@ -56,7 +56,7 @@ class EmailAdapter(BaseMessagingAdapter):
             from email.mime.text import MIMEText
 
             msg = MIMEText(text[:10000])
-            msg["Subject"] = "ManusClaw Response"
+            msg["Subject"] = "SHS Code Response"
             msg["From"] = self.token
             msg["To"] = channel_id
 

@@ -7,15 +7,15 @@ All configuration lives in `config.toml`. Environment variables override config 
 ## Named Config Profiles
 
 ```bash
-MANUSCLAW_PROFILE=work python -m app.cli
-# Loads: ~/.manusclaw/profiles/work/config.yaml + .env
+SHSCODE_PROFILE=work python -m app.cli
+# Loads: ~/.shscode/profiles/work/config.yaml + .env
 ```
 
 ---
 
 ## LLM Provider Configuration
 
-ManusClaw implements a dual-mode LLM router that works with every LLM provider — cloud or local, paid or free, online or completely air-gapped.
+SHS Code implements a dual-mode LLM router that works with every LLM provider — cloud or local, paid or free, online or completely air-gapped.
 
 ### Official Provider SDKs
 
@@ -49,7 +49,7 @@ temperature = 0.0
 
 ### Universal / Hacker Mode (OpenRouter, Groq, Together, any proxy)
 
-If you set `base_url`, ManusClaw switches to Universal/Agnostic mode — it sends standard OpenAI-compatible HTTP requests and works with any endpoint that speaks the OpenAI chat completions protocol.
+If you set `base_url`, SHS Code switches to Universal/Agnostic mode — it sends standard OpenAI-compatible HTTP requests and works with any endpoint that speaks the OpenAI chat completions protocol.
 
 ```toml
 # config.toml — OpenRouter (200+ models, one API key)
@@ -61,8 +61,8 @@ model      = "anthropic/claude-3.5-sonnet"
 max_tokens = 8192
 
 [llm.extra_headers]
-"HTTP-Referer" = "https://github.com/ManusAgents/ManusClaw"
-"X-Title"      = "ManusClaw"
+"HTTP-Referer" = "https://github.com/shslab-org/SHS-Code"
+"X-Title"      = "SHS Code"
 ```
 
 ```toml
@@ -85,7 +85,7 @@ The `extra_headers` field is critical for OpenRouter compliance — it passes th
 
 ### Fully Offline Local LLM
 
-Run ManusClaw with zero internet dependency using locally hosted models.
+Run SHS Code with zero internet dependency using locally hosted models.
 
 #### Ollama (Recommended for offline)
 
@@ -185,7 +185,7 @@ Rate limit errors (`429`) trigger the backoff. `TokenLimitExceeded` errors propa
 
 ```toml
 # ─────────────────────────────────────────────────────────
-# ManusClaw Configuration — config.toml
+# SHS Code Configuration — config.toml
 # ─────────────────────────────────────────────────────────
 
 [llm]
@@ -199,8 +199,8 @@ max_retries  = 6              # LLM retry attempts on failure
 timeout      = 120            # seconds before LLM request times out
 
 [llm.extra_headers]           # extra HTTP headers (required for OpenRouter)
-# "HTTP-Referer" = "https://github.com/ManusAgents/ManusClaw"
-# "X-Title"      = "ManusClaw"
+# "HTTP-Referer" = "https://github.com/shslab-org/SHS-Code"
+# "X-Title"      = "SHS Code"
 
 [browser]
 headless           = true     # run browser without visible window
@@ -242,6 +242,6 @@ max_steps     = 30            # max steps per agent run (prevents infinite loops
 | `ANTHROPIC_API_KEY` | Anthropic API key (auto-loaded into `llm.api_key`) |
 | `GOOGLE_API_KEY` | Google Gemini API key |
 | `LLM_BASE_URL` | Override `llm.base_url` at runtime |
-| `MANUSCLAW_API_KEY` | Enables API Key authentication on the server |
-| `MANUSCLAW_ALLOWED_ORIGINS` | CORS allowed origins (comma-separated) |
-| `MANUSCLAW_PROFILE` | Named config profile to load |
+| `SHSCODE_API_KEY` | Enables API Key authentication on the server |
+| `SHSCODE_ALLOWED_ORIGINS` | CORS allowed origins (comma-separated) |
+| `SHSCODE_PROFILE` | Named config profile to load |

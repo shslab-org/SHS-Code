@@ -104,7 +104,7 @@ def _build_patterns() -> List[_Pattern]:
         except re.error as exc:
             # Never let a bad regex crash the module import
             import logging
-            logging.getLogger("manusclaw.security").warning(
+            logging.getLogger("shscode.security").warning(
                 "Skipping invalid security pattern %s: %s", detector_id, exc
             )
     return compiled

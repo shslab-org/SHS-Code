@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Optional
 
 from app.logger import logger
+from app import env
 
 
 # ---------------------------------------------------------------------------
@@ -172,14 +173,13 @@ class ToolSelector:
     and optionally an LLM call. Returns an ordered SelectionResult.
 
     Phase 2 (spec §18): failure/success confidence persists ACROSS runs in
-    ~/.manusclaw/tool_confidence.json — a tool that repeatedly failed for
+    ~/.shscode/tool_confidence.json — a tool that repeatedly failed for
     this environment receives durably lower priority.
     """
 
     @staticmethod
     def _conf_path() -> Path:
-        return Path(os.getenv("MANUSCLAW_HOME",
-                              str(Path.home() / ".manusclaw"))) / "tool_confidence.json"
+        return env.home_dir() / "tool_confidence.json"
 
     def __init__(self, tool_names: list[str]) -> None:
         self._tool_names = tool_names

@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 """
-DataAnalysisAgent — Manus specialised for data exploration, statistics, and charting.
+DataAnalysisAgent — SHSCode specialised for data exploration, statistics, and charting.
 
-Inherits from Manus via the correct MRO:
-  DataAnalysisAgent → Manus → ToolCallAgent → ReActAgent → BaseAgent
+Inherits from SHSCode via the correct MRO:
+  DataAnalysisAgent → SHSCode → ToolCallAgent → ReActAgent → BaseAgent
 
-The only change from Manus is:
+The only change from SHSCode is:
   • Custom system_prompt (data-analysis focus)
   • DataVisualization tool added to the standard toolkit
 """
 
-from app.agent.manus import Manus
+from app.agent.shscode import SHSCode
 from app.tool.data_viz import DataVisualization
 
 
@@ -30,13 +30,13 @@ Your process:
 """
 
 
-class DataAnalysisAgent(Manus):
+class DataAnalysisAgent(SHSCode):
     """
-    Manus-derived agent with data-analysis focus.
+    SHSCode-derived agent with data-analysis focus.
 
     Uses super().__init__() to traverse the full MRO:
       DataAnalysisAgent.__init__
-        → Manus.__init__           (sets mode, session_id)
+        → SHSCode.__init__           (sets mode, session_id)
           → ToolCallAgent.__init__ (creates LLM, selector, retry_policy)
             → ReActAgent.__init__  (nothing extra)
               → BaseAgent.__init__ (sets state, memory, gate, db, …)
@@ -51,7 +51,7 @@ class DataAnalysisAgent(Manus):
         # Correctly calls the full MRO — no manual attribute assignment
         super().__init__()
 
-        # Add DataVisualization on top of Manus's standard toolkit
+        # Add DataVisualization on top of SHSCode's standard toolkit
         self.tools.add(DataVisualization())
 
         # FIX: Rebuild the tool selector so it knows about the new tool,

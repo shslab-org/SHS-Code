@@ -37,6 +37,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from app.logger import logger
+from app import env
 
 
 @dataclass
@@ -234,7 +235,7 @@ class ProfileRotator:
         self._session_profiles: dict[str, ModelProfile] = {}
         # FIX: Bound the session profile cache to prevent unbounded memory growth.
         # Oldest sessions are evicted when the limit is reached.
-        self._max_session_profiles: int = int(os.getenv("MANUSCLAW_MAX_SESSION_PROFILES", "128"))
+        self._max_session_profiles: int = int(env.getenv("MAX_SESSION_PROFILES", "128"))
 
     @property
     def profile(self) -> ModelProfile:

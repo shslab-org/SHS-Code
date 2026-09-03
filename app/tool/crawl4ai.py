@@ -44,7 +44,7 @@ class Crawl4AITool(BaseTool):
             import aiohttp
             import re
 
-            headers = {"User-Agent": "Mozilla/5.0 (compatible; ManusClawBot/1.0)"}
+            headers = {"User-Agent": "Mozilla/5.0 (compatible; SHSCodeBot/1.0)"}
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
                     html = await resp.text()  # Fix: remove invalid 'errors' kwarg (not supported by aiohttp)

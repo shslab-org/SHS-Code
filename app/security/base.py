@@ -2,8 +2,8 @@
 Security Defense-in-Depth — Base Module
 ========================================
 
-Core abstractions for the manusclaw security subsystem, inspired by
-OpenHands's security architecture and adapted for the manusclaw agent
+Core abstractions for the SHS Code security subsystem, inspired by
+OpenHands's security architecture and adapted for the SHS Code agent
 framework.
 
 Classes:

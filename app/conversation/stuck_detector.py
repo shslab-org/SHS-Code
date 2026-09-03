@@ -1,5 +1,5 @@
 """
-ManusClaw Conversation System — StuckDetector
+SHS Code Conversation System — StuckDetector
 ================================================
 
 Detects when a conversation's agent loop is "stuck" — i.e. making no

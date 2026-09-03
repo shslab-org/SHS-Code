@@ -11,7 +11,7 @@ Decision logic:
   APPROVED path   → broadcasts the approval signal to all roles
 
 The QA verdict is determined by:
-  1. LLM-generated QA report (via Manus with file/code access)
+  1. LLM-generated QA report (via SHSCode with file/code access)
   2. Simple keyword parse: "REWORK REQUIRED" → BLOCKED escalation
                            "APPROVED"        → PROCEED
 """
@@ -29,7 +29,7 @@ class QARole(BaseRole):
     max_retries      = 0   # QA does not retry itself; it sends feedback to Engineer
 
     specialist_prompt = """\
-You are the QA agent of ManusClaw. You receive implementation output from the
+You are the QA agent of SHS Code. You receive implementation output from the
 Engineer and validate it against the acceptance criteria in the PRD.
 
 Your QA process:
@@ -93,15 +93,15 @@ Your output MUST include:
     # ──────────────────────────────────────────────────────────────────────────
 
     async def _think_act_publish(self, context: str) -> str:
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
 
         # Pull implementation from bus if available; fall back to context
         msgs = await self.bus.drain(self.role_name)
         impl = next((m.artefact for m in msgs if m.artefact), context)
 
-        logger.info(f"[{self.role_name}] Delegating QA validation to Manus.")
+        logger.info(f"[{self.role_name}] Delegating QA validation to SHSCode.")
 
-        qa_agent = Manus()
+        qa_agent = SHSCode()
         try:
             qa_result = await qa_agent.run(
                 f"You are a QA engineer. Validate the following implementation:\n\n"

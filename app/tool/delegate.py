@@ -39,7 +39,7 @@ class DelegateTool(BaseTool):
 
     async def execute(self, task: str, role: str = "worker",
                       max_steps: int = 15, timeout: int = 300) -> ToolResult:
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from app.permissions.gate import AgentMode
 
         journal, parent_task_id = (self._task_provider() if self._task_provider
@@ -54,7 +54,7 @@ class DelegateTool(BaseTool):
                 sub_id = ""
 
         async def _run() -> str:
-            agent = Manus(mode=AgentMode.BUILD)
+            agent = SHSCode(mode=AgentMode.BUILD)
             agent._max_steps = max_steps
             return await agent.run(task)
 

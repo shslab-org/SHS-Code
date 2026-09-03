@@ -38,5 +38,5 @@ sandbox = create_sandbox(backend="openshell")
 
 ## Install
 ```bash
-pip install manusclaw[ssh]
+pip install shscode[ssh]
 ```

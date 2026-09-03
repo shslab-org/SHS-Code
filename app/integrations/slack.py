@@ -3,10 +3,10 @@ from __future__ import annotations
 """
 Slack Integration — Agent Interaction & Workflow
 =================================================
-Slack Bot for ManusClaw agent interaction, separate from the messaging
+Slack Bot for SHS Code agent interaction, separate from the messaging
 layer. This module provides:
 
-  - Slash commands: /manusclaw, /resolve, /review
+  - Slash commands: /shscode, /resolve, /review
   - Thread-based conversations
   - File upload support
   - Interactive messages with buttons
@@ -87,7 +87,7 @@ class SlackEventType(str, Enum):
 class SlashCommand(str, Enum):
     """Supported slash commands."""
 
-    MANUSCLAW = "/manusclaw"
+    SHSCODE = "/shscode"
     RESOLVE = "/resolve"
     REVIEW = "/review"
 
@@ -309,7 +309,7 @@ class BlockKit:
 
 class SlackIntegration:
     """
-    Slack Bot integration for ManusClaw agent interaction and workflows.
+    Slack Bot integration for SHS Code agent interaction and workflows.
 
     This is separate from the messaging Slack adapter — it provides
     slash commands, interactive messages, thread-based conversations,
@@ -474,17 +474,17 @@ class SlackIntegration:
         if self._bolt_app is None:
             return
 
-        @self._bolt_app.command("/manusclaw")
-        async def handle_manusclaw(ack, say, command):
+        @self._bolt_app.command("/shscode")
+        async def handle_shscode(ack, say, command):
             await ack()
             payload = self._parse_slash_command(command)
-            handler = self._command_handlers.get("/manusclaw")
+            handler = self._command_handlers.get("/shscode")
             if handler:
                 response = await handler(payload)
                 if response:
                     await say(response)
             else:
-                await say(self._default_manusclaw_response(payload))
+                await say(self._default_shscode_response(payload))
 
         @self._bolt_app.command("/resolve")
         async def handle_resolve(ack, say, command):
@@ -532,7 +532,7 @@ class SlackIntegration:
             if message.thread_ts:
                 await self._handle_thread_message(message)
 
-        @self._bolt_app.action(re.compile(r"manusclaw_.*"))
+        @self._bolt_app.action(re.compile(r"shscode_.*"))
         async def handle_interaction(ack, body, respond):
             await ack()
             payload = self._parse_interaction_body(body)
@@ -712,7 +712,7 @@ class SlackIntegration:
             Slack API response.
         """
         blocks = [
-            BlockKit.header("ManusClaw Issue Resolution"),
+            BlockKit.header("SHS Code Issue Resolution"),
             BlockKit.section(
                 f"*Issue:* <{issue_url}|{issue_title}>\n"
                 f"*Provider:* {provider} | *Repo:* `{repo_id}` | "
@@ -722,7 +722,7 @@ class SlackIntegration:
             BlockKit.actions(
                 BlockKit.button(
                     "Resolve Issue",
-                    "manusclaw_resolve",
+                    "shscode_resolve",
                     value=json.dumps({
                         "provider": provider,
                         "repo_id": repo_id,
@@ -732,7 +732,7 @@ class SlackIntegration:
                 ),
                 BlockKit.button(
                     "Review Only",
-                    "manusclaw_review",
+                    "shscode_review",
                     value=json.dumps({
                         "provider": provider,
                         "repo_id": repo_id,
@@ -741,20 +741,20 @@ class SlackIntegration:
                 ),
                 BlockKit.button(
                     "Dismiss",
-                    "manusclaw_dismiss",
+                    "shscode_dismiss",
                     value="dismiss",
                     style="danger",
                 ),
             ),
             BlockKit.context(
-                "_Powered by ManusClaw_ | "
+                "_Powered by SHS Code_ | "
                 "Resolve: auto-fix with LLM | Review: analysis only"
             ),
         ]
 
         return await self.send_message(
             channel_id,
-            text=f"ManusClaw: Issue Resolution - {issue_title}",
+            text=f"SHS Code: Issue Resolution - {issue_title}",
             thread_ts=thread_ts,
             blocks=blocks,
         )
@@ -790,19 +790,19 @@ class SlackIntegration:
                 BlockKit.actions(
                     BlockKit.button(
                         "View Changes",
-                        "manusclaw_view_changes",
+                        "shscode_view_changes",
                         value=request_id,
                     ),
                 )
             )
 
         blocks.append(
-            BlockKit.context("_Powered by ManusClaw_")
+            BlockKit.context("_Powered by SHS Code_")
         )
 
         return await self.send_message(
             channel_id,
-            text=f"ManusClaw Resolution: {status}",
+            text=f"SHS Code Resolution: {status}",
             thread_ts=thread_ts,
             blocks=blocks,
         )
@@ -872,15 +872,15 @@ class SlackIntegration:
     # ── Default slash command responses ────────────────────────────────────
 
     @staticmethod
-    def _default_manusclaw_response(
+    def _default_shscode_response(
         payload: SlashCommandPayload,
     ) -> str:
-        """Default response for /manusclaw command."""
+        """Default response for /shscode command."""
         return (
-            f"Hello <@{payload.user_id}>! I'm ManusClaw, your AI-powered "
+            f"Hello <@{payload.user_id}>! I'm SHS Code, your AI-powered "
             f"development assistant.\n\n"
             f"*Available commands:*\n"
-            f"• `/manusclaw status` — Check my status\n"
+            f"• `/shscode status` — Check my status\n"
             f"• `/resolve <issue-url>` — Resolve an issue with AI\n"
             f"• `/review <pr-url>` — Review a pull request\n\n"
             f"Or just mention me in a thread to start a conversation!"

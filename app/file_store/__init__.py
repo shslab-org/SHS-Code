@@ -1,8 +1,8 @@
 """
-File Storage Backends — manusclaw File Store Subsystem
+File Storage Backends — SHS Code File Store Subsystem
 ========================================================
 
-Enterprise-grade file storage backends for the ManusClaw agent framework,
+Enterprise-grade file storage backends for the SHS Code agent framework,
 inspired by OpenHands' approach to flexible storage abstraction.
 
 Components:
@@ -29,7 +29,7 @@ Quick start::
     store = FileStoreFactory.create()
 
     # Explicit backend
-    store = LocalFileStore(base_dir="/var/lib/manusclaw/files")
+    store = LocalFileStore(base_dir="/var/lib/shscode/files")
     await store.write("hello.txt", b"Hello, World!", content_type="text/plain")
     data = await store.read("hello.txt")
     url = await store.get_url("hello.txt")

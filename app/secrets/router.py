@@ -16,7 +16,7 @@ Endpoints:
 
 Authentication:
     All endpoints require the ``X-API-Key`` header when
-    ``MANUSCLAW_API_KEY`` is set in the environment.
+    ``SHSCODE_API_KEY`` is set in the environment.
 
 Usage::
 
@@ -40,6 +40,7 @@ from app.secrets.models import (
     SecretSource,
     SecretUpdateRequest,
 )
+from app import env
 from app.secrets.store import (
     FileSecretsStore,
     SecretAlreadyExistsError,
@@ -74,13 +75,13 @@ def _get_store() -> SecretsStore:
 # API Key dependency (same pattern as main server)
 # ──────────────────────────────────────────────────────────────────────────────
 
-_API_KEY = os.getenv("MANUSCLAW_API_KEY", "")
+_API_KEY = env.getenv("API_KEY", "")
 
 
 async def require_api_key(
     x_api_key: Optional[str] = None,
 ) -> None:
-    """Validate the API key if MANUSCLAW_API_KEY is configured."""
+    """Validate the API key if SHSCODE_API_KEY is configured."""
     if not _API_KEY:
         return
     # FastAPI header dependency

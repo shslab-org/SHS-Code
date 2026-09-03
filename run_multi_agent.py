@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ManusClaw Multi-Agent Pipeline CLI
+SHS Code Multi-Agent Pipeline CLI
 
 Usage:
     python run_multi_agent.py "Build a REST API for a todo list"
@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="ManusClaw Multi-Agent Pipeline")
+    parser = argparse.ArgumentParser(description="SHS Code Multi-Agent Pipeline")
     parser.add_argument("goal", nargs="?", default=None, help="Task goal")
     parser.add_argument("--mode", choices=["build", "plan"], default="build")
     args = parser.parse_args()
@@ -34,9 +34,9 @@ async def main() -> None:
     mode = AgentMode.PLAN if args.mode == "plan" else AgentMode.BUILD
     orch = MultiAgentOrchestrator(mode=mode)
 
-    print(f"\n[ManusClaw] Running multi-agent pipeline...")
-    print(f"[ManusClaw] Goal: {goal}")
-    print(f"[ManusClaw] Mode: {args.mode}\n")
+    print(f"\n[SHS Code] Running multi-agent pipeline...")
+    print(f"[SHS Code] Goal: {goal}")
+    print(f"[SHS Code] Mode: {args.mode}\n")
 
     result = await orch.run(goal)
     print(result)

@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
-from app.exceptions import ManusClawError, NonRetryableError, RetryableError
+from app.exceptions import SHSCodeError, NonRetryableError, RetryableError
 from app.logger import logger
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ class ResolutionResult:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-class ResolverError(ManusClawError):
+class ResolverError(SHSCodeError):
     """Error raised by the IssueResolver."""
 
     def __init__(self, message: str, request_id: str = "") -> None:
@@ -771,7 +771,7 @@ class IssueResolver:
         }.get(result.status, "")
 
         lines = [
-            f"## ManusClaw Resolver {status_emoji}",
+            f"## SHS Code Resolver {status_emoji}",
             "",
             f"**Resolution Type:** {request.resolution_type.value}",
             f"**Status:** {result.status.value}",
@@ -798,7 +798,7 @@ class IssueResolver:
 
         lines.append("")
         lines.append("---")
-        lines.append("*Powered by [ManusClaw](https://manusclaw.dev)*")
+        lines.append("*Powered by [SHS Code](https://github.com/shslab-org/SHS-Code)*")
 
         return "\n".join(lines)
 

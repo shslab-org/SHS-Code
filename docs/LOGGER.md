@@ -7,7 +7,7 @@
 | Field | Type | Description |
 |-------|------|-------------|
 | `trace_id` | `str` | Unique ID for the agent run (12-char UUID) |
-| `agent` | `str` | Agent name (e.g. `manus`, `orchestrator`) |
+| `agent` | `str` | Agent name (e.g. `shscode`, `orchestrator`) |
 | `step` | `int` | Current PAORR step number |
 | `task_id` | `str` | Short task UUID |
 
@@ -21,7 +21,7 @@ Context propagates correctly across `async/await` boundaries via `contextvars`.
 from app.logger import logger
 ```
 
-`logger` is a standard `logging.Logger` instance named `"manusclaw"`. All standard methods are available:
+`logger` is a standard `logging.Logger` instance named `"shscode"`. All standard methods are available:
 
 | Method | Signature | Level |
 |--------|-----------|-------|
@@ -66,7 +66,7 @@ from app.logger import set_log_context
 
 tokens = set_log_context(
     trace_id="abc123def456",
-    agent_name="manus",
+    agent_name="shscode",
     step_id=3,
     task_id="task_xyz",
 )
@@ -115,7 +115,7 @@ from app.logger import logger, new_trace_id, set_log_context, reset_log_context
 
 def run_agent():
     trace_id = new_trace_id()
-    ctx = set_log_context(trace_id=trace_id, agent_name="manus")
+    ctx = set_log_context(trace_id=trace_id, agent_name="shscode")
 
     logger.info("Agent started")   # tagged with trace_id + agent
     do_work()
@@ -168,7 +168,7 @@ The level string is uppercased and looked up via `getattr(logging, ...)`. Falls 
 
 ### Environment Variable Override
 
-No direct env var for log level exists yet; set `MANUSCLAW_PROFILE` to load a profile with a different `config.yaml` / `.env` that overrides the logging level.
+No direct env var for log level exists yet; set `SHSCODE_PROFILE` to load a profile with a different `config.yaml` / `.env` that overrides the logging level.
 
 ### `NO_COLOR`
 
@@ -188,11 +188,11 @@ NO_COLOR=1 python main.py
 - **Formatter**: `ColorfulFormatter`
 - **Format** (color):
   ```
-  14:23:05 | INFO     | manus@3 [abc123def456] — Agent started
+  14:23:05 | INFO     | shscode@3 [abc123def456] — Agent started
   ```
 - **Format** (no color):
   ```
-  14:23:05 | INFO     | manus@3 [abc123def456] — Agent started
+  14:23:05 | INFO     | shscode@3 [abc123def456] — Agent started
   ```
 - TTY-aware: colors enabled only when `sys.stderr.isatty()` and `NO_COLOR` is not set.
 - Level colors: `TRACE` grey, `DEBUG` cyan, `INFO` green, `WARNING` yellow, `ERROR` red, `CRITICAL` white-on-red.
@@ -208,7 +208,7 @@ NO_COLOR=1 python main.py
 - **Encoding**: UTF-8
 - **Format**:
   ```
-  2025-06-07 14:23:05,123 | INFO     | agent=manus step=3 trace=abc123def456 task=task_xyz | app.module:func:42 — message
+  2025-06-07 14:23:05,123 | INFO     | agent=shscode step=3 trace=abc123def456 task=task_xyz | app.module:func:42 — message
   ```
 
 ---
@@ -217,7 +217,7 @@ NO_COLOR=1 python main.py
 
 This logger is **not** a drop-in replacement for loguru, but the common use cases are similar.
 
-| loguru | ManusClaw Logger |
+| loguru | SHS Code Logger |
 |--------|------------------|
 | `logger.info("msg")` | `logger.info("msg")` — identical |
 | `logger.info("val {}", x)` | `logger.info("val %s", x)` — printf-style |
@@ -242,7 +242,7 @@ from loguru import logger
 logger.add("app.log", rotation="50 MB")
 logger.info("Hello {}", name)
 
-# After (ManusClaw)
+# After (SHS Code)
 from app.logger import logger
 logger.info("Hello %s", name)
 # File output is automatic — no setup needed

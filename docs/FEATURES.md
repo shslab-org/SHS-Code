@@ -1,6 +1,6 @@
-# ManusClaw v5.0 — Feature Overview
+# SHS Code v5.0 — Feature Overview
 
-ManusClaw v5.0 introduces **14 new features** spanning voice interaction, messaging expansion, code sandboxing, multi-agent routing, model failover, and more. Every feature follows a **stub-first pattern**: it degrades gracefully when optional dependencies or configuration are missing.
+SHS Code v5.0 introduces **14 new features** spanning voice interaction, messaging expansion, code sandboxing, multi-agent routing, model failover, and more. Every feature follows a **stub-first pattern**: it degrades gracefully when optional dependencies or configuration are missing.
 
 ---
 
@@ -34,7 +34,7 @@ ManusClaw v5.0 introduces **14 new features** spanning voice interaction, messag
 |---|---|
 | `WHATSAPP_ACCESS_TOKEN` | Bearer token for the WhatsApp Business Cloud API |
 | `WHATSAPP_BUSINESS_PHONE_ID` | Phone number ID of the business account |
-| `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Token for webhook verification (default: `manusclaw_verify`) |
+| `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Token for webhook verification (default: `shscode_verify`) |
 
 **Usage:** Configure env vars, then the adapter auto-starts with the MessagingGateway. Webhook URL: `POST /webhooks/whatsapp`.
 
@@ -108,7 +108,7 @@ ManusClaw v5.0 introduces **14 new features** spanning voice interaction, messag
 | `ELEVENLABS_API_KEY` | ElevenLabs TTS API key |
 | `OPENAI_API_KEY` | OpenAI TTS API key (also used for LLM) |
 
-**Install:** `pip install manusclaw[voice]`
+**Install:** `pip install shscode[voice]`
 
 ---
 
@@ -121,15 +121,15 @@ ManusClaw v5.0 introduces **14 new features** spanning voice interaction, messag
 **Configuration:**
 | Environment Variable | Description |
 |---|---|
-| `MANUSCLAW_SSH_ENABLED` | Enable SSH server (default: `false`) |
-| `MANUSCLAW_SSH_PORT` | SSH port (default: `2222`) |
-| `MANUSCLAW_SSH_HOST` | Bind address (default: `0.0.0.0`) |
-| `MANUSCLAW_SSH_HOST_KEY` | Path to host key |
-| `MANUSCLAW_SSH_AUTH_KEYS` | Path to authorized_keys |
+| `SHSCODE_SSH_ENABLED` | Enable SSH server (default: `false`) |
+| `SHSCODE_SSH_PORT` | SSH port (default: `2222`) |
+| `SHSCODE_SSH_HOST` | Bind address (default: `0.0.0.0`) |
+| `SHSCODE_SSH_HOST_KEY` | Path to host key |
+| `SHSCODE_SSH_AUTH_KEYS` | Path to authorized_keys |
 
 **Commands:** `status`, `restart`, `logs`, `agent --message`, `channels list`, `cron list`, `help`, `exit`
 
-**Install:** `pip install manusclaw[ssh]`
+**Install:** `pip install shscode[ssh]`
 
 ---
 
@@ -146,7 +146,7 @@ ManusClaw v5.0 introduces **14 new features** spanning voice interaction, messag
 | `GOOGLE_CLIENT_SECRET` | OAuth client secret |
 | `GOOGLE_GMAIL_TOKEN_PATH` | Path to stored credentials JSON |
 
-**Install:** `pip install manusclaw[gmail]`
+**Install:** `pip install shscode[gmail]`
 
 ---
 
@@ -176,7 +176,7 @@ ManusClaw v5.0 introduces **14 new features** spanning voice interaction, messag
 **Architecture:**
 - Webhook configurations persisted in SQLite
 - Template variables: `{{payload.field}}`
-- Entry point: `manusclaw-webhook`
+- Entry point: `shscode-webhook`
 
 ---
 
@@ -212,7 +212,7 @@ ManusClaw v5.0 introduces **14 new features** spanning voice interaction, messag
 agents:
   definitions:
     coder:
-      class_path: app.agent.manus.Manus
+      class_path: app.agent.shscode.SHSCode
       system_prompt: "You are a coding specialist..."
       tools: [python_execute, str_replace_editor, bash]
   routes:
@@ -220,7 +220,7 @@ agents:
       agent_name: coder
     - channel: telegram
       user_id: "admin_.*"
-      agent_name: manus
+      agent_name: shscode
 ```
 
 **Architecture:** RouteRule pattern matching (exact + regex), AgentRegistry with LRU eviction and idle TTL, AgentConfig for per-agent customization.
@@ -274,7 +274,7 @@ entry = await rotator.get_next()
 
 **Description:** System tray companion apps for macOS (using `rumps`) and cross-platform (using `pystray`).
 
-**Install:** `pip install manusclaw[companion]`
+**Install:** `pip install shscode[companion]`
 
 **Files:**
 - `desktop/macos/menubar.py` — macOS menu bar app
@@ -287,17 +287,17 @@ entry = await rotator.get_next()
 
 ```bash
 # Install everything
-pip install manusclaw[all-plus]
+pip install shscode[all-plus]
 
 # Start the server
-manusclaw-server
+shscode-server
 
 # Start cron scheduler
-manusclaw-cron --run
+shscode-cron --run
 
 # Manage sessions
-manusclaw-sessions list
-manusclaw-sessions history <session_id>
+shscode-sessions list
+shscode-sessions history <session_id>
 
 # SSH access (if enabled)
 ssh -p 2222 localhost

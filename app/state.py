@@ -16,8 +16,8 @@ Layers (spec §39):
   PROJECT STATE -> actual filesystem, mirrored as records here
 
 Storage:
-  ~/.manusclaw/state/journal.db   (SQLite, WAL) — tasks + event log
-  ~/.manusclaw/state/checkpoints/<task_id>.json (atomic os.replace) — memory snapshots
+  ~/.shscode/state/journal.db   (SQLite, WAL) — tasks + event log
+  ~/.shscode/state/checkpoints/<task_id>.json (atomic os.replace) — memory snapshots
 
 Atomicity (spec §43): checkpoints are written to a temp file then
 os.replace()d — a crash mid-write can never corrupt the previous snapshot.
@@ -46,8 +46,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.logger import logger
+from app import env
 
-_HOME = Path(os.getenv("MANUSCLAW_HOME", str(Path.home() / ".manusclaw")))
+_HOME = env.home_dir()
 STATE_DIR = _HOME / "state"
 CHECKPOINT_DIR = STATE_DIR / "checkpoints"
 DB_PATH = STATE_DIR / "journal.db"

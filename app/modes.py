@@ -13,8 +13,8 @@ Configurable modes that change REAL execution behavior (never cosmetic):
   planning    — plan generation only, deep architecture inspection
 
 Each mode maps to concrete knobs consumed by BaseAgent / ToolCallAgent /
-Manus: plan depth, verification level, max_steps scale, tool bias hints,
-system-prompt additions. The active mode persists (~/.manusclaw/mode.json)
+SHSCode: plan depth, verification level, max_steps scale, tool bias hints,
+system-prompt additions. The active mode persists (~/.shscode/mode.json)
 and survives restarts.
 """
 
@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.logger import logger
+from app import env
 
 _MODES: Dict[str, Dict[str, Any]] = {
     "coding": {
@@ -89,8 +90,7 @@ _MODES: Dict[str, Dict[str, Any]] = {
 }
 
 def _mode_file() -> Path:
-    return Path(os.getenv("MANUSCLAW_HOME",
-                          str(Path.home() / ".manusclaw"))) / "mode.json"
+    return env.home_dir() / "mode.json"
 
 
 def list_modes() -> List[Dict[str, str]]:

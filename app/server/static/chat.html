@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ManusClaw WebChat</title>
+<title>SHS Code WebChat</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -454,7 +454,7 @@ html, body {
 <!-- Auth bar -->
 <div class="auth-bar">
   <label for="api-key-input">🔑 API Key:</label>
-  <input type="password" id="api-key-input" placeholder="Enter MANUSCLAW_API_KEY (optional)">
+  <input type="password" id="api-key-input" placeholder="Enter SHSCODE_API_KEY (optional)">
   <button id="connect-btn" onclick="connectWebSocket()">Connect</button>
   <span class="auth-status" id="auth-status">Disconnected</span>
 </div>
@@ -463,7 +463,7 @@ html, body {
 <div class="header">
   <h1>
     <span class="logo">🦀</span>
-    ManusClaw WebChat
+    SHS Code WebChat
   </h1>
   <div class="header-actions">
     <button onclick="toggleTheme()" title="Toggle theme">🌙</button>
@@ -577,7 +577,7 @@ function connectWebSocket() {
     statusEl.textContent = '● Connected';
     statusEl.className = 'auth-status connected';
     document.getElementById('connect-btn').textContent = 'Disconnect';
-    addSystemMessage(`Connected to ManusClaw (session: ${sessionId})`);
+    addSystemMessage(`Connected to SHS Code (session: ${sessionId})`);
   };
 
   ws.onmessage = (event) => {
@@ -860,12 +860,12 @@ function toggleTheme() {
   const btn = document.querySelector('.header-actions button');
   btn.textContent = next === 'dark' ? '🌙' : '☀️';
 
-  localStorage.setItem('manusclaw-theme', next);
+  localStorage.setItem('shscode-theme', next);
 }
 
 // Restore theme
 (function() {
-  const saved = localStorage.getItem('manusclaw-theme');
+  const saved = localStorage.getItem('shscode-theme');
   if (saved) {
     document.body.setAttribute('data-theme', saved);
     const btn = document.querySelector('.header-actions button');
@@ -926,7 +926,7 @@ document.getElementById('connect-btn').addEventListener('click', (e) => {
 
 // Auto-connect on load if no API key required
 window.addEventListener('load', () => {
-  addSystemMessage('Welcome to ManusClaw WebChat. Click "Connect" to begin.');
+  addSystemMessage('Welcome to SHS Code WebChat. Click "Connect" to begin.');
 });
 </script>
 </body>

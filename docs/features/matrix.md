@@ -17,5 +17,5 @@ Uses `/sync` long-poll. Tracks `next_batch` token. Filters out own messages. Fal
 
 ## Install
 ```
-pip install manusclaw[matrix]
+pip install shscode[matrix]
 ```

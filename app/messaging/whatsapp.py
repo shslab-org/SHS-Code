@@ -26,7 +26,7 @@ class WhatsAppAdapter(BaseMessagingAdapter):
         self._phone_id = os.getenv("WHATSAPP_BUSINESS_PHONE_ID", "")
         token = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
         super().__init__(token=token)
-        self._verify_token = os.getenv("WHATSAPP_WEBHOOK_VERIFY_TOKEN", "manusclaw_verify")
+        self._verify_token = os.getenv("WHATSAPP_WEBHOOK_VERIFY_TOKEN", "shscode_verify")
 
     async def connect(self) -> None:
         if not self.is_configured():

@@ -1,4 +1,4 @@
-"""ManusClaw Email Tool.
+"""SHS Code Email Tool.
 
 Agent tool for sending, reading, searching, and replying to emails.
 Extends BaseTool from ``app.tool.base``.

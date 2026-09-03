@@ -46,16 +46,16 @@ from typing import Optional
 # ---------------------------------------------------------------------------
 
 _correlation_id: ContextVar[Optional[str]] = ContextVar(
-    "manusclaw_correlation_id", default=None
+    "shscode_correlation_id", default=None
 )
 _request_id: ContextVar[Optional[str]] = ContextVar(
-    "manusclaw_request_id", default=None
+    "shscode_request_id", default=None
 )
 _error_id: ContextVar[Optional[str]] = ContextVar(
-    "manusclaw_error_id", default=None
+    "shscode_error_id", default=None
 )
 _parent_span_id: ContextVar[Optional[str]] = ContextVar(
-    "manusclaw_parent_span_id", default=None
+    "shscode_parent_span_id", default=None
 )
 
 # Thread-safe fallback for sync code that does not use contextvars

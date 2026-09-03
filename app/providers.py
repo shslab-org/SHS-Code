@@ -5,7 +5,7 @@ SHS Code — Custom Provider Registry
 ===================================
 (spec §16, §17) Users can add unlimited custom AI providers (OpenAI-style
 or other supported protocols) at runtime. Persisted at
-~/.manusclaw/providers.json — survives restarts.
+~/.shscode/providers.json — survives restarts.
 
 A provider entry:
   name        unique id (e.g. "my-nim")
@@ -38,8 +38,9 @@ from typing import Any, Dict, List, Optional
 
 from app.connectors import mask_token
 from app.logger import logger
+from app import env
 
-_HOME = Path(os.getenv("MANUSCLAW_HOME", str(Path.home() / ".manusclaw")))
+_HOME = env.home_dir()
 PROVIDERS_PATH = _HOME / "providers.json"
 
 API_TYPES = {"openai-compat", "openai", "anthropic", "google", "ollama",

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 """
-ManusClaw Exception Hierarchy
+SHS Code Exception Hierarchy
 ==============================
-All exceptions inherit from ManusClawError.
+All exceptions inherit from SHSCodeError.
 
 Retry semantics:
   RetryableError    → the caller SHOULD retry after a wait
@@ -18,15 +18,15 @@ and error handlers can bucket them without string matching.
 # Root
 # ──────────────────────────────────────────────────────────────────────────────
 
-class ManusClawError(Exception):
-    """Base exception for all ManusClaw errors."""
+class SHSCodeError(Exception):
+    """Base exception for all SHS Code errors."""
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Retry semantics
 # ──────────────────────────────────────────────────────────────────────────────
 
-class RetryableError(ManusClawError):
+class RetryableError(SHSCodeError):
     """
     The operation failed but MAY succeed if retried after `wait_s` seconds.
     Callers should honour the wait before retrying.
@@ -36,7 +36,7 @@ class RetryableError(ManusClawError):
         self.wait_s = wait_s
 
 
-class NonRetryableError(ManusClawError):
+class NonRetryableError(SHSCodeError):
     """
     The operation failed in a way that retrying will not fix.
     Callers must propagate this immediately.
@@ -65,7 +65,7 @@ class LLMAuthError(NonRetryableError):
 # Tool layer
 # ──────────────────────────────────────────────────────────────────────────────
 
-class ToolError(ManusClawError):
+class ToolError(SHSCodeError):
     """A tool encountered an error during execution."""
     def __init__(self, tool_name: str, message: str) -> None:
         super().__init__(f"[{tool_name}] {message}")
@@ -108,7 +108,7 @@ class MissingEnvVar(ConfigError):
 # Sandbox
 # ──────────────────────────────────────────────────────────────────────────────
 
-class SandboxError(ManusClawError):
+class SandboxError(SHSCodeError):
     """Docker sandbox-related error."""
 
 
@@ -116,7 +116,7 @@ class SandboxError(ManusClawError):
 # MCP
 # ──────────────────────────────────────────────────────────────────────────────
 
-class MCPError(ManusClawError):
+class MCPError(SHSCodeError):
     """MCP server/client integration error."""
 
     def __init__(self, server_name: str, message: str) -> None:
@@ -128,7 +128,7 @@ class MCPError(ManusClawError):
 # Agent layer
 # ──────────────────────────────────────────────────────────────────────────────
 
-class AgentError(ManusClawError):
+class AgentError(SHSCodeError):
     """Base class for agent-level errors."""
     def __init__(self, agent_name: str, message: str) -> None:
         super().__init__(f"[Agent:{agent_name}] {message}")
@@ -147,7 +147,7 @@ class AgentLoopError(AgentError):
 # Orchestrator layer
 # ──────────────────────────────────────────────────────────────────────────────
 
-class OrchestratorError(ManusClawError):
+class OrchestratorError(SHSCodeError):
     """Error raised by the MultiAgentOrchestrator."""
 
     def __init__(self, message: str, pipeline: list[str] | None = None) -> None:
@@ -163,7 +163,7 @@ class PipelineCycleError(OrchestratorError):
 # Flow layer
 # ──────────────────────────────────────────────────────────────────────────────
 
-class FlowError(ManusClawError):
+class FlowError(SHSCodeError):
     """Error raised by the PlanningFlow."""
 
     def __init__(self, message: str, step_id: int | None = None) -> None:
@@ -179,7 +179,7 @@ class FlowTimeoutError(FlowError):
 # Role layer
 # ──────────────────────────────────────────────────────────────────────────────
 
-class RoleError(ManusClawError):
+class RoleError(SHSCodeError):
     """Error raised by a specialist role."""
 
     def __init__(self, role_name: str, message: str) -> None:

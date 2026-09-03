@@ -1,5 +1,5 @@
 """
-ManusClaw Conversation System — ConversationState
+SHS Code Conversation System — ConversationState
 ====================================================
 
 The mutable runtime state of a single conversation.  This is the central

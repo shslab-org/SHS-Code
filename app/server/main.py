@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 """
-ManusClaw HTTP/WebSocket Server
+SHS Code HTTP/WebSocket Server
 ================================
-FastAPI backend that exposes the full ManusClaw agent engine via:
+FastAPI backend that exposes the full SHS Code agent engine via:
   • REST API   — session management, history queries, tool introspection
   • WebSocket  — real-time streaming of agent thoughts, tool calls, and outputs
-  • API Key    — optional authentication via MANUSCLAW_API_KEY env var
-  • CORS       — configurable via MANUSCLAW_ALLOWED_ORIGINS env var
+  • API Key    — optional authentication via SHSCODE_API_KEY env var
+  • CORS       — configurable via SHSCODE_ALLOWED_ORIGINS env var
 
 Run with:
   python run_server.py
@@ -35,6 +35,7 @@ from pydantic import BaseModel
 from app.db.session import SessionDB
 from app.logger import logger
 from app.permissions.gate import AgentMode
+from app import env
 
 @asynccontextmanager
 async def _lifespan(application: FastAPI):
@@ -48,8 +49,8 @@ async def _lifespan(application: FastAPI):
     """
     if not _API_KEY:
         logger.warning(
-            "MANUSCLAW_API_KEY not set — all endpoints are UNAUTHENTICATED. "
-            "Set MANUSCLAW_API_KEY in production."
+            "SHSCODE_API_KEY not set — all endpoints are UNAUTHENTICATED. "
+            "Set SHSCODE_API_KEY in production."
         )
     logger.info("SHS Code Agent Server started.")
     application.state.background_tasks = set()
@@ -95,7 +96,7 @@ app = FastAPI(
     lifespan=_lifespan,
 )
 
-_raw_origins = os.getenv("MANUSCLAW_ALLOWED_ORIGINS", "")
+_raw_origins = env.getenv("ALLOWED_ORIGINS", "")
 _allowed_origins: list[str] = (
     [o.strip() for o in _raw_origins.split(",") if o.strip()]
     if _raw_origins
@@ -115,8 +116,8 @@ else:
     # Instead, require explicit configuration. We still allow it in dev mode
     # for developer convenience but log a clear warning.
     logger.warning(
-        "MANUSCLAW_ALLOWED_ORIGINS not set — CORS allows all origins. "
-        "Set MANUSCLAW_ALLOWED_ORIGINS in production to restrict access."
+        "SHSCODE_ALLOWED_ORIGINS not set — CORS allows all origins. "
+        "Set SHSCODE_ALLOWED_ORIGINS in production to restrict access."
     )
     app.add_middleware(
         CORSMiddleware,
@@ -126,7 +127,7 @@ else:
         allow_headers=["*"],
     )
 
-_API_KEY = os.getenv("MANUSCLAW_API_KEY", "")
+_API_KEY = env.getenv("API_KEY", "")
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 # Static files directory
@@ -191,8 +192,8 @@ def _get_canvas_server():
 
 
 
-class StreamingManus:
-    """Wraps Manus agent with WebSocket event emission and unified session tracking.
+class StreamingSHSCode:
+    """Wraps SHSCode agent with WebSocket event emission and unified session tracking.
 
     SHS Code FIX (registry regression): records the agent's REAL final state
     (state / step_count / error) so callers can close the session with
@@ -209,9 +210,9 @@ class StreamingManus:
         self.last_error: Optional[str] = None
 
     async def run(self, prompt: str) -> str:
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
 
-        agent = Manus(mode=self.mode, session_id=self.session_id)
+        agent = SHSCode(mode=self.mode, session_id=self.session_id)
         if self.max_steps is not None:
             agent._max_steps = self.max_steps
 
@@ -297,7 +298,7 @@ async def run_agent(req: RunRequest):
     session_id = await db.create_session(req.prompt, mode=mode_str)  # Fix: use enum value
 
     async def _run():
-        streamer = StreamingManus(session_id=session_id, mode=mode, max_steps=req.max_steps)
+        streamer = StreamingSHSCode(session_id=session_id, mode=mode, max_steps=req.max_steps)
         try:
             await streamer.run(req.prompt)
         except asyncio.CancelledError:
@@ -334,12 +335,12 @@ async def run_agent(req: RunRequest):
 
 @app.post("/run/sync", response_model=RunResponse, dependencies=[Depends(require_api_key)])
 async def run_agent_sync(req: RunRequest):
-    from app.agent.manus import Manus
+    from app.agent.shscode import SHSCode
     mode = AgentMode.PLAN if req.mode.lower() == "plan" else AgentMode.BUILD
     mode_str = mode.value
     session_id = await db.create_session(req.prompt, mode=mode_str)  # Fix: use enum value
     try:
-        agent = Manus(mode=mode, session_id=session_id)
+        agent = SHSCode(mode=mode, session_id=session_id)
         agent._max_steps = req.max_steps
         output = await agent.run(req.prompt)
         # SHS Code FIX (registry regression): BaseAgent.run closes the session
@@ -417,7 +418,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     # exists (stable id) before any run.
     try:
         if await db.get_session(session_id) is None:
-            await db.create_session("websocket session", agent_name="manus",
+            await db.create_session("websocket session", agent_name="shscode",
                                     session_id=session_id)
     except Exception as e:
         logger.debug(f"[Server] WS session ensure failed: {e}")
@@ -456,7 +457,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                 _ms = int(_ms) if _ms is not None else None
             except (TypeError, ValueError):
                 _ms = None
-            streamer = StreamingManus(session_id=session_id, mode=mode, max_steps=_ms)
+            streamer = StreamingSHSCode(session_id=session_id, mode=mode, max_steps=_ms)
             try:
                 await streamer.run(prompt)
             except Exception as e:
@@ -497,6 +498,7 @@ if _STATIC_DIR.is_dir():
 
 # ─── Webhook router ─────────────────────────────────────────────────────────
 from app.server.webhook_router import router as webhook_router
+from app import env
 app.include_router(webhook_router)
 
 
@@ -506,7 +508,7 @@ async def chat_page():
     chat_html = _STATIC_DIR / "chat.html"
     if chat_html.is_file():
         return HTMLResponse(content=chat_html.read_text(encoding="utf-8"))
-    return HTMLResponse(content="<h1>ManusClaw WebChat</h1><p>chat.html not found.</p>")
+    return HTMLResponse(content="<h1>SHS Code WebChat</h1><p>chat.html not found.</p>")
 
 
 @app.get("/canvas", response_class=HTMLResponse)
@@ -515,7 +517,7 @@ async def canvas_page(session: str = "default"):
     canvas_html = _STATIC_DIR / "canvas.html"
     if canvas_html.is_file():
         return HTMLResponse(content=canvas_html.read_text(encoding="utf-8"))
-    return HTMLResponse(content="<h1>ManusClaw Canvas</h1><p>canvas.html not found.</p>")
+    return HTMLResponse(content="<h1>SHS Code Canvas</h1><p>canvas.html not found.</p>")
 
 
 # ─── Chat WebSocket endpoint ─────────────────────────────────────────────
@@ -563,7 +565,7 @@ async def chat_websocket_endpoint(websocket: WebSocket, session_id: str):
         await websocket.send_text(json.dumps({
             "type": "connected",
             "session_id": session_id,
-            "message": "ManusClaw Chat ready. Send {\"type\": \"prompt\", \"prompt\": \"...\"} to start.",
+            "message": "SHS Code Chat ready. Send {\"type\": \"prompt\", \"prompt\": \"...\"} to start.",
         }))
         while True:
             data = await websocket.receive_text()
@@ -602,7 +604,7 @@ async def chat_websocket_endpoint(websocket: WebSocket, session_id: str):
                 _ms = int(_ms) if _ms is not None else None
             except (TypeError, ValueError):
                 _ms = None
-            streamer = StreamingManus(session_id=session_id, mode=mode, max_steps=_ms)
+            streamer = StreamingSHSCode(session_id=session_id, mode=mode, max_steps=_ms)
             try:
                 await streamer.run(prompt)
             except Exception as e:
@@ -717,7 +719,7 @@ def serve() -> None:
     import argparse
     import uvicorn
 
-    parser = argparse.ArgumentParser(description="ManusClaw Agent Server")
+    parser = argparse.ArgumentParser(description="SHS Code Agent Server")
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--reload", action="store_true")

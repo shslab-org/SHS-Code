@@ -3,7 +3,7 @@ from __future__ import annotations
 """
 Node Protocol — Data definitions for Live Canvas node communication.
 
-Defines the wire protocol for communication between the ManusClaw server
+Defines the wire protocol for communication between the SHS Code server
 and mobile/desktop nodes (iOS, Android, desktop) via WebSocket.
 
 Message types:

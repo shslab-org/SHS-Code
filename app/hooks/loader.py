@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 """
-ManusClaw Hooks — Dynamic Hook Loader
+SHS Code Hooks — Dynamic Hook Loader
 =======================================
 Loads hook configurations from YAML files, Python modules, and the
-manusclaw config system, then registers them with a HookManager.
+SHS Code config system, then registers them with a HookManager.
 
-YAML configuration format (``hooks.yaml`` or ``~/.manusclaw/hooks.yaml``):
+YAML configuration format (``hooks.yaml`` or ``~/.shscode/hooks.yaml``):
 
     hooks:
       - name: logging
@@ -40,7 +40,7 @@ YAML configuration format (``hooks.yaml`` or ``~/.manusclaw/hooks.yaml``):
 
 Loading sources (in priority order, last wins):
     1. Built-in defaults (empty — no hooks auto-loaded)
-    2. ~/.manusclaw/hooks.yaml
+    2. ~/.shscode/hooks.yaml
     3. ./hooks.yaml (project-local)
     4. Explicit path passed to ``load_from_yaml``
     5. Programmatic registration via ``HookManager.register``
@@ -55,6 +55,7 @@ from app.hooks.builtin import AuditHook, LoggingHook, SecurityHook
 from app.hooks.manager import HookManager
 from app.hooks.types import HookEventType
 from app.logger import logger
+from app import env
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -312,15 +313,15 @@ class HookLoader:
         return self._from_definitions(hook_defs)
 
     # ──────────────────────────────────────────────────────────────────────
-    # Auto-discovery from manusclaw home
+    # Auto-discovery from SHS Code home
     # ──────────────────────────────────────────────────────────────────────
 
     def load_from_default_locations(self) -> list[HookBase]:
         """
-        Search standard manusclaw config locations for hook definitions.
+        Search standard SHS Code config locations for hook definitions.
 
         Locations searched (last wins):
-            1. ``~/.manusclaw/hooks.yaml``
+            1. ``~/.shscode/hooks.yaml``
             2. ``./hooks.yaml`` (project-local)
 
         Returns:
@@ -328,7 +329,7 @@ class HookLoader:
         """
         import os
 
-        home = Path(os.getenv("MANUSCLAW_HOME", str(Path.home() / ".manusclaw")))
+        home = env.home_dir()
         candidates = [
             home / "hooks.yaml",
             Path("hooks.yaml"),

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-FastAPI-based MCP server that exposes local ManusClaw tools to external MCP clients.
+FastAPI-based MCP server that exposes local SHS Code tools to external MCP clients.
 """
 
 import os
@@ -17,12 +17,13 @@ from app.tool.bash import Bash
 from app.tool.browser_use_tool import BrowserUseTool
 from app.tool.str_replace_editor import StrReplaceEditor
 from app.tool.terminate import Terminate
+from app import env
 
 # ---------------------------------------------------------------------------
-# API Key authentication — enabled only when MANUSCLAW_API_KEY is set
+# API Key authentication — enabled only when SHSCODE_API_KEY is set
 # ---------------------------------------------------------------------------
 
-_API_KEY = os.getenv("MANUSCLAW_API_KEY", "")
+_API_KEY = env.getenv("API_KEY", "")
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
@@ -34,12 +35,12 @@ async def require_api_key(key: Optional[str] = Depends(_api_key_header)) -> None
 
 
 def build_mcp_server() -> FastAPI:
-    app = FastAPI(title="ManusClaw MCP Server", version="1.0.0")
+    app = FastAPI(title="SHS Code MCP Server", version="1.0.0")
 
     # -------------------------------------------------------------------------
     # CORS — configurable via env; never mixes wildcard with credentials
     # -------------------------------------------------------------------------
-    _raw_origins = os.getenv("MANUSCLAW_ALLOWED_ORIGINS", "")
+    _raw_origins = env.getenv("ALLOWED_ORIGINS", "")
     _allowed_origins: list[str] = (
         [o.strip() for o in _raw_origins.split(",") if o.strip()]
         if _raw_origins

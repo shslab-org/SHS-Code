@@ -5,7 +5,7 @@ AgentRouter — Multi-agent routing per channel/account.
 
 Manages multiple agent instances with per-channel routing rules.
 Supports loading agent configurations from config.yaml under [agents.routes]
-and [agents.defaults]. Falls back to the default Manus agent when no route matches.
+and [agents.defaults]. Falls back to the default SHSCode agent when no route matches.
 
 Usage in MessagingGateway:
     router = AgentRouter()
@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.logger import logger
+from app import env
 
 _CACHE_SIZE = 64
 _IDLE_TTL = 300  # seconds
@@ -49,21 +50,21 @@ class AgentConfig:
     """Configuration for a single agent instance.
 
     Attributes:
-        name: Unique agent identifier (e.g. ``manus``, ``coder``, ``analyst``).
+        name: Unique agent identifier (e.g. ``shscode``, ``coder``, ``analyst``).
         system_prompt: Custom system prompt override. ``None`` uses the agent default.
         tools: List of tool names to enable. Empty means all default tools.
         sandbox_mode: Whether to run code in a sandboxed environment.
         workspace_dir: Per-agent workspace directory.
         class_path: Dotted import path to the agent class. Defaults to
-                    ``app.agent.manus.Manus``.
+                    ``app.agent.shscode.SHSCode``.
         extra_config: Arbitrary extra configuration passed to the agent constructor.
     """
-    name: str = "manus"
+    name: str = "shscode"
     system_prompt: Optional[str] = None
     tools: list[str] = field(default_factory=list)
     sandbox_mode: bool = False
     workspace_dir: str = "workspace"
-    class_path: str = "app.agent.manus.Manus"
+    class_path: str = "app.agent.shscode.SHSCode"
     extra_config: dict[str, Any] = field(default_factory=dict)
 
 
@@ -87,7 +88,7 @@ class RouteRule:
     channel: str = ""
     user_id: str = ""
     chat_id: str = ""
-    agent_name: str = "manus"
+    agent_name: str = "shscode"
     priority: int = 0
 
     def matches(self, platform: str, user_id: str, channel_id: str) -> bool:
@@ -231,10 +232,10 @@ class AgentRouter:
             sandbox_mode: false
             workspace_dir: workspace
           definitions:
-            manus:
-              class_path: app.agent.manus.Manus
+            shscode:
+              class_path: app.agent.shscode.SHSCode
             coder:
-              class_path: app.agent.manus.Manus
+              class_path: app.agent.shscode.SHSCode
               system_prompt: "You are a coding specialist..."
               tools: [python_execute, str_replace_editor, bash]
           routes:
@@ -242,11 +243,11 @@ class AgentRouter:
               agent_name: coder
             - channel: telegram
               user_id: "admin_.*"
-              agent_name: manus
+              agent_name: shscode
             - chat_id: "general"
-              agent_name: manus
+              agent_name: shscode
 
-    Falls back to the default ``Manus`` agent when no route matches.
+    Falls back to the default ``SHSCode`` agent when no route matches.
     """
 
     def __init__(self) -> None:
@@ -278,7 +279,7 @@ class AgentRouter:
         try:
             from pathlib import Path as P
             import os
-            home = P(os.getenv("MANUSCLAW_HOME", P.home() / ".manusclaw"))
+            home = P(env.home_dir())
             for candidate in [home / "config.yaml", P("config.yaml")]:
                 if candidate.exists():
                     try:
@@ -292,12 +293,12 @@ class AgentRouter:
         return None
 
     def _register_defaults(self) -> None:
-        """Register the default Manus agent configuration."""
-        self._configs["manus"] = AgentConfig(
-            name="manus",
-            class_path="app.agent.manus.Manus",
+        """Register the default SHSCode agent configuration."""
+        self._configs["shscode"] = AgentConfig(
+            name="shscode",
+            class_path="app.agent.shscode.SHSCode",
         )
-        logger.info("[AgentRouter] Using default Manus agent configuration")
+        logger.info("[AgentRouter] Using default SHSCode agent configuration")
 
     def _parse_config(self, agents_data: dict[str, Any]) -> None:
         """Parse the agents section from config data."""
@@ -305,24 +306,24 @@ class AgentRouter:
         definitions = agents_data.get("definitions", {})
         defaults = agents_data.get("defaults", {})
 
-        # Always register manus as the base default
-        self._configs["manus"] = AgentConfig(
-            name="manus",
-            class_path="app.agent.manus.Manus",
+        # Always register shscode as the base default
+        self._configs["shscode"] = AgentConfig(
+            name="shscode",
+            class_path="app.agent.shscode.SHSCode",
             sandbox_mode=defaults.get("sandbox_mode", False),
             workspace_dir=defaults.get("workspace_dir", "workspace"),
         )
 
         for name, defn in definitions.items():
-            if name == "manus":
-                # Override manus defaults
-                self._configs["manus"] = AgentConfig(
+            if name == "manus":  # legacy alias
+                # Override shscode defaults
+                self._configs["shscode"] = AgentConfig(
                     name=name,
                     system_prompt=defn.get("system_prompt"),
                     tools=defn.get("tools", []),
                     sandbox_mode=defn.get("sandbox_mode", defaults.get("sandbox_mode", False)),
                     workspace_dir=defn.get("workspace_dir", defaults.get("workspace_dir", "workspace")),
-                    class_path=defn.get("class_path", "app.agent.manus.Manus"),
+                    class_path=defn.get("class_path", "app.agent.shscode.SHSCode"),
                     extra_config=defn.get("extra_config", {}),
                 )
             else:
@@ -332,7 +333,7 @@ class AgentRouter:
                     tools=defn.get("tools", []),
                     sandbox_mode=defn.get("sandbox_mode", defaults.get("sandbox_mode", False)),
                     workspace_dir=defn.get("workspace_dir", defaults.get("workspace_dir", "workspace")),
-                    class_path=defn.get("class_path", "app.agent.manus.Manus"),
+                    class_path=defn.get("class_path", "app.agent.shscode.SHSCode"),
                     extra_config=defn.get("extra_config", {}),
                 )
             logger.debug(f"[AgentRouter] Registered agent config: {name}")
@@ -344,7 +345,7 @@ class AgentRouter:
                 channel=route.get("channel", ""),
                 user_id=route.get("user_id", ""),
                 chat_id=route.get("chat_id", ""),
-                agent_name=route.get("agent_name", "manus"),
+                agent_name=route.get("agent_name", "shscode"),
                 priority=route.get("priority", 0),
             )
             self._rules.append(rule)
@@ -390,7 +391,7 @@ class AgentRouter:
     def _resolve_route(self, platform: str, user_id: str, channel_id: str) -> str:
         """Evaluate routing rules and return the matched agent name.
 
-        Falls back to ``manus`` if no rule matches.
+        Falls back to ``shscode`` if no rule matches.
         """
         for rule in self._rules:
             if rule.matches(platform, user_id, channel_id):
@@ -402,20 +403,20 @@ class AgentRouter:
                 else:
                     logger.warning(
                         f"[AgentRouter] Route matched {rule.agent_name} but config not found, "
-                        f"falling back to manus"
+                        f"falling back to shscode"
                     )
-                    return "manus"
-        return "manus"
+                    return "shscode"
+        return "shscode"
 
     def _create_agent(self, agent_name: str):
         """Instantiate an agent from its configuration."""
         config = self._configs.get(agent_name)
         if not config:
             logger.warning(
-                f"[AgentRouter] No config for '{agent_name}', creating default Manus"
+                f"[AgentRouter] No config for '{agent_name}', creating default SHSCode"
             )
-            from app.agent.manus import Manus
-            return Manus()
+            from app.agent.shscode import SHSCode
+            return SHSCode()
 
         try:
             cls = self._import_class(config.class_path)
@@ -426,16 +427,16 @@ class AgentRouter:
         except Exception as e:
             logger.error(
                 f"[AgentRouter] Failed to create agent '{agent_name}': {e}, "
-                f"falling back to Manus"
+                f"falling back to SHSCode"
             )
-            from app.agent.manus import Manus
-            return Manus()
+            from app.agent.shscode import SHSCode
+            return SHSCode()
 
     @staticmethod
     def _import_class(dotted_path: str):
         """Import a class from a dotted module path.
 
-        Example: ``app.agent.manus.Manus`` → ``<class Manus>``
+        Example: ``app.agent.shscode.SHSCode`` → ``<class SHSCode>``
 
         FIX: Sandboxed to only allow imports from the ``app.`` namespace
         to prevent arbitrary code execution via class_path injection.

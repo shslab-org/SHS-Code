@@ -1,10 +1,10 @@
-"""Initial schema — core manusclaw tables
+"""Initial schema — core SHS Code tables
 
 Revision ID: 001_initial
 Revises:
 Create Date: 2024-01-01 00:00:00.000000
 
-Creates the core tables used by manusclaw:
+Creates the core tables used by SHS Code:
     - conversations: Agent conversation sessions
     - events: Event log for conversation turns
     - sessions: User/agent session tracking
@@ -37,7 +37,7 @@ def upgrade() -> None:
         "conversations",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("user_id", sa.String(255), nullable=True, index=True),
-        sa.Column("agent_name", sa.String(100), nullable=False, server_default="manus"),
+        sa.Column("agent_name", sa.String(100), nullable=False, server_default="shscode"),
         sa.Column("mode", sa.String(20), nullable=False, server_default="build"),
         sa.Column("goal", sa.Text, nullable=True),
         sa.Column("state", sa.String(20), nullable=False, server_default="running"),
@@ -113,7 +113,7 @@ def upgrade() -> None:
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("user_id", sa.String(255), nullable=True, index=True),
         sa.Column("conversation_id", sa.String(36), nullable=True, index=True),
-        sa.Column("agent_name", sa.String(100), nullable=False, server_default="manus"),
+        sa.Column("agent_name", sa.String(100), nullable=False, server_default="shscode"),
         sa.Column("mode", sa.String(20), nullable=False, server_default="build"),
         sa.Column("state", sa.String(20), nullable=False, server_default="active"),
         sa.Column("parent_session_id", sa.String(36), nullable=True),

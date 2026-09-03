@@ -30,7 +30,7 @@ from enum import Enum
 from typing import Any, Callable, Optional
 
 from app.exceptions import (
-    ManusClawError,
+    SHSCodeError,
     RateLimitError,
     RetryableError,
     NonRetryableError,

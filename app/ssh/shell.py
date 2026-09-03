@@ -1,11 +1,11 @@
-"""ManusClaw Restricted Shell.
+"""SHS Code Restricted Shell.
 
-Parses, validates, and maps incoming SSH commands to ManusClaw internal APIs.
+Parses, validates, and maps incoming SSH commands to SHS Code internal APIs.
 Only a whitelist of safe management commands is allowed.
 
 Supported Commands:
     status              — Show server status (uptime, version, active sessions)
-    restart             — Restart the ManusClaw server (placeholder)
+    restart             — Restart the SHS Code server (placeholder)
     logs [lines]        — Show recent log lines (default: 50)
     agent --message MSG — Run a one-shot agent prompt
     channels list       — List connected messaging channels
@@ -73,10 +73,10 @@ class _CommandInfo:
 
 
 class RestrictedShell:
-    """Restricted shell command handler for ManusClaw SSH access.
+    """Restricted shell command handler for SHS Code SSH access.
 
     Parses incoming SSH commands, validates them against the whitelist,
-    and maps them to internal ManusClaw API calls. Unknown or dangerous
+    and maps them to internal SHS Code API calls. Unknown or dangerous
     commands are rejected.
 
     Usage::
@@ -90,7 +90,7 @@ class RestrictedShell:
         self._start_time: float = time.time()
         self._motd: str = (
             "═══════════════════════════════════════════════\n"
-            "  ManusClaw SSH Gateway — Restricted Shell\n"
+            "  SHS Code SSH Gateway — Restricted Shell\n"
             "  Type 'help' for available commands.\n"
             "═══════════════════════════════════════════════\n"
         )
@@ -103,7 +103,7 @@ class RestrictedShell:
     @property
     def prompt(self) -> str:
         """Shell prompt string."""
-        return "manusclaw> "
+        return "shscode> "
 
     # ─── Parse ─────────────────────────────────────────────────────────────
 
@@ -222,7 +222,7 @@ class RestrictedShell:
     # ─── Command Handlers ──────────────────────────────────────────────────
 
     async def _cmd_status(self, args: list[str]) -> ShellResult:
-        """Show ManusClaw server status."""
+        """Show SHS Code server status."""
         uptime_s = time.time() - self._start_time
         hours, remainder = divmod(int(uptime_s), 3600)
         minutes, seconds = divmod(remainder, 60)
@@ -238,7 +238,7 @@ class RestrictedShell:
             pass
 
         lines = [
-            f"ManusClaw Server v4.0.0",
+            f"SHS Code Server v4.0.0",
             f"Status:     Running",
             f"Uptime:     {hours}h {minutes}m {seconds}s",
             f"Sessions:   {n_sessions}",
@@ -249,7 +249,7 @@ class RestrictedShell:
         return ShellResult(stdout="\n".join(lines))
 
     async def _cmd_restart(self, args: list[str]) -> ShellResult:
-        """Restart the ManusClaw server (placeholder)."""
+        """Restart the SHS Code server (placeholder)."""
         logger.warning("[SSH:Shell] Restart requested via SSH")
         return ShellResult(
             stdout="Restart requested. This is a placeholder — "
@@ -296,9 +296,9 @@ class RestrictedShell:
         logger.info(f"[SSH:Shell] Agent prompt: {prompt[:80]}")
 
         try:
-            from app.agent.manus import Manus
+            from app.agent.shscode import SHSCode
 
-            agent = Manus()
+            agent = SHSCode()
             output = await agent.run(prompt)
             return ShellResult(stdout=output[:4000])
         except Exception as exc:

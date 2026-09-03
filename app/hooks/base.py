@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-ManusClaw Hooks — Abstract Base Class
+SHS Code Hooks — Abstract Base Class
 =======================================
 All hooks must inherit from ``HookBase`` and implement ``on_event``.
 
@@ -22,7 +22,7 @@ from app.hooks.types import HookContext, HookDecision, HookEventType, HookResult
 
 class HookBase(ABC):
     """
-    Abstract base class for all manusclaw hooks.
+    Abstract base class for all SHS Code hooks.
 
     Subclasses must:
         1. Set ``name`` to a unique identifier.

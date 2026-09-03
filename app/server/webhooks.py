@@ -1,4 +1,4 @@
-"""ManusClaw Webhook System.
+"""SHS Code Webhook System.
 
 Provides incoming webhook management with HMAC-SHA256 verification.
 Webhook triggers format a prompt from a template + payload and run the
@@ -26,15 +26,16 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.logger import logger
+from app import env
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
 def _default_db_path() -> Path:
-    """SHS Code FIX (CWD split-brain): share the SessionDB location resolved
-    lazily via MANUSCLAW_WORKSPACE — webhook registrations used to land in a
-    CWD-relative file, invisible to a server started from another directory."""
-    workspace = Path(os.getenv("MANUSCLAW_WORKSPACE", "workspace"))
-    return workspace / ".sessions" / "manusclaw.db"
+    """Share the SessionDB location resolved lazily via SHSCODE_WORKSPACE
+    (CWD split-brain fix) — including the legacy pre-rename DB fallback,
+    which lives in one place: app.db.session._default_db_path."""
+    from app.db.session import _default_db_path as _session_db
+    return _session_db()
 
 
 _DB_PATH = _default_db_path()
@@ -116,7 +117,7 @@ class WebhookConfig:
 class WebhookManager:
     """Manages webhook registration, HMAC verification, and agent triggering.
 
-    Persists webhook configurations in the ManusClaw SQLite database.
+    Persists webhook configurations in the SHS Code SQLite database.
 
     Usage::
 
@@ -355,9 +356,9 @@ class WebhookManager:
 
         # Run the agent
         try:
-            from app.agent.manus import Manus
+            from app.agent.shscode import SHSCode
 
-            agent = Manus(
+            agent = SHSCode(
                 session_id=config.target_session or None,
             )
             output = await agent.run(prompt)
@@ -425,13 +426,13 @@ webhook_manager = WebhookManager()
 
 
 def main_cli() -> None:
-    """Entry point for ``manusclaw-webhook`` — list and manage webhooks from the CLI."""
+    """Entry point for ``shscode-webhook`` — list and manage webhooks from the CLI."""
     import argparse
     import sys
 
     parser = argparse.ArgumentParser(
-        prog="manusclaw-webhook",
-        description="ManusClaw Webhook Management",
+        prog="shscode-webhook",
+        description="SHS Code Webhook Management",
     )
     parser.add_argument("--list", action="store_true", help="List all webhooks")
     parser.add_argument("--info", metavar="HOOK_ID", help="Show webhook details")

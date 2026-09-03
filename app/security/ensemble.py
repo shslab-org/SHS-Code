@@ -5,7 +5,7 @@ Security Defense-in-Depth — Ensemble Security Analyzer
 Combines multiple security analyzers into a single composite analyzer
 that returns the **maximum severity** across all sub-analyzers.
 
-This is the primary entry point for the manusclaw security subsystem:
+This is the primary entry point for the SHS Code security subsystem:
 users construct an ``EnsembleSecurityAnalyzer`` with the desired set of
 analyzers and call :meth:`analyze` once.  The ensemble handles:
 

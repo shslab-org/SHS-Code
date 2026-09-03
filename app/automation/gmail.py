@@ -1,4 +1,4 @@
-"""ManusClaw Gmail Watcher.
+"""SHS Code Gmail Watcher.
 
 Watches a Gmail inbox for new messages using the Gmail API Pub/Sub push
 notifications. When a new email arrives, the watcher triggers the agent to
@@ -13,7 +13,7 @@ Supports two modes:
 Environment Variables:
     GOOGLE_APPLICATION_CREDENTIALS  — Path to service account JSON credentials
     GOOGLE_SERVICE_ACCOUNT_JSON    — Alternative: inline JSON credentials
-    GMAIL_WATCH_TOPIC_NAME          — Pub/Sub topic name (default: ``projects/{project}/topics/manusclaw-gmail``)
+    GMAIL_WATCH_TOPIC_NAME          — Pub/Sub topic name (default: ``projects/{project}/topics/shscode-gmail``)
     GMAIL_PROJECT_ID                — GCP project ID for Pub/Sub
     GMAIL_USER_ADDRESS              — Email address to watch (default: ``me``)
     GMAIL_AUTO_REPLY                — Enable auto-reply (default: ``false``)
@@ -80,7 +80,7 @@ class WatchResult:
 # ─── GmailWatcher ──────────────────────────────────────────────────────────────
 
 class GmailWatcher:
-    """Watches a Gmail inbox and processes new emails with the ManusClaw agent.
+    """Watches a Gmail inbox and processes new emails with the SHS Code agent.
 
     In stub mode (no credentials), all operations are logged but not executed.
 
@@ -309,7 +309,7 @@ class GmailWatcher:
     # ─── Process Email ────────────────────────────────────────────────────────
 
     async def process_email(self, message_id: str) -> Optional[str]:
-        """Process a single email with the ManusClaw agent.
+        """Process a single email with the SHS Code agent.
 
         Fetches the email, runs the agent on its content, and optionally
         auto-replies.
@@ -347,9 +347,9 @@ class GmailWatcher:
                     logger.error(f"[Gmail] Callback error: {exc}")
 
             # Run agent
-            from app.agent.manus import Manus
+            from app.agent.shscode import SHSCode
 
-            agent = Manus()
+            agent = SHSCode()
             prompt = (
                 f"Process this email and determine if action is needed:\n\n"
                 f"From: {email.from_address}\n"

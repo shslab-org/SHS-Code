@@ -10,8 +10,8 @@ User-defined specialized agent profiles composed from:
   model preference      (provider/model hint for /model)
   verification strategy (none|fast|standard|thorough)
 
-Persisted at ~/.manusclaw/profiles.json — survives restarts. Applied at
-agent construction (Manus accepts profile kwargs), and via /profile use.
+Persisted at ~/.shscode/profiles.json — survives restarts. Applied at
+agent construction (SHSCode accepts profile kwargs), and via /profile use.
 Builtin examples are seeded on first run and fully editable.
 """
 
@@ -24,10 +24,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.logger import logger
+from app import env
 
 def _profiles_path() -> Path:
-    return Path(os.getenv("MANUSCLAW_HOME",
-                          str(Path.home() / ".manusclaw"))) / "profiles.json"
+    return env.home_dir() / "profiles.json"
 
 _VALID_VERIFICATION = {"none", "fast", "standard", "thorough"}
 

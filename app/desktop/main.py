@@ -1,6 +1,6 @@
 """
-ManusClaw Desktop GUI — built with Flet.
-Provides a terminal-style chat interface running ManusClaw locally.
+SHS Code Desktop GUI — built with Flet.
+Provides a terminal-style chat interface running SHS Code locally.
 Launch: python -m app.desktop.main
 """
 from __future__ import annotations
@@ -44,7 +44,7 @@ BANNER = r"""
 # ─── agent runner ────────────────────────────────────────────────────────────
 
 def _run_agent(task: str, on_token, on_done, on_error):
-    """Run ManusClaw agent in a background thread."""
+    """Run SHS Code agent in a background thread."""
     try:
         # Lazy import so desktop works even if some deps are missing
         from app.flow.planning import PlanningFlow
@@ -68,7 +68,7 @@ def _run_agent(task: str, on_token, on_done, on_error):
 def _bubble(role: str, text: str) -> ft.Container:
     is_user = role == "user"
     colour  = USER_CLR if is_user else AI_CLR
-    label   = "YOU" if is_user else "MANUSCLAW"
+    label   = "YOU" if is_user else "SHSCODE"
     return ft.Container(
         content=ft.Column(
             [
@@ -98,7 +98,7 @@ def _status_line(msg: str, color: str = MUTED) -> ft.Text:
 # ─── main app ────────────────────────────────────────────────────────────────
 
 def main(page: ft.Page):
-    page.title       = "ManusClaw — Autonomous AI Ecosystem"
+    page.title       = "SHS Code — Autonomous AI Ecosystem"
     page.bgcolor     = BG
     page.window_width    = 960
     page.window_height   = 700
@@ -242,7 +242,7 @@ def main(page: ft.Page):
             # top bar
             ft.Container(
                 ft.Row([
-                    ft.Text("MANUSCLAW", size=14, weight=ft.FontWeight.BOLD,
+                    ft.Text("SHSCODE", size=14, weight=ft.FontWeight.BOLD,
                             color=ACCENT, font_family="monospace"),
                     ft.Text("Autonomous AI Ecosystem", size=11, color=MUTED,
                             font_family="monospace"),

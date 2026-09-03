@@ -3,7 +3,7 @@ from __future__ import annotations
 """
 Git Provider Integrations
 ==========================
-Enterprise-grade git provider integrations for the ManusClaw platform.
+Enterprise-grade git provider integrations for the SHS Code platform.
 
 Supports: GitHub, GitLab, Azure DevOps, Bitbucket, Forgejo/Gitea.
 

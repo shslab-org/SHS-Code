@@ -32,7 +32,7 @@ class ArchitectRole(BaseRole):
     max_retries      = 2
 
     specialist_prompt = """\
-You are the Architect agent of ManusClaw. You receive a PRD and produce a
+You are the Architect agent of SHS Code. You receive a PRD and produce a
 concrete system design document with a dependency-aware task list.
 
 Your design MUST include all six of these sections (exact headers required):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-ManusClaw multi-agent CLI entry point.
+SHS Code multi-agent CLI entry point.
 Installed via pyproject.toml [project.scripts].
 """
 
@@ -27,7 +27,7 @@ async def _run(goal: str, mode: str) -> None:
 
 
 def run_cli() -> None:
-    parser = argparse.ArgumentParser(description="ManusClaw Multi-Agent Pipeline")
+    parser = argparse.ArgumentParser(description="SHS Code Multi-Agent Pipeline")
     parser.add_argument("goal", nargs="?", default=None, help="Task goal")
     parser.add_argument("--mode", default="build", choices=["build", "plan"],
                         help="Agent mode: build (auto) or plan (approval-gated)")

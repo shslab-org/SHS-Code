@@ -14,7 +14,7 @@ Gmail read/send via Google API with OAuth2 authentication flow.
 
 ## Install
 ```
-pip install manusclaw[gmail]
+pip install shscode[gmail]
 ```
 
 ## Architecture

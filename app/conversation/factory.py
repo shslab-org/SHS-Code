@@ -1,5 +1,5 @@
 """
-ManusClaw Conversation System — ConversationFactory
+SHS Code Conversation System — ConversationFactory
 ======================================================
 
 Factory for creating the appropriate conversation implementation based
@@ -15,7 +15,7 @@ Two conversation types are supported:
     via WebSocket.  This is for distributed deployments where the
     agent runtime is separated from the client.
 
-The factory reads configuration from the manusclaw :class:`Config`
+The factory reads configuration from the SHS Code :class:`Config`
 system and constructs the appropriate conversation with all
 dependencies wired up.
 
@@ -46,6 +46,7 @@ from app.conversation.local_conversation import LocalConversation
 from app.conversation.remote_conversation import RemoteConversation
 from app.conversation.stuck_detector import StuckDetector
 from app.logger import logger
+from app import env
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -58,7 +59,7 @@ class ConversationConfig:
 
     This is a simple dataclass that captures all the parameters needed
     to construct a conversation.  It can be built manually or derived
-    from the global manusclaw :class:`Config`.
+    from the global SHS Code :class:`Config`.
 
     Attributes:
         mode:                "local" or "remote".
@@ -285,9 +286,9 @@ class ConversationFactory:
         hook_manager: Optional[Any] = None,
     ) -> BaseConversation:
         """
-        Create a conversation using the global manusclaw :class:`Config`.
+        Create a conversation using the global SHS Code :class:`Config`.
 
-        This method reads the manusclaw configuration to determine
+        This method reads the SHS Code configuration to determine
         whether to create a local or remote conversation, and wires up
         security analyzers, confirmation policies, and other dependencies.
 
@@ -305,7 +306,7 @@ class ConversationFactory:
 
         # Determine mode from environment or config
         import os
-        mode = os.getenv("MANUSCLAW_CONVERSATION_MODE", "local").lower()
+        mode = env.getenv("CONVERSATION_MODE", "local").lower()
         if mode not in ("local", "remote"):
             mode = "local"
 
@@ -350,7 +351,7 @@ class ConversationFactory:
             conversation_id=conversation_id,
             agent=agent,
             server_url=os.getenv(
-                "MANUSCLAW_AGENT_SERVER_URL",
+                "AGENT_SERVER_URL",
                 "ws://localhost:3000/ws",
             ),
             confirmation_policy=confirmation_policy,

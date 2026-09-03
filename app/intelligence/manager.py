@@ -6,7 +6,7 @@ SHS Code — Project Intelligence Manager (facade, spec §2-§4)
 Ties together: incremental index cache + project profile + semantic search.
 
 Per-project singletons (LRU bounded). The profile is persisted at
-~/.manusclaw/intel/<hash>/profile.json and refreshed when stale (>10 min)
+~/.shscode/intel/<hash>/profile.json and refreshed when stale (>10 min)
 or on explicit demand (force=True).
 
 Async surface (used by agent tools / CLI):

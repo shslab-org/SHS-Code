@@ -33,7 +33,7 @@ class ProductManagerRole(BaseRole):
     max_retries      = 2
 
     specialist_prompt = """\
-You are the Product Manager agent of ManusClaw. Your sole job is to receive
+You are the Product Manager agent of SHS Code. Your sole job is to receive
 a user goal and produce a structured Product Requirements Document (PRD).
 
 Your PRD MUST include all six of these sections (exact headers required):

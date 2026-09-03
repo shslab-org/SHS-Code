@@ -6,7 +6,7 @@ SHS Code — Project Intelligence Cache (spec §3)
 Persistent, incremental symbol/import index per project.
 
 Storage:
-  ~/.manusclaw/intel/<sha1(abs_root)[:16]>/index.db   (SQLite, WAL)
+  ~/.shscode/intel/<sha1(abs_root)[:16]>/index.db   (SQLite, WAL)
 
 Incremental updates (spec §3: "update only necessary indexes"):
   - each file is keyed by (path, mtime, size)
@@ -31,13 +31,13 @@ from app.intelligence.indexer import (
     LANGUAGE_BY_EXT, FileIndex, index_file, read_source, walk_source_files,
 )
 from app.logger import logger
+from app import env
 
 
 def _intel_root() -> Path:
-    """Resolve the intel root at CALL time (respects MANUSCLAW_HOME changes
+    """Resolve the intel root at CALL time (respects SHSCODE_HOME changes
     — required for test isolation and runtime home switching)."""
-    return Path(os.getenv("MANUSCLAW_HOME",
-                          str(Path.home() / ".manusclaw"))) / "intel"
+    return env.home_dir() / "intel"
 
 
 INTEL_ROOT = _intel_root()  # module-level convenience (tests should use env)

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 """
-ManusClaw Hooks — Built-in Hooks
+SHS Code Hooks — Built-in Hooks
 ==================================
-Production-ready hooks shipped with manusclaw, inspired by OpenHands's
+Production-ready hooks shipped with SHS Code, inspired by OpenHands's
 hook architecture.
 
 Built-in hooks:
-    LoggingHook   — Logs every hook event to the manusclaw logger.
+    LoggingHook   — Logs every hook event to the SHS Code logger.
     SecurityHook  — Integrates with the security analyzer subsystem.
     AuditHook     — Writes a persistent audit trail to file / database.
 """
@@ -34,7 +34,7 @@ from app.logger import logger
 
 class LoggingHook(HookBase):
     """
-    Logs all hook events to the manusclaw structured logger.
+    Logs all hook events to the SHS Code structured logger.
 
     This is a passive (observation-only) hook that always returns ALLOW.
     It subscribes to all event types and logs:
@@ -51,7 +51,7 @@ class LoggingHook(HookBase):
     """
 
     name = "logging"
-    description = "Logs all hook events to the manusclaw logger"
+    description = "Logs all hook events to the SHS Code logger"
     priority = 200  # Run after decision-making hooks
     timeout_s = 5.0
     fail_open = True
@@ -124,7 +124,7 @@ class LoggingHook(HookBase):
 
 class SecurityHook(HookBase):
     """
-    Integrates with the manusclaw security analyzer subsystem.
+    Integrates with the SHS Code security analyzer subsystem.
 
     For PRE_TOOL_USE events, this hook:
         1. Extracts the action string from tool arguments.

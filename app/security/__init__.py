@@ -1,9 +1,9 @@
 """
-Security Defense-in-Depth — manusclaw Security Subsystem
+Security Defense-in-Depth — SHS Code Security Subsystem
 =========================================================
 
 A layered security architecture inspired by OpenHands, adapted for the
-manusclaw agent framework.  The subsystem provides:
+SHS Code agent framework.  The subsystem provides:
 
 **Analyzers** (detect threats):
     - :class:`PatternSecurityAnalyzer` — regex-based pattern matching

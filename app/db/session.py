@@ -23,20 +23,29 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.logger import logger
+from app import env
 
 
 def _default_db_path() -> Path:
-    """Resolve the session DB path lazily (SHS Code FIX).
+    """Resolve the session DB path lazily.
 
     The path used to be a module-level constant relative to the CURRENT
-    WORKING DIRECTORY (``workspace/.sessions/manusclaw.db``). Two processes
-    started from different directories (server from ~, CLI from the repo)
-    silently created TWO different session databases — a split-brain that
-    made the server registry and the CLI disagree about session state.
-    Now MANUSCLAW_WORKSPACE is honoured and re-read on every construction.
+    WORKING DIRECTORY. Two processes started from different directories
+    (server from ~, CLI from the repo) silently created TWO different
+    session databases — a split-brain that made the server registry and
+    the CLI disagree about session state. Now the workspace is honoured
+    and re-read on every construction.
+
+    Canonical filename: ``shscode.db``. If only the legacy
+    ``manusclaw.db`` exists (pre-rename installation), it is still used
+    so existing sessions survive the rename.
     """
-    workspace = Path(os.getenv("MANUSCLAW_WORKSPACE", "workspace"))
-    return workspace / ".sessions" / "manusclaw.db"
+    workspace = Path(env.getenv("WORKSPACE", "workspace"))
+    canonical = workspace / ".sessions" / "shscode.db"
+    legacy = workspace / ".sessions" / "manusclaw.db"
+    if canonical.exists() or not legacy.exists():
+        return canonical
+    return legacy
 
 
 # Backward-compatible module constant (frozen at import; runtime resolution
@@ -194,7 +203,7 @@ class SessionDB:
     # Session lifecycle
     # ------------------------------------------------------------------
 
-    async def create_session(self, goal: str, agent_name: str = "manus",
+    async def create_session(self, goal: str, agent_name: str = "shscode",
                               mode: str = "build",
                               parent_session_id: Optional[str] = None,
                               session_id: Optional[str] = None) -> str:

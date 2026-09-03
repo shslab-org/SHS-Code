@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ManusClaw — MCP Agent entry point.
+SHS Code — MCP Agent entry point.
 
 Usage:
     python run_mcp.py --connection sse --server-url http://localhost:8000 --prompt "task"

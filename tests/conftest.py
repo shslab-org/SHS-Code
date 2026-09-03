@@ -2,22 +2,23 @@ import os
 import asyncio
 import tempfile
 import pytest
+from app import env
 
 # Use mock LLM for all tests
 os.environ["APP_ENV"] = "test"
 _tmp_ws = tempfile.mkdtemp()
-os.environ.setdefault("MANUSCLAW_WORKSPACE", _tmp_ws)
+os.environ.setdefault("SHSCODE_WORKSPACE", _tmp_ws)
 
 
 @pytest.fixture
 def tmp_workspace(tmp_path):
-    prev = os.environ.get("MANUSCLAW_WORKSPACE", "")
-    os.environ["MANUSCLAW_WORKSPACE"] = str(tmp_path)
+    prev = env.getenv("WORKSPACE", "")
+    os.environ["SHSCODE_WORKSPACE"] = str(tmp_path)
     yield tmp_path
     if prev:
-        os.environ["MANUSCLAW_WORKSPACE"] = prev
+        os.environ["SHSCODE_WORKSPACE"] = prev
     else:
-        os.environ.pop("MANUSCLAW_WORKSPACE", None)
+        os.environ.pop("SHSCODE_WORKSPACE", None)
 
 
 @pytest.fixture

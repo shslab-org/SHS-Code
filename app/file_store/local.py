@@ -18,7 +18,7 @@ Usage::
 
     from app.file_store.local import LocalFileStore
 
-    store = LocalFileStore(base_dir="/var/lib/manusclaw/files")
+    store = LocalFileStore(base_dir="/var/lib/shscode/files")
     await store.write("reports/q1.pdf", pdf_bytes, content_type="application/pdf")
     data = await store.read("reports/q1.pdf")
     url = await store.get_url("reports/q1.pdf")
@@ -45,6 +45,7 @@ from app.file_store.base import (
     FileStorePermissionError,
 )
 from app.logger import logger
+from app import env
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -100,7 +101,7 @@ class LocalFileStore(FileStore):
     def __init__(self, base_dir: str = "") -> None:
         if not base_dir:
             base_dir = os.path.join(
-                os.getenv("MANUSCLAW_HOME", str(Path.home() / ".manusclaw")),
+                str(env.home_dir()),
                 "file_store",
             )
         self._base_dir = Path(base_dir).resolve()

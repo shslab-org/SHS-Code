@@ -14,7 +14,7 @@ from app.task_dag import TaskGraph
 
 @pytest.fixture
 def journal(tmp_path, monkeypatch):
-    monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "home"))
     j = Journal(tmp_path / "journal.db")
     yield j
     j.close()

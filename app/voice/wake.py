@@ -28,7 +28,7 @@ class VoiceWakeDetector:
 
     Usage::
 
-        detector = VoiceWakeDetector(wake_word="hey manus")
+        detector = VoiceWakeDetector(wake_word="hey shs code")
         await detector.start(lambda: print("WAKE!"))
         ...
         detector.stop()
@@ -39,7 +39,7 @@ class VoiceWakeDetector:
 
     def __init__(
         self,
-        wake_word: str = "hey manus",
+        wake_word: str = "hey shs code",
         sensitivity: float = 0.5,
         audio_device_index: Optional[int] = None,
     ) -> None:

@@ -3,7 +3,7 @@ Structured Logging Utilities
 ==============================
 
 Provides structured JSON logging with automatic correlation ID injection,
-per-module log level configuration, and integration with the manusclaw
+per-module log level configuration, and integration with the SHS Code
 security subsystem for sensitive data redaction.
 
 Features:
@@ -12,7 +12,7 @@ Features:
     - Per-module log level configuration
     - Sensitive data redaction via :mod:`app.security.base`
     - Drop-in replacement for standard ``logging.Logger``
-    - Compatible with the existing manusclaw logger
+    - Compatible with the existing SHS Code logger
 
 Usage::
 
@@ -30,7 +30,7 @@ Configuration::
     level = INFO
 
     # Or via environment variable
-    MANUSCLAW_LOG_FORMAT=json
+    SHSCODE_LOG_FORMAT=json
 """
 
 from __future__ import annotations
@@ -41,6 +41,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Union
+from app import env
 
 # ---------------------------------------------------------------------------
 # Sensitive data redaction integration
@@ -70,7 +71,7 @@ except ImportError:
     pass
 
 # Environment variable override
-if os.getenv("MANUSCLAW_REDACT", "").lower() in ("1", "true", "yes"):
+if env.getenv("REDACT", "").lower() in ("1", "true", "yes"):
     _REDACTION_ENABLED = True
 
 
@@ -145,7 +146,7 @@ class StructuredJsonFormatter(logging.Formatter):
         if eid:
             log_entry["error_id"] = eid
 
-        # Trace ID from manusclaw's existing logger context
+        # Trace ID from SHS Code's existing logger context
         trace_id = getattr(record, "trace_id", None)
         if trace_id and trace_id != "————":
             log_entry["trace_id"] = trace_id
@@ -219,7 +220,7 @@ class StructuredJsonFormatter(logging.Formatter):
             "pathname", "filename", "module", "levelno", "levelname",
             "thread", "threadName", "process", "processName", "message",
             "msecs", "task", "taskName",
-            # manusclaw context fields
+            # SHS Code context fields
             "trace_id", "agent", "step", "task_id",
         }
         return {
@@ -267,8 +268,8 @@ class StructuredTextFormatter(logging.Formatter):
 
         # Logger name (shortened)
         logger_name = record.name
-        if logger_name.startswith("manusclaw."):
-            logger_name = logger_name[len("manusclaw."):]
+        if logger_name.startswith("shscode."):
+            logger_name = logger_name[len("shscode."):]
         parts.append(f"{logger_name}:")
 
         # Message
@@ -324,7 +325,7 @@ def get_module_levels() -> Dict[str, int]:
 def apply_module_levels(config: Optional[Dict[str, str]] = None) -> None:
     """Apply per-module log levels from a config dict or env var.
 
-    Environment variable: ``MANUSCLAW_LOG_LEVELS``
+    Environment variable: ``SHSCODE_LOG_LEVELS``
     Format: ``"module1=DEBUG,module2=WARNING"``
 
     Args:
@@ -332,7 +333,7 @@ def apply_module_levels(config: Optional[Dict[str, str]] = None) -> None:
                 If ``None``, reads from the environment variable.
     """
     if config is None:
-        env_str = os.getenv("MANUSCLAW_LOG_LEVELS", "")
+        env_str = env.getenv("LOG_LEVELS", "")
         if not env_str:
             return
         config = {}
@@ -355,7 +356,7 @@ _json_format_enabled: bool = False
 
 def _is_json_format_enabled() -> bool:
     """Check if JSON log format is enabled via config or env."""
-    if os.getenv("MANUSCLAW_LOG_FORMAT", "").lower() == "json":
+    if env.getenv("LOG_FORMAT", "").lower() == "json":
         return True
     try:
         from app.config import Config
@@ -418,7 +419,7 @@ def get_structured_logger(
         else:
             handler.setFormatter(StructuredTextFormatter(redact=should_redact))
         logger_obj.addHandler(handler)
-        # Prevent propagation to the manusclaw root logger whose handlers
+        # Prevent propagation to the SHS Code root logger whose handlers
         # require ContextFilter attributes (agent, trace_id, etc.) that
         # child loggers may not have set on their records.
         logger_obj.propagate = False
@@ -428,7 +429,7 @@ def get_structured_logger(
 
 
 # ---------------------------------------------------------------------------
-# Convenience: configure the root manusclaw logger for structured output
+# Convenience: configure the root SHS Code logger for structured output
 # ---------------------------------------------------------------------------
 
 def configure_structured_logging(
@@ -436,9 +437,9 @@ def configure_structured_logging(
     redact: Optional[bool] = None,
     level: Optional[Union[str, int]] = None,
 ) -> None:
-    """Configure the manusclaw root logger for structured output.
+    """Configure the SHS Code root logger for structured output.
 
-    This replaces the default handlers on the ``"manusclaw"`` logger
+    This replaces the default handlers on the ``"shscode"`` logger
     with structured formatters.  Call this once at application startup.
 
     Args:
@@ -454,7 +455,7 @@ def configure_structured_logging(
     else:
         should_redact = _HAS_SANITISE
 
-    root_logger = logging.getLogger("manusclaw")
+    root_logger = logging.getLogger("shscode")
 
     # Set level
     if level is not None:
@@ -481,7 +482,7 @@ def configure_structured_logging(
 
 
 # ---------------------------------------------------------------------------
-# Integration with manusclaw's existing context filter
+# Integration with SHS Code's existing context filter
 # ---------------------------------------------------------------------------
 
 try:
@@ -498,7 +499,7 @@ def bind_logger_context(
     step: Optional[int] = None,
     task_id: Optional[str] = None,
 ) -> None:
-    """Bind context variables to the existing manusclaw logger.
+    """Bind context variables to the existing SHS Code logger.
 
     This integrates structured logging with the existing
     ``app.logger.set_log_context`` system.

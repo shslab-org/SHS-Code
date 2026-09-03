@@ -3,20 +3,19 @@ from __future__ import annotations
 """
 SHS Code CLI — Persistent Autonomous Coding Shell
 =================================================
-Type: SHSCode   (legacy alias: manusclaw)
+Type: SHSCode
 
 SHS Code is part of the SHS Lab ecosystem (Sazzad Hussain Shobuj).
-Lineage: evolved from ManusClaw — its predecessor and original foundation.
 
 The interactive shell is a persistent agent environment:
-  - Memory, task journal and checkpoints survive restarts (spec §3/§6/§7)
+  - Memory, task journal and checkpoints survive restarts
   - /model and /provider switch the reasoning backend LIVE — context,
-    memory, files and task progress are never destroyed (spec §4/§17)
+    memory, files and task progress are never destroyed
   - NVIDIA NIM (and any provider) paced by a true rolling-window limiter
-    (spec §18) — rate-limit waits preserve all state (spec §19)
-  - Interrupted tasks are detected and resumable on next launch (spec §9)
+    — rate-limit waits preserve all state
+  - Interrupted tasks are detected and resumable on next launch
 
-Slash commands (spec §10) — all backed by real functionality:
+Slash commands — all backed by real functionality:
   /help /status /version /tasks /task /resume /pause /stop /continue
   /model /models /providers /provider /skills /skill /mcp /tools
   /channels /connectors /config /context /checkpoint /history /files
@@ -35,13 +34,13 @@ import sys
 import time
 from pathlib import Path
 from typing import Optional
+from app import env
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Version / branding
 # ──────────────────────────────────────────────────────────────────────────────
 
-VERSION = "2.1.0"           # SHS Code — stabilized, live-verified on NVIDIA NIM
-PREDECESSOR = "ManusClaw v5.1.1"
+VERSION = "2.2.0"           # SHS Code — identity-complete, product docs
 
 SHS_BANNER = r"""
 ███████╗██╗  ██╗███████╗  ██████╗ ██████╗ ██████╗ ██████╗
@@ -53,7 +52,7 @@ SHS_BANNER = r"""
 """
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Skins (preserved from ManusClaw)
+# Skins
 # ──────────────────────────────────────────────────────────────────────────────
 
 SKINS = {
@@ -81,10 +80,10 @@ SLASH_COMMANDS = [
 
 
 def _get_skin(name: str = "default") -> dict:
-    """Load skin: check ~/.manusclaw/skins/<name>.yaml first, then built-ins."""
+    """Load skin: check ~/.shscode/skins/<name>.yaml first, then built-ins."""
     from pathlib import Path
     import os
-    skin_file = Path(os.getenv("MANUSCLAW_HOME", Path.home() / ".manusclaw")) / "skins" / f"{name}.yaml"
+    skin_file = Path(env.home_dir()) / "skins" / f"{name}.yaml"
     if skin_file.exists():
         try:
             import yaml
@@ -422,7 +421,6 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
 
     if command == "/version":
         return (f"SHS Code v{VERSION} (SHS Lab — Sazzad Hussain Shobuj)\n"
-                f"Predecessor: {PREDECESSOR}\n"
                 f"Python {sys.version.split()[0]}")
 
     if command == "/clear":
@@ -777,7 +775,7 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
                         rpm = int(tok)
                 e = reg.add(name=sub[1], api_type=sub[2], base_url=sub[3],
                             model=sub[4], api_key=api_key, rpm=rpm)
-                return (f"Provider '{e['name']}' registered (persisted to ~/.manusclaw/providers.json).\n"
+                return (f"Provider '{e['name']}' registered (persisted to ~/.shscode/providers.json).\n"
                         f"Switch to it: /provider {e['name']}")
             except ValueError as ex:
                 return f"Error: {ex}"
@@ -914,7 +912,7 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
                     return "Usage: /skill install <git-url|path> [name]"
                 try:
                     s = engine.install(toks[0], toks[1] if len(toks) > 1 else None)
-                    return f"Installed skill '{s.name}' (v{s.version}) into ~/.manusclaw/skills/installed/"
+                    return f"Installed skill '{s.name}' (v{s.version}) into ~/.shscode/skills/installed/"
                 except Exception as e:
                     return f"Install failed: {e}"
             if action == "create":
@@ -942,7 +940,7 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             if action == "enable":
                 return "Enabled " + name if engine.set_disabled(name, False) else f"No skill named {name}."
             if action == "disable":
-                return f"Disabled {name} (persists in ~/.manusclaw/skills_state.json)" if engine.set_disabled(name, True) else f"No skill named {name}."
+                return f"Disabled {name} (persists in ~/.shscode/skills_state.json)" if engine.set_disabled(name, True) else f"No skill named {name}."
             return f"Unknown action: {action}"
         except Exception as e:
             return f"Skill error: {e}"
@@ -1089,7 +1087,7 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             f"  workspace:   {c.workspace_dir}\n"
             f"  streaming:   {llm.streaming.enabled}\n"
             f"  mcp servers: {len(c.mcp_servers)}\n"
-            f"  config path: {os.getenv('MANUSCLAW_HOME', str(Path.home() / '.manusclaw'))}"
+            f"  config path: {env.home_dir()}"
         )
 
     if command == "/context":
@@ -1423,7 +1421,7 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
                 try:
                     create_profile(name, description=desc)
                     return (f"Profile '{name}' created. Configure it:\n"
-                            f"  edit ~/.manusclaw/profiles.json or ask me to "
+                            f"  edit ~/.shscode/profiles.json or ask me to "
                             f"update its instructions/skills/verification.")
                 except ValueError as e:
                     return f"Error: {e}"
@@ -1668,7 +1666,7 @@ async def _save_mcp_servers(servers) -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# /sessions subcommand handler (preserved from ManusClaw, spec §46)
+# /sessions subcommand handler (preserved from SHS Code, spec §46)
 # ──────────────────────────────────────────────────────────────────────────────
 
 async def _handle_sessions(arg: str, agent=None, session_id: str = "") -> str:
@@ -1687,7 +1685,7 @@ async def _handle_sessions(arg: str, agent=None, session_id: str = "") -> str:
         lines = ["Sessions:", f"{'ID':<14} {'STATE':<10} {'AGENT':<10} {'GOAL'}", "-" * 70]
         for s in sessions:
             goal = (s.get("goal") or "")[:40]
-            lines.append(f"  {s['id']:<14} {s.get('state', '?'):<10} {s.get('agent_name', 'manus'):<10} {goal}")
+            lines.append(f"  {s['id']:<14} {s.get('state', '?'):<10} {s.get('agent_name', 'shscode'):<10} {goal}")
         return "\n".join(lines)
 
     if subcmd == "history":
@@ -1835,7 +1833,7 @@ def _get_session():
         from prompt_toolkit import PromptSession
         from prompt_toolkit.history import FileHistory
         from pathlib import Path
-        history_file = Path(os.getenv("MANUSCLAW_HOME", Path.home() / ".manusclaw")) / ".cli_history"
+        history_file = Path(env.home_dir()) / ".cli_history"
         history_file.parent.mkdir(parents=True, exist_ok=True)
         return PromptSession(history=FileHistory(str(history_file)))
     except ImportError:
@@ -1848,8 +1846,8 @@ def _get_session():
 
 async def _execute_background_task(task_entry) -> str:
     """Execute a task from the background queue."""
-    from app.agent.manus import Manus
-    agent = Manus()
+    from app.agent.shscode import SHSCode
+    agent = SHSCode()
     try:
         # If task has a checkpoint, restore memory state
         if task_entry.checkpoint and task_entry.checkpoint.memory_snapshot:
@@ -1872,7 +1870,7 @@ async def _execute_background_task(task_entry) -> str:
 # ──────────────────────────────────────────────────────────────────────────────
 
 async def _interactive_loop(skin_name: str = "default") -> None:
-    from app.agent.manus import Manus
+    from app.agent.shscode import SHSCode
     from app.config import Config
     from app.task_queue import TaskQueue
     from app.logger import logger
@@ -1880,7 +1878,7 @@ async def _interactive_loop(skin_name: str = "default") -> None:
 
     skin = _get_skin(skin_name)
     cfg = Config.get()
-    agent = Manus()
+    agent = SHSCode()
     session_id = ""
     pt_session = _get_session()
     completer = _get_completer()
@@ -1990,7 +1988,7 @@ async def _interactive_loop(skin_name: str = "default") -> None:
             if result == "NEW_SESSION":
                 await agent.cleanup()
                 ActivityBus.unsubscribe_all()
-                agent = Manus()
+                agent = SHSCode()
                 ActivityBus.subscribe(_make_activity_printer(skin, enabled=True))
                 session_id = ""
                 _print_message("system", "New session started. (Persistent memory and journal remain on disk.)", skin)
@@ -2089,7 +2087,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.profile:
-        os.environ["MANUSCLAW_PROFILE"] = args.profile
+        os.environ["SHSCODE_PROFILE"] = args.profile
 
     if args.model:
         os.environ["LLM_MODEL_OVERRIDE"] = args.model
@@ -2103,10 +2101,10 @@ def main() -> None:
         prompt_text = " ".join(args.prompt)
 
         async def _run_once():
-            from app.agent.manus import Manus
+            from app.agent.shscode import SHSCode
             from app.task_queue import TaskQueue
             skin = _get_skin(args.skin)
-            agent = Manus()
+            agent = SHSCode()
 
             task_queue = TaskQueue(max_workers=1)
             resumed = await task_queue.resume_interrupted()

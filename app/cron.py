@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional, Callable
 
 from app.logger import logger
+from app import env
 
 try:
     from croniter import croniter
@@ -27,18 +28,18 @@ try:
 except ImportError:
     _HAS_YAML = False
 
-_DEFAULT_CRON_FILE = str(Path.home() / ".manusclaw" / "cron_jobs.yaml")
+_DEFAULT_CRON_FILE = str(env.home_dir() / "cron_jobs.yaml")
 
 
 def _get_jobs_file() -> Path:
     """Resolve the cron jobs file path lazily.
 
-    Reads ``MANUSCLAW_CRON_FILE`` each time so that runtime changes
+    Reads ``SHSCODE_CRON_FILE`` each time so that runtime changes
     (e.g. via ``monkeypatch.setenv`` in tests, or per-invocation CLI
     overrides) are honoured. Previously this was a module-level constant
     evaluated once at import, which silently ignored later env changes.
     """
-    return Path(os.getenv("MANUSCLAW_CRON_FILE", _DEFAULT_CRON_FILE))
+    return Path(env.getenv("CRON_FILE", _DEFAULT_CRON_FILE))
 
 
 @dataclass
@@ -137,7 +138,7 @@ class CronScheduler:
                 # FIX: Restore webhook_secret from environment variable
                 # instead of reading the REDACTED placeholder from YAML.
                 if kwargs.get("webhook_secret") == "REDACTED_USE_ENV":
-                    kwargs["webhook_secret"] = os.getenv("MANUSCLAW_WEBHOOK_SECRET", "")
+                    kwargs["webhook_secret"] = env.getenv("WEBHOOK_SECRET", "")
                 job = CronJob(job_id=job_id, **kwargs)
                 self._jobs[job_id] = job
             logger.info(f"[Cron] Loaded {len(self._jobs)} jobs")
@@ -153,7 +154,7 @@ class CronScheduler:
             jobs_file.parent.mkdir(parents=True, exist_ok=True)
             # FIX: Don't persist webhook_secret in plaintext YAML.
             # Instead, store a placeholder and retrieve the actual secret
-            # from the MANUSCLAW_WEBHOOK_SECRET env var at load time.
+            # from the SHSCODE_WEBHOOK_SECRET env var at load time.
             data = {}
             for jid, j in self._jobs.items():
                 job_data = {k: v for k, v in vars(j).items() if k != "job_id"}
@@ -268,8 +269,8 @@ class CronScheduler:
         agent = None
         gw = None
         try:
-            from app.agent.manus import Manus
-            agent = Manus()
+            from app.agent.shscode import SHSCode
+            agent = SHSCode()
             result = await agent.run(job.prompt)
 
             # 1. Custom callback
@@ -334,7 +335,7 @@ class CronScheduler:
         """Deliver cron job results to a webhook URL.
 
         Sends a JSON POST with the job result. If webhook_secret is set,
-        includes an HMAC-SHA256 signature in the ``X-ManusClaw-Signature`` header.
+        includes an HMAC-SHA256 signature in the ``X-SHSCode-Signature`` header.
         """
         try:
             import aiohttp
@@ -361,7 +362,7 @@ class CronScheduler:
                     body.encode(),
                     hashlib.sha256,
                 ).hexdigest()
-                headers["X-ManusClaw-Signature"] = f"sha256={sig}"
+                headers["X-SHSCode-Signature"] = f"sha256={sig}"
             else:
                 body = json.dumps(payload)
 
@@ -408,34 +409,34 @@ def _parse_output_target(output_str: str) -> tuple[str, str]:
 
 def main() -> None:
     """
-    Entry point for manusclaw-cron command.
+    Entry point for shscode-cron command.
 
     Usage:
-      manusclaw-cron --run                          # Start scheduler loop
-      manusclaw-cron --list                         # List all jobs
-      manusclaw-cron --add ID NAME EXPR PROMPT      # Add a new job
-      manusclaw-cron --add ID NAME EXPR PROMPT --output telegram:12345
-      manusclaw-cron --add ID NAME EXPR PROMPT --output-channel telegram --output-target 12345
-      manusclaw-cron --add ID NAME EXPR PROMPT --trigger-webhook https://example.com/hook
-      manusclaw-cron --remove JOB_ID                # Remove a job
-      manusclaw-cron --trigger JOB_ID               # Force-trigger a job now
+      shscode-cron --run                          # Start scheduler loop
+      shscode-cron --list                         # List all jobs
+      shscode-cron --add ID NAME EXPR PROMPT      # Add a new job
+      shscode-cron --add ID NAME EXPR PROMPT --output telegram:12345
+      shscode-cron --add ID NAME EXPR PROMPT --output-channel telegram --output-target 12345
+      shscode-cron --add ID NAME EXPR PROMPT --trigger-webhook https://example.com/hook
+      shscode-cron --remove JOB_ID                # Remove a job
+      shscode-cron --trigger JOB_ID               # Force-trigger a job now
     """
     import argparse
     import sys
 
     parser = argparse.ArgumentParser(
-        description="ManusClaw Cron Scheduler",
+        description="SHS Code Cron Scheduler",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  manusclaw-cron --run
-  manusclaw-cron --list
-  manusclaw-cron --add daily-report "Daily Report" "0 9 * * *" "Summarise today's news"
-  manusclaw-cron --add daily-report "Daily Report" "0 9 * * *" "Summarise news" --output telegram:12345
-  manusclaw-cron --add daily-report "Daily Report" "0 9 * * *" "Summarise news" --output-channel telegram --output-target 12345
-  manusclaw-cron --add web-hook "Webhook" "0 */2 * * *" "Check status" --trigger-webhook https://example.com/hook
-  manusclaw-cron --remove daily-report
-  manusclaw-cron --trigger daily-report
+  shscode-cron --run
+  shscode-cron --list
+  shscode-cron --add daily-report "Daily Report" "0 9 * * *" "Summarise today's news"
+  shscode-cron --add daily-report "Daily Report" "0 9 * * *" "Summarise news" --output telegram:12345
+  shscode-cron --add daily-report "Daily Report" "0 9 * * *" "Summarise news" --output-channel telegram --output-target 12345
+  shscode-cron --add web-hook "Webhook" "0 */2 * * *" "Check status" --trigger-webhook https://example.com/hook
+  shscode-cron --remove daily-report
+  shscode-cron --trigger daily-report
         """,
     )
     parser.add_argument("--run",     action="store_true", help="Start the scheduler loop")

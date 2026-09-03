@@ -4,7 +4,7 @@ from __future__ import annotations
 SHS Code — Platform Connectors
 ==============================
 (spec §26, §27) Generic connector layer: platform + username + email + token
-+ extra config, persisted at ~/.manusclaw/connectors.json.
++ extra config, persisted at ~/.shscode/connectors.json.
 
 Purpose is NOT merely storing credentials: the connector layer feeds tokens
 into the corresponding tool/provider layers (git_providers, integrations,
@@ -24,8 +24,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.logger import logger
+from app import env
 
-_HOME = Path(os.getenv("MANUSCLAW_HOME", str(Path.home() / ".manusclaw")))
+_HOME = env.home_dir()
 CONNECTORS_PATH = _HOME / "connectors.json"
 
 KNOWN_PLATFORMS = [

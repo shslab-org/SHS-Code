@@ -5,7 +5,7 @@ PlanningFlow — multi-agent orchestration with PAORR-aware step dispatch.
 
 Architecture
 ────────────
-PlanningFlow sits ABOVE individual agents (Manus, DataAnalysisAgent) and BELOW
+PlanningFlow sits ABOVE individual agents (SHSCode, DataAnalysisAgent) and BELOW
 the MultiAgentOrchestrator. Its responsibilities are:
 
   1. Decompose a high-level goal into a numbered list of concrete steps
@@ -356,11 +356,11 @@ class PlanningFlow:
     def _select_agent(self, step: PlanStep, prefer_safe: bool = False):
         """
         FIX: Cache agent instances instead of creating a new one per step.
-        Creating Manus() per step spawns a new Bash subprocess each time,
+        Creating SHSCode() per step spawns a new Bash subprocess each time,
         leaking file descriptors and memory for the duration of the flow.
         Agents are reused across steps and cleaned up when the flow ends.
         """
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from app.agent.data_analysis import DataAnalysisAgent
 
         if not hasattr(self, "_agent_cache"):
@@ -379,9 +379,9 @@ class PlanningFlow:
                 self._agent_cache["data_analysis"] = DataAnalysisAgent()
             return self._agent_cache["data_analysis"]
 
-        if "manus" not in self._agent_cache:
-            self._agent_cache["manus"] = Manus()
-        return self._agent_cache["manus"]
+        if "shscode" not in self._agent_cache:
+            self._agent_cache["shscode"] = SHSCode()
+        return self._agent_cache["shscode"]
 
     async def _cleanup_agents(self) -> None:
         """Clean up all cached agent instances to release resources.

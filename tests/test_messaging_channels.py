@@ -87,7 +87,7 @@ async def test_matrix_stub_connect_and_send():
 async def test_whatsapp_webhook_verify_success():
     from app.messaging.whatsapp import WhatsAppAdapter
     adapter = WhatsAppAdapter()
-    result = await adapter.verify_webhook("subscribe", "manusclaw_verify", "challenge123")
+    result = await adapter.verify_webhook("subscribe", "shscode_verify", "challenge123")
     assert result == "challenge123"
 
 
@@ -95,7 +95,7 @@ async def test_whatsapp_webhook_verify_success():
 async def test_whatsapp_webhook_verify_wrong_mode():
     from app.messaging.whatsapp import WhatsAppAdapter
     adapter = WhatsAppAdapter()
-    result = await adapter.verify_webhook("wrong_mode", "manusclaw_verify", "challenge123")
+    result = await adapter.verify_webhook("wrong_mode", "shscode_verify", "challenge123")
     assert result is None
 
 
@@ -118,7 +118,7 @@ async def test_whatsapp_webhook_parse_event():
                     "messages": [{
                         "from": "123456",
                         "id": "msg_001",
-                        "text": {"body": "Hello ManusClaw"},
+                        "text": {"body": "Hello SHS Code"},
                     }],
                     "contacts": [{"wa_id": "123456"}],
                 }
@@ -128,7 +128,7 @@ async def test_whatsapp_webhook_parse_event():
     messages = await adapter.handle_webhook_event(payload)
     assert len(messages) == 1
     assert messages[0].platform == "whatsapp"
-    assert messages[0].text == "Hello ManusClaw"
+    assert messages[0].text == "Hello SHS Code"
     assert messages[0].user_id == "123456"
 
 

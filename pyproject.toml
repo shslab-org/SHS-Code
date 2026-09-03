@@ -5,14 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "shscode"
 version = "2.1.0"
-description = "SHS Code: Persistent autonomous AI coding agent by SHS Lab (Sazzad Hussain Shobuj). Evolved from ManusClaw."
+description = "SHS Code: persistent autonomous AI coding agent by SHS Lab (Sazzad Hussain Shobuj)."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Modified MIT License - see LICENSE file" }
 authors = [{ name = "SHS Lab (Sazzad Hussain Shobuj)" }]
-
-# Compatibility: the importable distribution historically was 'manusclaw'.
-# pip install shscode provides BOTH command names.
 
 dependencies = [
     "pydantic>=2.7,<3",
@@ -103,13 +100,12 @@ all-plus = ["shscode[all,voice,ssh,gmail,matrix,companion,s3,gcs]"]
 [project.scripts]
 SHSCode = "app.cli:main"
 shscode = "app.cli:main"
-manusclaw = "app.cli:main"
-manusclaw-server = "app.server.main:serve"
-manusclaw-cron = "app.cron:main"
-manusclaw-multi = "app.multi_agent:run_cli"
-manusclaw-sessions = "app.session_tools:main"
-manusclaw-channels = "app.messaging:main_channels"
-manusclaw-webhook = "app.server.webhooks:main_cli"
+shscode-server = "app.server.main:serve"
+shscode-cron = "app.cron:main"
+shscode-multi = "app.multi_agent:run_cli"
+shscode-sessions = "app.session_tools:main"
+shscode-channels = "app.messaging:main_channels"
+shscode-webhook = "app.server.webhooks:main_cli"
 
 [tool.setuptools.packages.find]
 where = ["."]

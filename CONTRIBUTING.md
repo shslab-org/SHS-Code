@@ -1,14 +1,14 @@
-# Contributing to ManusClaw
+# Contributing to SHS Code
 
-Welcome to the most fire autonomous agent ecosystem on the planet. ManusClaw is a no-GUI, pure-power AI agent framework — and we need builders who think in systems, not just snippets.
+Welcome to the most fire autonomous agent ecosystem on the planet. SHS Code is a no-GUI, pure-power AI agent framework — and we need builders who think in systems, not just snippets.
 
 This guide will walk you through everything you need to start contributing effectively.
 
 ---
 
-## The ManusClaw Contribution Philosophy
+## The SHS Code Contribution Philosophy
 
-ManusClaw is not a chatbot wrapper. It is a **production-grade autonomous agent** with a PAORR reasoning loop, 14+ tools, 10+ LLM providers, 12+ messaging channels, voice I/O, SSH gateway, and three sandbox backends. Every contribution should reflect this ethos: **build for production, test for chaos, ship with confidence.**
+SHS Code is not a chatbot wrapper. It is a **production-grade autonomous agent** with a PAORR reasoning loop, 14+ tools, 10+ LLM providers, 12+ messaging channels, voice I/O, SSH gateway, and three sandbox backends. Every contribution should reflect this ethos: **build for production, test for chaos, ship with confidence.**
 
 We value:
 - **Brutal efficiency** — clean code that does more with less
@@ -69,16 +69,16 @@ git checkout -b docs/your-doc-update
 
 ### 2. Write Your Code
 
-Follow the ManusClaw codebase conventions:
+Follow the SHS Code codebase conventions:
 - **Type hints** on all public functions and methods
 - **Docstrings** on all modules, classes, and public functions
 - **Pydantic models** for configuration and data structures
-- **Async-first** — ManusClaw is heavily async; follow the existing patterns
-- **Error handling** — use ManusClaw's custom exceptions from `app/exceptions.py`
+- **Async-first** — SHS Code is heavily async; follow the existing patterns
+- **Error handling** — use SHS Code's custom exceptions from `app/exceptions.py`
 
 ### 3. Test on Linux / Termux
 
-ManusClaw runs on both full Linux environments and Android Termux. Test on both if possible:
+SHS Code runs on both full Linux environments and Android Termux. Test on both if possible:
 
 ```bash
 # Full Linux test
@@ -135,7 +135,7 @@ git push origin feat/your-feature-name
 
 ## Architecture Overview for Contributors
 
-Understanding the ManusClaw architecture is essential for making effective contributions:
+Understanding the SHS Code architecture is essential for making effective contributions:
 
 ```
 app/
@@ -194,4 +194,4 @@ See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for our community standards.
 
 ---
 
-*ManusClaw is built by The-JDdev (SHS Lab). Contributing to ManusClaw means you're building the future of autonomous AI agents.*
+*SHS Code is built by The-JDdev (SHS Lab). Contributing to SHS Code means you're building the future of autonomous AI agents.*

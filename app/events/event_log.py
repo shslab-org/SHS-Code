@@ -1,5 +1,5 @@
 """
-ManusClaw Event System — File-Backed Event Log
+SHS Code Event System — File-Backed Event Log
 =================================================
 
 An append-only, file-backed event log with O(1) length queries, lazy
@@ -53,7 +53,7 @@ from app.events.serialization import (
 )
 from app.events.types import KIND_TO_EVENT
 
-logger = logging.getLogger("manusclaw.events.event_log")
+logger = logging.getLogger("shscode.events.event_log")
 
 
 # ──────────────────────────────────────────────────────────────────────────────

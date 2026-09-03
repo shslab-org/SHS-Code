@@ -1,5 +1,5 @@
 """
-ManusClaw Conversation System — RemoteConversation
+SHS Code Conversation System — RemoteConversation
 =====================================================
 
 A conversation that connects to a remote agent server via WebSocket.

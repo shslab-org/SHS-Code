@@ -3,7 +3,7 @@
 SHS Code — main entry point.
 
 SHS Code is part of the SHS Lab ecosystem (Sazzad Hussain Shobuj).
-Lineage: evolved from ManusClaw, its predecessor and project foundation.
+Lineage: evolved from SHS Code, its predecessor and project foundation.
 
 Usage:
     python main.py                # interactive SHS Code shell (the real REPL)

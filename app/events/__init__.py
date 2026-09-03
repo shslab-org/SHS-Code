@@ -1,8 +1,8 @@
 """
-ManusClaw Event System
+SHS Code Event System
 =======================
 
-A comprehensive, OpenHands-inspired event system adapted for manusclaw's
+A comprehensive, OpenHands-inspired event system adapted for SHS Code's
 architecture.  Provides type-safe, immutable events with discriminated-union
 dispatch, file-backed persistence, and LLM message conversion.
 

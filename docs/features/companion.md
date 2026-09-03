@@ -3,7 +3,7 @@
 **Status:** 🏗 Scaffolded
 
 ## Description
-System tray companion apps for macOS and Windows that connect to the ManusClaw server.
+System tray companion apps for macOS and Windows that connect to the SHS Code server.
 
 ## Components
 
@@ -18,7 +18,7 @@ WebSocket client for mobile Live Canvas viewing.
 
 ## Install
 ```bash
-pip install manusclaw[companion]
+pip install shscode[companion]
 ```
 
 ## Current State

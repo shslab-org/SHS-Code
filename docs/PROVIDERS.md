@@ -1,6 +1,6 @@
 # Provider Templates
 
-This directory contains configuration templates for various AI providers supported by **ManusClaw**.
+This directory contains configuration templates for various AI providers supported by **SHS Code**.
 
 ## How to Use Provider Templates
 
@@ -17,9 +17,9 @@ cp providers/ollama.toml config.toml
 Move the template to your profiles directory and switch via an environment variable:
 
 ```bash
-mkdir -p ~/.manusclaw/profiles/ollama
-cp providers/ollama.toml ~/.manusclaw/profiles/ollama/config.toml
-MANUSCLAW_PROFILE=ollama manusclaw "Your task"
+mkdir -p ~/.shscode/profiles/ollama
+cp providers/ollama.toml ~/.shscode/profiles/ollama/config.toml
+SHSCODE_PROFILE=ollama shscode "Your task"
 ```
 
 ---
@@ -80,8 +80,8 @@ max_tokens = 8192
 temperature = 0.0
 
 [llm.extra_headers]
-"HTTP-Referer" = "https://github.com/ManusAgents/ManusClaw"
-"X-Title" = "ManusClaw"
+"HTTP-Referer" = "https://github.com/shslab-org/SHS-Code"
+"X-Title" = "SHS Code"
 ```
 
 - **Provider value:** `"universal"` — uses `UniversalClient` (OpenAI-compatible SDK call).

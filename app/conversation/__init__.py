@@ -1,9 +1,9 @@
 """
-ManusClaw Conversation System
+SHS Code Conversation System
 ================================
 
 A comprehensive, OpenHands-inspired conversation system adapted for
-manusclaw's agent architecture.  Provides local and remote conversation
+SHS Code's agent architecture.  Provides local and remote conversation
 implementations with full lifecycle management, cancellation, forking,
 stuck detection, and security integration.
 

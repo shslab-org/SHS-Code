@@ -12,7 +12,7 @@ reproduces the ORIGINAL failure mode and asserts the fixed behavior:
   Bug 4 — _get_adaptive_timeout clamping explicit user timeouts (90 -> 300).
   Bug 5 — one-shot exit: unclosed aiohttp session, "Event loop is closed",
           leaked TaskQueue connections.
-  Bug 6 — log prefix mangling ([manus] rendered as anus] in fragile viewers).
+# Bug 6 — log prefix mang (legacy bracketed agent prefix truncated to 'anus]')
   Plus: post-terminate escape-prompt pollution, resume retry-inflation.
 """
 import asyncio
@@ -344,8 +344,8 @@ class TestSessionRegistrySync:
     forever after a real run completed."""
 
     def _agent(self, sid, db):
-        from app.agent.manus import Manus
-        agent = Manus(session_id=sid)
+        from app.agent.shscode import SHSCode
+        agent = SHSCode(session_id=sid)
         # Point the agent's session store at the TEST database (same store
         # the caller reads — mirrors the server where both share one file).
         agent.db = db
@@ -358,7 +358,7 @@ class TestSessionRegistrySync:
         from app.db.session import SessionDB
 
         db = SessionDB(db_path=tmp_path / "sess.db")
-        sid = await db.create_session("test goal", agent_name="manus")
+        sid = await db.create_session("test goal", agent_name="shscode")
         agent = self._agent(sid, db)
         agent._max_steps = 3
         await agent.run("Say hello")
@@ -385,7 +385,7 @@ class TestSessionRegistrySync:
         from app.db.session import SessionDB
 
         db = SessionDB(db_path=tmp_path / "sess.db")
-        sid = await db.create_session("server-injected", agent_name="manus")
+        sid = await db.create_session("server-injected", agent_name="shscode")
         agent = self._agent(sid, db)
         agent._max_steps = 3
         await agent.run("Say hello")
@@ -399,7 +399,7 @@ class TestSessionRegistrySync:
     async def test_live_progress_updates(self, tmp_path):
         from app.db.session import SessionDB
         db = SessionDB(db_path=tmp_path / "sess.db")
-        sid = await db.create_session("progress", agent_name="manus")
+        sid = await db.create_session("progress", agent_name="shscode")
         await db.update_progress(sid, 7)
         row = await db.get_session(sid)
         assert row["step_count"] == 7
@@ -412,7 +412,7 @@ class TestSessionRegistrySync:
         from app.db.session import SessionDB
 
         db = SessionDB(db_path=tmp_path / "sess.db")
-        sid = await db.create_session("will fail", agent_name="manus")
+        sid = await db.create_session("will fail", agent_name="shscode")
         agent = self._agent(sid, db)
         agent._max_steps = 2
 
@@ -434,7 +434,7 @@ class TestSessionRegistrySync:
         from app.db.session import SessionDB
 
         db = SessionDB(db_path=tmp_path / "sess.db")
-        sid = await db.create_session("cancelled", agent_name="manus")
+        sid = await db.create_session("cancelled", agent_name="shscode")
         agent = self._agent(sid, db)
         agent._max_steps = 30
 
@@ -460,8 +460,8 @@ class TestSessionRegistrySync:
         from app.db.session import SessionDB
         db = SessionDB(db_path=tmp_path / "sess.db")
         old_boot = time.time() - 100
-        stale = await db.create_session("stale", agent_name="manus")
-        fresh = await db.create_session("fresh live", agent_name="manus")
+        stale = await db.create_session("stale", agent_name="shscode")
+        fresh = await db.create_session("fresh live", agent_name="shscode")
 
         # Make 'stale' look pre-boot: backdate its start
         def _backdate():
@@ -484,7 +484,7 @@ class TestSessionRegistrySync:
     async def test_close_session_records_error_column(self, tmp_path):
         from app.db.session import SessionDB
         db = SessionDB(db_path=tmp_path / "sess.db")
-        sid = await db.create_session("err col", agent_name="manus")
+        sid = await db.create_session("err col", agent_name="shscode")
         await db.close_session(sid, state="error", step_count=5, error="boom")
         row = await db.get_session(sid)
         assert row["error"] == "boom"
@@ -522,9 +522,9 @@ class TestOneShotResourceLifecycle:
     async def test_agent_cleanup_closes_llm_backend(self):
         """agent.cleanup() must close the LLM backend's aiohttp session
         (previously leaked -> 'Unclosed client session')."""
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from app.llm.llm import UniversalClient
-        agent = Manus()
+        agent = SHSCode()
         backend = agent.llm._backend
         if isinstance(backend, UniversalClient):
             # Simulate an open session
@@ -564,11 +564,11 @@ class TestOneShotResourceLifecycle:
         """Full one-shot simulation: run agent + stop task queue -> no
         'Unclosed client session' / 'Event loop is closed' warnings."""
         import warnings as _w
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from app.task_queue import TaskQueue
         with _w.catch_warnings(record=True) as caught:
             _w.simplefilter("always")
-            agent = Manus()
+            agent = SHSCode()
             agent._max_steps = 3
             await agent.run("Say hello")
             tq = TaskQueue(db_path=str(tmp_path / "tq.db"), max_workers=1)
@@ -579,7 +579,7 @@ class TestOneShotResourceLifecycle:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Bug 6 — log prefix formatting
+# Bug 6 — log prefix mang (legacy bracketed agent prefix truncated to 'anus]')
 # ═════════════════════════════════════════════════════════════════════════════
 
 class TestLogPrefixFormatting:
@@ -587,9 +587,9 @@ class TestLogPrefixFormatting:
     def _format(self, message: str) -> str:
         import app.logger as L
         L._should_use_color = lambda: False
-        rec = logging.LogRecord("manusclaw", logging.INFO, "p", 1,
+        rec = logging.LogRecord("shscode", logging.INFO, "p", 1,
                                 message, None, None)
-        rec.agent = "manus"; rec.step = 1; rec.trace_id = "t"; rec.task_id = "x"
+        rec.agent = "shscode"; rec.step = 1; rec.trace_id = "t"; rec.task_id = "x"
         return L.ColorfulFormatter().format(rec)
 
     def test_bracketed_agent_name_survives_formatting(self):
@@ -612,9 +612,9 @@ class TestLogPrefixFormatting:
         """Color path must emit COMPLETE escape sequences (ESC [ code m)."""
         import app.logger as L
         L._should_use_color = lambda: True
-        rec = logging.LogRecord("manusclaw", logging.INFO, "p", 1,
+        rec = logging.LogRecord("shscode", logging.INFO, "p", 1,
                                 "hello", None, None)
-        rec.agent = "manus"; rec.step = 2; rec.trace_id = "abc"; rec.task_id = "x"
+        rec.agent = "shscode"; rec.step = 2; rec.trace_id = "abc"; rec.task_id = "x"
         out = L.ColorfulFormatter().format(rec)
         # every ESC must be followed by '[' (well-formed CSI)
         for i, ch in enumerate(out):
@@ -633,9 +633,9 @@ class TestPostTerminateBehavior:
     async def test_no_escape_prompt_after_terminate(self):
         """After terminate() the loop must not inject nudge/escape messages
         (they polluted the final memory snapshot and confused resume)."""
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from app.schema import Message
-        agent = Manus()
+        agent = SHSCode()
         agent._max_steps = 3
         await agent.run("Say hello")
         # After a normal MockLLM run the agent has terminated; assert no
@@ -654,7 +654,7 @@ class TestServerSessionRegistry:
     def client(self, tmp_path, monkeypatch):
         # Route BOTH the server's SessionDB and agent-created SessionDBs at
         # the same temp file (mirrors production: one shared file).
-        monkeypatch.setenv("MANUSCLAW_WORKSPACE", str(tmp_path))
+        monkeypatch.setenv("SHSCODE_WORKSPACE", str(tmp_path))
         import app.db.session as session_mod
         from app.server import main as server_main
         test_db = session_mod.SessionDB(db_path=tmp_path / "server.db")
@@ -734,9 +734,9 @@ class TestFinalAnswerSemantics:
 
     @pytest.mark.asyncio
     async def test_text_only_response_finishes_and_returns_answer(self):
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from tests.test_integration_e2e import ScriptedLLM
-        agent = Manus()
+        agent = SHSCode()
         agent.llm = ScriptedLLM([("text", "NIM_LIVE_OK")])
         agent._max_steps = 10
         result = await agent.run("Reply with exactly this token: NIM_LIVE_OK")
@@ -748,9 +748,9 @@ class TestFinalAnswerSemantics:
     async def test_empty_text_response_does_not_finish(self):
         """Guard: empty content with no tool calls must NOT finish the run
         (that's a degenerate response — loop keeps nudging)."""
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from tests.test_integration_e2e import ScriptedLLM
-        agent = Manus()
+        agent = SHSCode()
         agent.llm = ScriptedLLM([("text", "   ")])
         agent._max_steps = 2
         await agent.run("do something")
@@ -761,9 +761,9 @@ class TestFinalAnswerSemantics:
     @pytest.mark.asyncio
     async def test_tool_call_then_text_answer(self):
         """Normal coding flow: tool call → observation → text summary = final."""
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from tests.test_integration_e2e import ScriptedLLM
-        agent = Manus()
+        agent = SHSCode()
         agent.llm = ScriptedLLM([
             ("tool", ("bash", {"command": "echo stable3"})),
             ("text", "The command printed stable3. Done."),
@@ -775,7 +775,7 @@ class TestFinalAnswerSemantics:
 
 
 class TestConfigLayerDeepMerge:
-    """stabil3 finding: a partial ~/.manusclaw/config.yaml (e.g. only
+    """stabil3 finding: a partial ~/.shscode/config.yaml (e.g. only
     mcp_servers: []) silently SHADOWED the entire project config.toml —
     LLM provider fell back to mock. Layers must deep-merge instead."""
 
@@ -802,7 +802,7 @@ class TestConfigLayerDeepMerge:
         home.mkdir()
         (home / "config.yaml").write_text("mcp_servers: []\n")
         monkeypatch.setattr(C, "_HOME", home)
-        monkeypatch.setenv("MANUSCLAW_PROFILE", "")
+        monkeypatch.setenv("SHSCODE_PROFILE", "")
         monkeypatch.delenv("LLM_MODEL_OVERRIDE", raising=False)
         cfg = C.Config.__new__(C.Config)   # bare instance, no side effects
         got = cfg._load_config_files(str(proj))
@@ -880,7 +880,7 @@ class TestAnyDirectoryUniversalDetection:
         import app.config as C
         for var in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "MISTRAL_API_KEY",
                     "GOOGLE_API_KEY", "LLM_API_KEY", "LLM_MODEL_OVERRIDE",
-                    "MANUSCLAW_PROFILE"):
+                    "SHSCODE_PROFILE"):
             monkeypatch.delenv(var, raising=False)
         monkeypatch.setenv("LLM_BASE_URL", "https://integrate.api.nvidia.com/v1")
         monkeypatch.setenv("NVIDIA_API_KEY", "nvapi-test")
@@ -906,9 +906,9 @@ class TestNarrationGuard:
 
     @pytest.mark.asyncio
     async def test_narration_does_not_end_run(self):
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from tests.test_integration_e2e import ScriptedLLM
-        agent = Manus()
+        agent = SHSCode()
         agent.llm = ScriptedLLM([
             ("text", "I'll now create the file for you."),
             ("tool", ("bash", {"command": "echo narr_fixed"})),
@@ -922,9 +922,9 @@ class TestNarrationGuard:
 
     @pytest.mark.asyncio
     async def test_direct_answer_still_final_no_nudge(self):
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from tests.test_integration_e2e import ScriptedLLM
-        agent = Manus()
+        agent = SHSCode()
         agent.llm = ScriptedLLM([("text", "42")])
         agent._max_steps = 6
         result = await agent.run("what is 6*7?")
@@ -934,9 +934,9 @@ class TestNarrationGuard:
 
     @pytest.mark.asyncio
     async def test_narration_budget_exhausted_text_becomes_final(self):
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from tests.test_integration_e2e import ScriptedLLM
-        agent = Manus()
+        agent = SHSCode()
         agent.llm = ScriptedLLM([
             ("text", "I'll do it now.")     # nudge 1
         ])
@@ -980,10 +980,10 @@ class TestGoalCompletionGate:
 
     @pytest.mark.asyncio
     async def test_final_answer_with_pending_plan_nudges(self, tmp_path):
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from tests.test_integration_e2e import ScriptedLLM
         from app.state import Journal
-        agent = Manus()
+        agent = SHSCode()
         # drive the loop manually: seed a task + plan with a pending node
         await agent.run("noop bootstrap")   # registers journal task & plan
         tid = agent._journal_task_id
@@ -1010,9 +1010,9 @@ class TestGoalCompletionGate:
     @pytest.mark.asyncio
     async def test_no_plan_answer_stands(self):
         """No journal/plan => cannot judge => direct answer ends the run."""
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from tests.test_integration_e2e import ScriptedLLM
-        agent = Manus()
+        agent = SHSCode()
         agent.journal = None
         agent.llm = ScriptedLLM([("text", "NIM_LIVE_OK")])
         agent._max_steps = 5
@@ -1023,10 +1023,10 @@ class TestGoalCompletionGate:
 
     @pytest.mark.asyncio
     async def test_gate_budget_exhausted(self, tmp_path):
-        from app.agent.manus import Manus
+        from app.agent.shscode import SHSCode
         from tests.test_integration_e2e import ScriptedLLM
         from app.state import Journal
-        agent = Manus()
+        agent = SHSCode()
         await agent.run("noop bootstrap")
         tid = agent._journal_task_id
         from app.task_dag import TaskGraph

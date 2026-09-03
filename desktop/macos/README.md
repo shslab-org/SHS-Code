@@ -1,6 +1,6 @@
-# ManusClaw macOS Menu Bar App
+# SHS Code macOS Menu Bar App
 
-macOS menu bar companion for ManusClaw, built with `rumps`.
+macOS menu bar companion for SHS Code, built with `rumps`.
 
 ## Prerequisites
 
@@ -23,20 +23,20 @@ python menubar.py
 | Menu Item         | Description                                      |
 |-------------------|--------------------------------------------------|
 | **Status**        | Shows current connection status (Connected/Disconnected) |
-| **Chat**          | Opens the ManusClaw web chat interface           |
+| **Chat**          | Opens the SHS Code web chat interface           |
 | **Canvas**        | Opens the live canvas viewer                     |
 | **Voice**         | Toggles voice input on/off (placeholder)          |
-| **Preferences**   | Opens the ManusClaw config directory             |
+| **Preferences**   | Opens the SHS Code config directory             |
 | **Quit**          | Exits the menu bar app                           |
 
 ## Configuration
 
 | Variable               | Default        | Description                          |
 |------------------------|----------------|--------------------------------------|
-| `MANUSCLAW_SERVER_URL` | `http://localhost:8765` | HTTP URL of ManusClaw server   |
-| `MANUSCLAW_WS_URL`    | `ws://localhost:8765` | WebSocket URL of ManusClaw server |
-| `MANUSCLAW_API_KEY`    |                | API key for authentication            |
-| `MANUSCLAW_DEVICE_ID`  | `auto`         | Unique device identifier              |
+| `SHSCODE_SERVER_URL` | `http://localhost:8765` | HTTP URL of SHS Code server   |
+| `SHSCODE_WS_URL`    | `ws://localhost:8765` | WebSocket URL of SHS Code server |
+| `SHSCODE_API_KEY`    |                | API key for authentication            |
+| `SHSCODE_DEVICE_ID`  | `auto`         | Unique device identifier              |
 
 ## Bundling as a macOS App
 
@@ -58,7 +58,7 @@ OPTIONS = {
     "iconfile": "icon.icns",
     "plist": {
         "CFBundleShortVersionString": "1.0",
-        "CFBundleName": "ManusClaw",
+        "CFBundleName": "SHS Code",
     },
 }
 

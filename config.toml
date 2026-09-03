@@ -60,8 +60,8 @@ max_steps     = 30
 enabled            = false
 port               = 2222
 host               = "0.0.0.0"
-# host_key_path      = "~/.manusclaw/ssh/host_key"
-# authorized_keys_path = "~/.manusclaw/ssh/authorized_keys"
+# host_key_path      = "~/.shscode/ssh/host_key"
+# authorized_keys_path = "~/.shscode/ssh/authorized_keys"
 
 # ── Security ──────────────────────────────────────────────────────────────────
 
@@ -70,14 +70,14 @@ enabled = true
 # analyzers: "pattern", "rails", "llm", "ensemble"
 analyzers = ["pattern", "rails"]
 confirmation_threshold = "medium"   # "never", "low", "medium", "high"
-# cipher_key = ""                   # Fernet key; prefer env var MANUSCLAW_CIPHER_KEY
+# cipher_key = ""                   # Fernet key; prefer env var SHSCODE_CIPHER_KEY
 
 # ── Hooks ─────────────────────────────────────────────────────────────────────
 
 [hooks]
 enabled    = true
 auto_load  = true
-# hook_dirs = ["~/.manusclaw/hooks"]
+# hook_dirs = ["~/.shscode/hooks"]
 timeout_s  = 30           # per-hook timeout in seconds
 
 # ── Context (Condenser) ──────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ stuck_threshold    = 3                # repeated-action count before stuck flag
 [observability]
 tracing_enabled  = false
 tracing_endpoint = "http://localhost:4317"   # OTLP gRPC endpoint
-tracing_service  = "manusclaw"
+tracing_service  = "shscode"
 metrics_enabled  = false
 metrics_port     = 9090
 health_enabled   = true
@@ -110,14 +110,14 @@ health_path      = "/health"
 
 [secrets]
 backend = "file"                     # "file", "env"
-# file_path = "~/.manusclaw/secrets/secrets.json"
+# file_path = "~/.shscode/secrets/secrets.json"
 encryption_enabled = true
 
 # ── File Store ────────────────────────────────────────────────────────────────
 
 [file_store]
 backend = "local"                    # "local", "s3", "gcs", "memory"
-# base_dir = "~/.manusclaw/files"
+# base_dir = "~/.shscode/files"
 # s3_bucket = ""
 # s3_region = "us-east-1"
 # s3_endpoint = ""                   # for MinIO etc.
@@ -140,7 +140,7 @@ default_provider = "github"
 # ── Integrations ──────────────────────────────────────────────────────────────
 
 [integrations]
-jinja_templates_dir = "~/.manusclaw/templates"
+jinja_templates_dir = "~/.shscode/templates"
 webhooks_enabled    = false
 # webhook_secret     = ""
 

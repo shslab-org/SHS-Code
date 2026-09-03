@@ -1,7 +1,7 @@
-"""ManusClaw SSH Module.
+"""SHS Code SSH Module.
 
 Provides SSH remote gateway control with a restricted shell interface.
-Allows authenticated SSH clients to run a limited set of ManusClaw management
+Allows authenticated SSH clients to run a limited set of SHS Code management
 commands (status, restart, logs, agent, channels list, cron list).
 
 Classes:

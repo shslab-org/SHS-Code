@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 """
-ManusClaw Configuration System
+SHS Code Configuration System
 ================================
 Config loads in priority order (highest first):
   1. Environment variables
-  2. ~/.manusclaw/profiles/<MANUSCLAW_PROFILE>/.env
-  3. ~/.manusclaw/profiles/<MANUSCLAW_PROFILE>/config.yaml
-  4. ~/.manusclaw/.env
-  5. ~/.manusclaw/config.yaml
+  2. ~/.shscode/profiles/<SHSCODE_PROFILE>/.env
+  3. ~/.shscode/profiles/<SHSCODE_PROFILE>/config.yaml
+  4. ~/.shscode/.env
+  5. ~/.shscode/config.yaml
   6. ./config.toml  (legacy)
   7. Built-in defaults (MockLLM — safe for immediate use)
 """
@@ -35,8 +35,9 @@ except ImportError:
 
 from pydantic import BaseModel, Field, model_validator
 from app.exceptions import ConfigError
+from app import env
 
-_HOME = Path(os.getenv("MANUSCLAW_HOME", str(Path.home() / ".manusclaw")))
+_HOME = env.home_dir()
 
 
 class AppEnv(str, Enum):
@@ -163,7 +164,7 @@ class SecurityConfig(BaseModel):
 class HooksConfig(BaseModel):
     enabled:   bool       = True
     auto_load: bool       = True
-    hook_dirs: list[str]  = Field(default_factory=lambda: ["~/.manusclaw/hooks"])
+    hook_dirs: list[str]  = Field(default_factory=lambda: ["~/.shscode/hooks"])
     timeout_s: int        = 30
 
 
@@ -183,7 +184,7 @@ class ConversationConfig(BaseModel):
 class ObservabilityConfig(BaseModel):
     tracing_enabled:  bool  = False
     tracing_endpoint: str   = "http://localhost:4317"
-    tracing_service:  str   = "manusclaw"
+    tracing_service:  str   = "shscode"
     metrics_enabled:  bool  = False
     metrics_port:     int   = 9090
     health_enabled:   bool  = True
@@ -219,7 +220,7 @@ class GitProvidersConfig(BaseModel):
 
 
 class IntegrationsConfig(BaseModel):
-    jinja_templates_dir: str           = "~/.manusclaw/templates"
+    jinja_templates_dir: str           = "~/.shscode/templates"
     webhooks_enabled:    bool          = False
     webhook_secret:      Optional[str] = None
 
@@ -315,9 +316,9 @@ class Config:
 
     def active_config_path(self) -> Path:
         """Where /model, /provider, /mcp add etc. persist changes.
-        Profile dir if MANUSCLAW_PROFILE set, else ~/.manusclaw/config.yaml
+        Profile dir if SHSCODE_PROFILE set, else ~/.shscode/config.yaml
         (which takes precedence over ./config.toml on next load)."""
-        profile = os.getenv("MANUSCLAW_PROFILE", "").strip()
+        profile = env.getenv("PROFILE", "").strip()
         if profile:
             pdir = _HOME / "profiles" / profile
             pdir.mkdir(parents=True, exist_ok=True)
@@ -437,12 +438,12 @@ class Config:
 
         cfg.redact_secrets = (
             cfg.logging.redact_secrets
-            or os.getenv("MANUSCLAW_REDACT", "").lower() in ("1", "true", "yes")
+            or env.getenv("REDACT", "").lower() in ("1", "true", "yes")
         )
 
         # ── Overlay env vars for new modules ──────────────────────────────
         if not cfg.security.cipher_key:
-            cfg.security.cipher_key = os.getenv("MANUSCLAW_CIPHER_KEY")
+            cfg.security.cipher_key = env.getenv("CIPHER_KEY")
         if not cfg.git_providers.github_token:
             cfg.git_providers.github_token = os.getenv("GITHUB_TOKEN")
         if not cfg.git_providers.gitlab_token:
@@ -461,7 +462,7 @@ class Config:
         return cfg
 
     def _load_dotenv_chain(self) -> None:
-        profile = os.getenv("MANUSCLAW_PROFILE", "")
+        profile = env.getenv("PROFILE", "")
         candidates: list[Path] = []
         if profile:
             candidates.append(_HOME / "profiles" / profile / ".env")
@@ -479,7 +480,7 @@ class Config:
         """Load and MERGE all config layers.
 
         SHS Code FIX (config shadowing): the old loader returned the FIRST
-        existing file. A partial ``~/.manusclaw/config.yaml`` (e.g. written
+        existing file. A partial ``~/.shscode/config.yaml`` (e.g. written
         by the MCP manager containing only ``mcp_servers: []``) silently
         shadowed the ENTIRE project ``config.toml`` — the LLM provider
         quietly fell back to mock. Layers are now deep-merged, lowest
@@ -488,7 +489,7 @@ class Config:
             project config.toml  <  home config.toml  <  home config.yaml
                                                                     < profile
         """
-        profile = os.getenv("MANUSCLAW_PROFILE", "")
+        profile = env.getenv("PROFILE", "")
         candidates: list[Path] = []
         candidates.append(Path(legacy_path))          # lowest priority
         candidates.append(_HOME / "config.toml")

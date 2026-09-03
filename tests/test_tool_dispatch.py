@@ -61,7 +61,7 @@ async def test_node_execute_fallback():
 @pytest.mark.asyncio
 async def test_skill_manager_create_list_delete(tmp_path):
     import os
-    os.environ["MANUSCLAW_SKILLS_DIR"] = str(tmp_path / "skills")
+    os.environ["SHSCODE_SKILLS_DIR"] = str(tmp_path / "skills")
     from app.skills import skill_engine as se
     se._engine = None  # reset singleton
     from app.tool.skill_manager import SkillManagerTool

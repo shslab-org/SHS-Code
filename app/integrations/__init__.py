@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 """
-ManusClaw Integrations Module
+SHS Code Integrations Module
 ==============================
-Enterprise-grade integrations for the ManusClaw platform.
+Enterprise-grade integrations for the SHS Code platform.
 
 Sub-modules:
   - **templates**: Jinja2 prompt template system for the resolver.

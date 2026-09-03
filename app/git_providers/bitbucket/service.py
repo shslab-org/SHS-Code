@@ -621,7 +621,7 @@ class BitbucketService(GitProviderService):
             self._WEBHOOK_EVENT_MAP.get(e, "repo:push") for e in config.events
         ] or ["repo:push"]
         payload = {
-            "description": "ManusClaw webhook",
+            "description": "SHS Code webhook",
             "url": config.url,
             "active": config.active,
             "events": events,

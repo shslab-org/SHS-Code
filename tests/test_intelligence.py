@@ -16,7 +16,7 @@ from app.intelligence.project import build_profile, summarize_profile
 
 @pytest.fixture
 def py_project(tmp_path, monkeypatch):
-    monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "home"))
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "demo"\nversion = "0.1.0"\n')
     (tmp_path / "tests").mkdir()
@@ -235,7 +235,7 @@ class TestProjectDetection:
 
 class TestEnvironment:
     def test_detect_environment(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("MANUSCLAW_HOME", str(tmp_path))
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path))
         from app.intelligence.environment import (
             detect_environment, environment_summary, command_available)
         env = detect_environment(force=True)

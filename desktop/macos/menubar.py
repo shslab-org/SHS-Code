@@ -1,6 +1,6 @@
-"""ManusClaw macOS Menu Bar App.
+"""SHS Code macOS Menu Bar App.
 
-Provides a native macOS menu bar application for interacting with the ManusClaw
+Provides a native macOS menu bar application for interacting with the SHS Code
 server. Connects via WebSocket, shows connection status, and offers quick access
 to chat, canvas, and voice features.
 
@@ -19,6 +19,7 @@ import uuid
 import webbrowser
 from pathlib import Path
 from typing import Callable, Optional
+from app import env
 
 try:
     import rumps
@@ -39,13 +40,13 @@ except ImportError:
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
-_SERVER_URL: str = os.getenv("MANUSCLAW_SERVER_URL", "http://localhost:8765")
-_WS_URL: str = os.getenv("MANUSCLAW_WS_URL", "ws://localhost:8765")
-_API_KEY: str = os.getenv("MANUSCLAW_API_KEY", "")
-_DEVICE_ID: str = os.getenv("MANUSCLAW_DEVICE_ID", "") or f"mac-{uuid.uuid4().hex[:8]}"
+_SERVER_URL: str = env.getenv("SERVER_URL", "http://localhost:8765")
+_WS_URL: str = env.getenv("WS_URL", "ws://localhost:8765")
+_API_KEY: str = env.getenv("API_KEY", "")
+_DEVICE_ID: str = env.getenv("DEVICE_ID", "") or f"mac-{uuid.uuid4().hex[:8]}"
 _CHAT_URL: str = f"{_SERVER_URL}/chat"
 _CANVAS_URL: str = f"{_SERVER_URL}/canvas"
-_CONFIG_DIR: Path = Path.home() / ".manusclaw"
+_CONFIG_DIR: Path = Path.home() / ".shscode"
 
 _HEALTHCHECK_INTERVAL: float = 30.0
 _RECONNECT_BASE_DELAY: float = 1.0
@@ -79,7 +80,7 @@ async def _ws_loop(on_message: Callable[[dict], None]) -> None:
 
                 # Notify menu bar of connection
                 try:
-                    _app.title = "✓ ManusClaw"
+                    _app.title = "✓ SHS Code"
                     _app.menu["Status"].title = "● Connected"
                 except Exception:
                     pass
@@ -101,7 +102,7 @@ async def _ws_loop(on_message: Callable[[dict], None]) -> None:
         ):
             _connected = False
             try:
-                _app.title = "✗ ManusClaw"
+                _app.title = "✗ SHS Code"
                 _app.menu["Status"].title = "○ Disconnected"
             except Exception:
                 pass
@@ -120,14 +121,14 @@ def _handle_ws_message(msg: dict, on_message: Callable[[dict], None]) -> None:
     elif msg_type == "agent_done":
         output = msg.get("output", "")[:200]
         try:
-            rumps.notification("ManusClaw", "Agent Complete", output)
+            rumps.notification("SHS Code", "Agent Complete", output)
         except Exception:
             print(f"[MenuBar] Agent done: {output}")
 
     elif msg_type == "agent_error":
         error = msg.get("error", "Unknown error")
         try:
-            rumps.notification("ManusClaw", "Error", error)
+            rumps.notification("SHS Code", "Error", error)
         except Exception:
             print(f"[MenuBar] Error: {error}")
 
@@ -170,7 +171,7 @@ async def _ws_loop_with_ref(on_message: Callable[[dict], None]) -> None:
                 _connected = True
                 delay = _RECONNECT_BASE_DELAY
                 try:
-                    _app.title = "✓ ManusClaw"
+                    _app.title = "✓ SHS Code"
                     _app.menu["Status"].title = "● Connected"
                 except Exception:
                     pass
@@ -188,7 +189,7 @@ async def _ws_loop_with_ref(on_message: Callable[[dict], None]) -> None:
             _connected = False
             _ws_ref = None
             try:
-                _app.title = "✗ ManusClaw"
+                _app.title = "✗ SHS Code"
                 _app.menu["Status"].title = "○ Disconnected"
             except Exception:
                 pass
@@ -234,7 +235,7 @@ def _on_voice_toggle(sender: rumps.MenuItem) -> None:
     sender.state = not sender.state
     state_str = "ON" if sender.state else "OFF"
     try:
-        rumps.notification("ManusClaw", "Voice", f"Voice input {state_str}")
+        rumps.notification("SHS Code", "Voice", f"Voice input {state_str}")
     except Exception:
         print(f"[MenuBar] Voice toggled: {state_str}")
 
@@ -257,7 +258,7 @@ def _on_quick_chat(sender: rumps.MenuItem) -> None:
     """Show a text input dialog for quick chat."""
     window = rumps.Window(
         title="Quick Chat",
-        message="Send a message to ManusClaw:",
+        message="Send a message to SHS Code:",
         default_text="",
         ok="Send",
         cancel="Cancel",
@@ -288,8 +289,8 @@ def main() -> None:
     global _app
 
     _app = rumps.App(
-        "ManusClaw",
-        title="○ ManusClaw",
+        "SHS Code",
+        title="○ SHS Code",
         quit_button=None,
     )
 

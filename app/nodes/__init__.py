@@ -1,4 +1,4 @@
-"""Live Canvas Nodes — Mobile/desktop node management for ManusClaw.
+"""Live Canvas Nodes — Mobile/desktop node management for SHS Code.
 
 Manages connected devices (iOS, Android, desktop) that receive Canvas
 updates and send user interaction events via WebSocket.

@@ -45,7 +45,7 @@ from app.security.base import (
 # ──────────────────────────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = """\
-You are a security risk analyzer for an AI agent framework called manusclaw.
+You are a security risk analyzer for an AI agent framework called SHS Code.
 Your job is to assess the risk level of an action that the agent is about
 to execute.
 
@@ -82,7 +82,7 @@ LLMCaller = Callable[[str, str], str]
 
 def _default_llm_caller(system_prompt: str, user_prompt: str) -> str:
     """
-    Default LLM caller that attempts to use the manusclaw LLM layer.
+    Default LLM caller that attempts to use the SHS Code LLM layer.
 
     Falls back to returning a LOW-risk JSON if the LLM layer is not
     configured or available.  This ensures the analyzer never crashes

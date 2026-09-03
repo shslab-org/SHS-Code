@@ -1,22 +1,22 @@
-"""ManusClaw SSH Server.
+"""SHS Code SSH Server.
 
 Provides an SSH server for remote gateway control using a restricted shell.
-SSH clients authenticate via public keys from ``~/.manusclaw/ssh/authorized_keys``
-and can run a limited set of ManusClaw management commands.
+SSH clients authenticate via public keys from ``~/.shscode/ssh/authorized_keys``
+and can run a limited set of SHS Code management commands.
 
 Configuration (config.toml or env vars):
 
     [ssh]
     enabled = true
     port = 2222
-    host_key_path = "~/.manusclaw/ssh/host_key"
-    authorized_keys_path = "~/.manusclaw/ssh/authorized_keys"
+    host_key_path = "~/.shscode/ssh/host_key"
+    authorized_keys_path = "~/.shscode/ssh/authorized_keys"
 
 Environment Variables:
-    MANUSCLAW_SSH_ENABLED    — Enable SSH server (default: ``false``)
-    MANUSCLAW_SSH_PORT       — SSH port (default: ``2222``)
-    MANUSCLAW_SSH_HOST_KEY   — Path to host key file
-    MANUSCLAW_SSH_AUTH_KEYS  — Path to authorized_keys file
+    SHSCODE_SSH_ENABLED    — Enable SSH server (default: ``false``)
+    SHSCODE_SSH_PORT       — SSH port (default: ``2222``)
+    SHSCODE_SSH_HOST_KEY   — Path to host key file
+    SHSCODE_SSH_AUTH_KEYS  — Path to authorized_keys file
 
 Requirements:
     pip install asyncssh
@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.logger import logger
+from app import env
 
 # ─── Optional Import ──────────────────────────────────────────────────────────
 
@@ -46,16 +47,16 @@ except ImportError:
 
 # ─── Configuration ──────────────────────────────────────────────────────────
 
-_MANUSCLAW_HOME = Path(os.getenv("MANUSCLAW_HOME", str(Path.home() / ".manusclaw")))
-_SSH_DIR = _MANUSCLAW_HOME / "ssh"
+_SHSCODE_HOME = env.home_dir()
+_SSH_DIR = _SHSCODE_HOME / "ssh"
 
-_ENABLED: bool = os.getenv("MANUSCLAW_SSH_ENABLED", "false").lower() in ("1", "true", "yes")
-_PORT: int = int(os.getenv("MANUSCLAW_SSH_PORT", "2222"))
-_HOST_KEY_PATH: str = os.getenv("MANUSCLAW_SSH_HOST_KEY", str(_SSH_DIR / "host_key"))
-_AUTH_KEYS_PATH: str = os.getenv("MANUSCLAW_SSH_AUTH_KEYS", str(_SSH_DIR / "authorized_keys"))
+_ENABLED: bool = env.getenv("SSH_ENABLED", "false").lower() in ("1", "true", "yes")
+_PORT: int = int(env.getenv("SSH_PORT", "2222"))
+_HOST_KEY_PATH: str = env.getenv("SSH_HOST_KEY", str(_SSH_DIR / "host_key"))
+_AUTH_KEYS_PATH: str = env.getenv("SSH_AUTH_KEYS", str(_SSH_DIR / "authorized_keys"))
 
 # Default bind address
-_HOST: str = os.getenv("MANUSCLAW_SSH_HOST", "0.0.0.0")
+_HOST: str = env.getenv("SSH_HOST", "0.0.0.0")
 
 # ─── SSH Server State ──────────────────────────────────────────────────────
 
@@ -70,8 +71,8 @@ _connections: set = set()
 if _HAS_ASYNCSSH:
     import asyncssh  # type: ignore[no-redef]
 
-    class _ManusClawSSHServer(asyncssh.SSHServer):  # type: ignore[misc]
-        """AsyncSSH server callback for ManusClaw restricted shell.
+    class _SHSCodeSSHServer(asyncssh.SSHServer):  # type: ignore[misc]
+        """AsyncSSH server callback for SHS Code restricted shell.
 
         Handles:
         - Public key authentication from authorized_keys file
@@ -151,7 +152,7 @@ if _HAS_ASYNCSSH:
             return _RestrictedShellSession()
 
     class _RestrictedShellSession(asyncssh.SSHServerSession):  # type: ignore[misc]
-        """SSH session that runs the ManusClaw restricted shell."""
+        """SSH session that runs the SHS Code restricted shell."""
 
         def __init__(self) -> None:
             self._chan: Optional[asyncssh.SSHServerChannel] = None  # type: ignore[assignment]
@@ -237,7 +238,7 @@ if _HAS_ASYNCSSH:
 # ─── Public API ─────────────────────────────────────────────────────────────
 
 class SSHServer:
-    """ManusClaw SSH server controller.
+    """SHS Code SSH server controller.
 
     Manages the lifecycle of the asyncssh SSH server for remote gateway control.
     Uses public key authentication and a restricted shell with whitelisted commands.
@@ -301,7 +302,7 @@ class SSHServer:
 
         try:
             self._server = await _asyncssh_mod.create_server(
-                _ManusClawSSHServer,
+                _SHSCodeSSHServer,
                 self.host,
                 self.port,
                 server_host_keys=[str(self.host_key_path)],
@@ -375,7 +376,7 @@ class SSHServer:
         if not self.authorized_keys_path.exists():
             self.authorized_keys_path.parent.mkdir(parents=True, exist_ok=True)
             self.authorized_keys_path.write_text(
-                "# ManusClaw SSH authorized_keys\n"
+                "# SHS Code SSH authorized_keys\n"
                 "# Add public keys below (one per line):\n"
                 "# ssh-rsa AAAA... user@host\n",
                 encoding="utf-8",

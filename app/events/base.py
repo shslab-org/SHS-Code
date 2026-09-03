@@ -1,9 +1,9 @@
 """
-ManusClaw Event System — Base Classes
+SHS Code Event System — Base Classes
 ======================================
 
-Provides the foundational event abstractions for the manusclaw agent framework,
-inspired by OpenHands's event system and adapted for manusclaw's architecture.
+Provides the foundational event abstractions for the SHS Code agent framework,
+inspired by OpenHands's event system and adapted for SHS Code's architecture.
 
 Key design decisions:
   - Pydantic v2 with ``frozen=True`` for immutable, hashable events.
@@ -44,7 +44,7 @@ SourceType = Literal["agent", "user", "environment", "hook"]
 # ──────────────────────────────────────────────────────────────────────────────
 
 class Event(BaseModel, frozen=True):
-    """Root base class for all manusclaw events.
+    """Root base class for all SHS Code events.
 
     Every event carries:
       - ``id``         : Unique identifier (auto-generated UUID4 if not supplied).

@@ -12,10 +12,11 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Callable, List, Tuple
+from app import env
 
 Check = Tuple[str, bool, str, str]
 
-_HOME = Path(os.getenv("MANUSCLAW_HOME", str(Path.home() / ".manusclaw")))
+_HOME = env.home_dir()
 
 
 def _check_python() -> Check:
@@ -56,7 +57,7 @@ def _check_provider() -> Check:
         model = cfg.llm.model
         if p == "mock":
             return ("provider", False, "provider is 'mock' (no real LLM configured)",
-                    "Set [llm] provider/model/api_key in ~/.manusclaw/config.yaml, "
+                    "Set [llm] provider/model/api_key in ~/.shscode/config.yaml, "
                     "or use /provider <name> / /provider add ...")
         key = bool(cfg.llm.api_key) or p in ("ollama", "gguf")
         if not key:
@@ -65,7 +66,7 @@ def _check_provider() -> Check:
         return ("provider", True, f"provider={p} model={model}", "")
     except Exception as e:
         return ("provider", False, f"config load failed: {e}",
-                "Fix ~/.manusclaw/config.yaml syntax")
+                "Fix ~/.shscode/config.yaml syntax")
 
 
 def _check_registry_files() -> Check:
@@ -96,7 +97,7 @@ def _check_journal() -> Check:
         return ("journal", True, f"journal OK at {j.db_path}", "")
     except Exception as e:
         return ("journal", False, f"journal broken: {e}",
-                "Remove ~/.manusclaw/state/journal.db (history will reset)")
+                "Remove ~/.shscode/state/journal.db (history will reset)")
 
 
 def _check_skills() -> Check:
@@ -106,7 +107,7 @@ def _check_skills() -> Check:
         return ("skills", True, f"{len(skills)} skill(s) loaded", "")
     except Exception as e:
         return ("skills", False, f"skill engine failed: {e}",
-                "Check ~/.manusclaw/skills for broken markdown files")
+                "Check ~/.shscode/skills for broken markdown files")
 
 
 def _check_mcp() -> Check:
@@ -149,7 +150,7 @@ def _check_fs_writable() -> Check:
             probe.unlink()
         except Exception as e:
             return ("filesystem", False, f"{d} not writable: {e}",
-                    "Fix permissions on ~/.manusclaw")
+                    "Fix permissions on ~/.shscode")
     return ("filesystem", True, f"{_HOME} writable", "")
 
 

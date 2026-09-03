@@ -60,7 +60,7 @@ def _worker(code: str, result_queue: multiprocessing.Queue) -> None:
     sys.stdout = buf_out = StringIO()
     sys.stderr = buf_err = StringIO()
     try:
-        exec(compile(code, "<manusclaw>", "exec"), {"__name__": "__main__"})
+        exec(compile(code, "<shscode>", "exec"), {"__name__": "__main__"})
         out = buf_out.getvalue()
         err = buf_err.getvalue()
     except SystemExit as e:

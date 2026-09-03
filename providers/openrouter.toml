@@ -10,5 +10,5 @@ max_tokens = 8192
 temperature = 0.0
 
 [llm.extra_headers]
-"HTTP-Referer" = "https://github.com/The-JDdev/ManusClaw"
-"X-Title" = "ManusClaw"
+"HTTP-Referer" = "https://github.com/The-JDdev/SHS Code"
+"X-Title" = "SHS Code"
