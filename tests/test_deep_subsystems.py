@@ -538,3 +538,45 @@ class TestCLICommandsDeep:
         out = self._slash("/help")
         for cmd in ("/resume", "/model", "/provider", "/checkpoint", "/verify"):
             assert cmd in out, f"/help missing {cmd}"
+
+
+class TestToolCollectionNameCollision:
+    """Regression (found LIVE on NVIDIA NIM): ToolCollection.execute used a
+    dispatcher parameter literally named ``name`` — any tool whose schema
+    exposes its own ``name`` argument (skill_manager does) collided with it
+    and failed with 'got multiple values for argument name' on every call."""
+
+    @pytest.mark.asyncio
+    async def test_tool_with_name_argument_executes(self):
+        from app.tool.base import BaseTool, ToolCollection
+        from app.schema import ToolResult
+
+        class NameArgTool(BaseTool):
+            name = "namearg"
+            description = "Tool whose own schema has a name argument"
+            parameters = {
+                "type": "object",
+                "properties": {"name": {"type": "string"},
+                               "value": {"type": "string"}},
+            }
+
+            async def execute(self, name: str = "", value: str = "") -> ToolResult:
+                return ToolResult(output=f"name={name} value={value}")
+
+        coll = ToolCollection(NameArgTool())
+        res = await coll.execute("namearg", name="my-skill", value="v1")
+        assert res.success
+        assert res.output == "name=my-skill value=v1"
+
+    @pytest.mark.asyncio
+    async def test_skill_manager_real_name_call(self, tmp_path, monkeypatch):
+        """The actual live-failing path: skill_manager create with name=..."""
+        monkeypatch.setenv("SHSCODE_SKILLS_DIR", str(tmp_path))
+        from app.agent.shscode import SHSCode
+        agent = SHSCode()
+        res = await agent.tools.execute(
+            "skill_manager", action="create",
+            name="live-regression", description="d",
+            content="Always verify.")
+        assert res.success, f"skill_manager failed: {res.error}"
+        assert (tmp_path / "live-regression.md").exists()

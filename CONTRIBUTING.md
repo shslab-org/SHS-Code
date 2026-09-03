@@ -34,8 +34,8 @@ We value:
 ```bash
 # 1. Fork the repository on GitHub
 # 2. Clone YOUR fork locally
-git clone https://github.com/YOUR_USERNAME/manusclaw.git
-cd manusclaw
+git clone https://github.com/YOUR_USERNAME/SHS-Code.git
+cd SHS-Code
 
 # 3. Install with all dependencies
 pip install -e ".[all-plus]"
@@ -162,7 +162,7 @@ app/
 | Add a new messaging channel | `app/messaging/base.py`, any existing adapter |
 | Add a new tool | `app/tool/base.py`, any existing tool |
 | Add a new sandbox backend | `app/sandbox/factory.py`, any existing backend |
-| Modify the PAORR loop | `app/agent/react.py`, `app/agent/manus.py` |
+| Modify the PAORR loop | `app/agent/react.py`, `app/agent/shscode.py` |
 | Add a new voice TTS provider | `app/voice/tts.py` |
 | Modify config system | `app/config.py` |
 
@@ -188,7 +188,7 @@ See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for our community standards.
 
 ## Questions?
 
-- Open a [GitHub Discussion](https://github.com/ManusAgents/manusclaw/discussions) for general questions
+- Open a [GitHub Discussion](https://github.com/shslab-org/SHS-Code/discussions) for general questions
 - Email security issues to [thejddev.official@gmail.com](mailto:thejddev.official@gmail.com)
 - Join [Telegram](https://t.me/singularityos) for community chat
 

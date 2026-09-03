@@ -1,4 +1,77 @@
-# SHS Code State — v2.1.0 (Full Stabilization, LIVE-Verified on NVIDIA NIM)
+# SHS Code State — v2.2.0 (Identity-Complete, Product-Documented, Deep-Audited)
+
+## Repository
+- Source: github.com/shslab-org/SHS-Code (working copy: /home/z/my-project/SHS-Code)
+- Language: Python 3.11+ (tested 3.12), package `app/`, 340+ files
+- Product: **SHS Code v2.2.0** (SHS Lab — Sazzad Hussain Shobuj)
+- All prior phases fully preserved — nothing rewritten, only extended,
+  stabilized, and identity-migrated
+
+## Current Phase
+IDENTITY + RATE-LIMIT + MEMORY + DEEP-AUDIT COMPLETE — full ManusClaw→SHS Code
+codebase identity migration; rate-limit architecture made provider-independent
+with per-provider custom limits; all four memory layers verified against
+model switching; every major subsystem deep-tested on real execution paths;
+README rewritten as product documentation. 564 tests passing.
+
+## v2.2.0 Commits (this phase)
+- 90efb56 v2.2.0-identity — complete ManusClaw→SHS Code codebase identity
+  migration (195 files): class Manus→SHSCode, app/agent/manus.py→shscode.py,
+  ManusClawError→SHSCodeError, MANUSCLAW_*→SHSCODE_* env vars via central
+  app/env.py compat layer (legacy env vars + ~/.manusclaw home + manusclaw.db
+  auto-detected — pre-rename state survives), console scripts manusclaw*→
+  shscode*, logger namespaces, Slack commands, webhook headers, user-agent,
+  docs/installers/Docker/index.html. 487 tests green post-migration.
+- 854b32a v2.2.0-ratelimit+memory — resolve_rpm() precedence (per-provider
+  custom > global custom > provider default NIM 40 > no limiter); provider
+  registry entries now apply their own rpm via provider_overlay with global
+  baseline restore; config.toml default rpm 40→0 (auto: provider defaults,
+  no artificial throttling below the limit); 24 rate-limit tests + 16
+  four-layer memory tests (session DB, long-term DB, MEMORY.md/USER.md,
+  journal work notebook) all surviving model switches + compaction.
+- 9177c67 v2.2.0-readme — README rewritten as product documentation from the
+  real implementation (no changelog-style content); 4-layer memory, rate-limit
+  resolution order, checkpoints/recovery, all subsystems documented.
+- ea2c7d2 v2.2.0-deepaudit — 35 deep functional subsystem tests (real
+  execution paths: tools/bash timeout+failure surfacing, multi-file workflow
+  observe-failure→fix→verify, Git real repo ops, REAL MCP stdio JSON-RPC
+  server fixture, skills runtime path, sandbox, webhooks+HMAC, FastAPI
+  in-process, CLI). Fixed 3 real bugs: OpenShellSandbox.stop() hung forever
+  (PID-1-in-namespace ignores SIGTERM → start_new_session + group SIGKILL +
+  bounded reap); /config UnboundLocalError (env variable shadowing); live
+  NIM tool-name collision (see below).
+- (this commit) v2.2.0-live — ToolCollection.execute dispatcher parameter
+  renamed name→tool_name: any tool exposing its own `name` argument
+  (skill_manager) collided with it and failed every call — found LIVE on
+  real NVIDIA NIM. LICENSE/SECURITY/CONTRIBUTING cleaned; LICENSE
+  attribution now SHS Lab.
+
+## LIVE Verification Matrix (v2.2.0)
+- GitHub integration (real token, read-only): 7/7 — auth+repo metadata,
+  issue/PR retrieval, missing-repo 404, bad-token rejection, provider
+  factory, authenticated user (shslab-org)
+- Model switch + interrupt + resume (real NIM): 8/8 — journal registration,
+  partial work before interrupt, checkpoint with memory, live switch
+  gpt-oss-20b→deepseek-v4-flash, DOUBLE switch back, resume completes all
+  5 files, journal updated
+- NIM live model: openai/gpt-oss-20b (762ms, tool calling verified).
+  NOTE: openai/gpt-oss-120b reached NVIDIA end-of-life 2026-09-03 —
+  deepseek-v4-flash works but is ~60s/req; kimi-k3/coder models 404 for
+  this account
+- CLI command sweep: 50/50 commands (post-identity-migration)
+- Full suite: 564 passed, 2 skipped
+
+## Remaining legacy references (INTENTIONAL, documented)
+- app/env.py — the single compat point (MANUSCLAW_* env fallback)
+- app/db/session.py + app/migrations/env.py — legacy manusclaw.db fallback
+- app/agent/router.py — "manus" agent-name legacy alias
+- README upgrade note; test canaries; history ledgers (CHANGELOG.md,
+  IMPLEMENTATION_NOTES.md, this file's historical sections)
+
+---
+
+# HISTORICAL STATE (v2.1.0 and earlier — preserved)
+
 
 ## Repository
 - Source: github.com/shslab-org/ManusClaw (working copy: /home/z/my-project/SHS-Code)

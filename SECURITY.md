@@ -57,7 +57,7 @@ SHS Code includes several built-in security mechanisms:
 - **IdentityGuard**: 30+ anti-jailbreak regex patterns protecting against prompt injection
 - **Permission Gate**: Three-tier tool authorization (Allow / Ask / Deny)
 - **Credential Pool**: API key rotation with 60s cooldown on exhaustion
-- **Secret Redaction**: Optional log redaction of API keys (`MANUSCLAW_REDACT=true`)
+- **Secret Redaction**: Optional log redaction of API keys (`SHSCODE_REDACT=true`)
 - **SSH Restricted Shell**: Command whitelisting with public-key-only authentication
 - **Webhook HMAC Verification**: SHA-256 signature verification on incoming webhooks
 - **Sandbox Isolation**: Docker, SSH, and OpenShell backends for untrusted code execution

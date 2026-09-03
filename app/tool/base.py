@@ -58,10 +58,20 @@ class ToolCollection:
     def get(self, name: str) -> BaseTool | None:
         return self._tools.get(name)
 
-    async def execute(self, name: str, **kwargs: Any) -> ToolResult:
-        tool = self._tools.get(name)
+    async def execute(self, tool_name: str, **kwargs: Any) -> ToolResult:
+        """Execute a tool by name.
+
+        The dispatcher parameter is ``tool_name`` (NOT ``name``): several
+        tools — e.g. skill_manager — expose their own ``name`` argument in
+        the tool schema. Calling this parameter ``name`` made every LLM
+        tool call that passed a ``name`` argument collide with it
+        ("got multiple values for argument 'name'") and fail all 3 retry
+        attempts on a perfectly valid call.
+        """
+        tool = self._tools.get(tool_name)
         if tool is None:
-            return ToolResult(error=f"Tool '{name}' not found. Available: {list(self._tools)}")
+            return ToolResult(
+                error=f"Tool '{tool_name}' not found. Available: {list(self._tools)}")
         return await tool(**kwargs)
 
     def to_openai_schemas(self) -> list[dict[str, Any]]:
