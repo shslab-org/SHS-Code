@@ -77,7 +77,10 @@ class LLMConfig(BaseModel):
     max_tokens:     int            = 4096
     temperature:    float          = 0.0
     max_retries:    int            = 15
-    timeout:        int            = 1800   # 30 minutes — safe for deep-reasoning models (DeepSeek R1, o1, etc.)
+    # None = timeout not explicitly configured -> adaptive default applies
+    # (long-thinking models 1800s, regular models 600s). ANY explicit value is
+    # honored exactly by the runtime — never clamped (regression fix).
+    timeout:        Optional[int]  = None
     extra_headers:  dict[str, str] = Field(default_factory=dict)
     extra_api_keys: list[str]      = Field(default_factory=list)
     streaming:      LLMStreamingConfig = Field(default_factory=LLMStreamingConfig)

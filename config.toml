@@ -1,16 +1,23 @@
-# ManusClaw Configuration
+# SHS Code Configuration
 # Copy and customize this file. Secrets should use environment variables.
 
 [llm]
-# provider options: "mock" (no API key needed), "openai", "azure", "anthropic", "ollama", "openrouter", "gguf", "huggingface"
-provider = "mock"
-model    = "gpt-4o"
-# base_url = "https://api.openai.com/v1"  # or Azure endpoint, OpenRouter, etc.
-# api_key  = ""  # prefer env var: OPENAI_API_KEY or ANTHROPIC_API_KEY
-max_tokens   = 4096
+# provider options: "mock" (no API key needed), "openai", "anthropic", "ollama", "openrouter",
+# "universal" (any OpenAI-compatible endpoint: NVIDIA NIM, vLLM, Together, Groq, ...), "gguf", "huggingface"
+provider = "universal"
+model    = "openai/gpt-oss-120b"
+base_url = "https://integrate.api.nvidia.com/v1"   # NVIDIA NIM (OpenAI-compatible)
+# api_key  = ""  # prefer env var: LLM_API_KEY (or OPENAI_API_KEY, ANTHROPIC_API_KEY, ...)
+max_tokens   = 8192
 temperature  = 0.0
 max_retries  = 6
-timeout      = 1800   # 30 minutes — safe for deep-reasoning models (DeepSeek R1, o1, etc.)
+timeout      = 1800   # 30 minutes — explicit user setting; honored exactly as configured
+
+[llm.rate_limit]
+# Rolling-window request pacing (true timestamp window, not naive 60s sleep).
+# NVIDIA NIM personal-key tier = 40 RPM. Set rpm = 0 for unlimited (NIM still auto-detects 40).
+enabled = true
+rpm     = 40
 
 [llm.streaming]
 enabled      = true

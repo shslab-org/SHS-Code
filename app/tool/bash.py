@@ -258,6 +258,18 @@ class Bash(BaseTool):
                     self._process.kill()
                 except Exception:
                     pass
+        # SHS Code FIX (one-shot leak regression): terminate/wait reaps the
+        # child process but does NOT close the pipe transports. The stdin
+        # writer transport stayed open, was finalized by GC AFTER the event
+        # loop closed, and printed "Event loop is closed" on every one-shot
+        # exit. Close the transport explicitly while the loop is still alive.
+        if self._process is not None:
+            transport = getattr(self._process, "_transport", None)
+            if transport is not None:
+                try:
+                    transport.close()
+                except Exception:
+                    pass
         self._process = None
 
     async def cleanup(self) -> None:

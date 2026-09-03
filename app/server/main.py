@@ -38,29 +38,60 @@ from app.permissions.gate import AgentMode
 
 @asynccontextmanager
 async def _lifespan(application: FastAPI):
-    """FIX: Startup/shutdown lifecycle — log warnings at startup, clean up on shutdown."""
+    """Startup/shutdown lifecycle.
+
+    SHS Code FIX (registry regression): on startup, sessions left 'running'
+    by a previous crashed server are recovered to 'interrupted' so the
+    registry can never show phantom running sessions; on shutdown, tasks
+    still running are cancelled and their sessions closed with the real
+    final state instead of staying 'running' forever.
+    """
     if not _API_KEY:
         logger.warning(
             "MANUSCLAW_API_KEY not set — all endpoints are UNAUTHENTICATED. "
             "Set MANUSCLAW_API_KEY in production."
         )
-    logger.info("ManusClaw Agent Server v5.1.1 started.")
+    logger.info("SHS Code Agent Server started.")
     application.state.background_tasks = set()
+    application.state.session_tasks = {}   # session_id -> asyncio.Task
+    try:
+        recovered = await db.recover_stale_sessions(before_ts=_BOOT_TIME)
+        if recovered:
+            logger.info(
+                f"[Server] Recovered {recovered} stale 'running' session(s) "
+                "from a previous process -> 'interrupted'."
+            )
+    except Exception as e:
+        logger.warning(f"[Server] Stale-session recovery failed: {e}")
     yield
-    # Cleanup: cancel any still-running background agent tasks
+    # Cleanup: cancel any still-running background agent tasks AND close
+    # their sessions so the registry reflects reality after shutdown.
     bg = getattr(application.state, "background_tasks", set())
+    session_tasks = getattr(application.state, "session_tasks", {})
     if bg:
         logger.info(f"[Server] Cancelling {len(bg)} background task(s) on shutdown.")
         for t in list(bg):
             t.cancel()
         import asyncio as _asyncio
         await _asyncio.gather(*bg, return_exceptions=True)
-    logger.info("ManusClaw Agent Server shut down cleanly.")
+    # Mark sessions whose tasks were cancelled while still 'running'.
+    try:
+        for sid in list(session_tasks.keys()):
+            row = await db.get_session(sid)
+            if row and row.get("state") == "running":
+                await db.close_session(sid, state="interrupted",
+                                       step_count=row.get("step_count") or 0)
+    except Exception as e:
+        logger.warning(f"[Server] Shutdown session close failed: {e}")
+    logger.info("SHS Code Agent Server shut down cleanly.")
+
+
+_BOOT_TIME = time.time()
 
 app = FastAPI(
-    title="ManusClaw Agent Server",
-    description="Autonomous AI agent engine by The-JDdev (SHS Shobuj)",
-    version="5.1.1",
+    title="SHS Code Agent Server",
+    description="Persistent autonomous coding agent engine by SHS Lab (Sazzad Hussain Shobuj)",
+    version="2.0.0",
     lifespan=_lifespan,
 )
 
@@ -161,12 +192,21 @@ def _get_canvas_server():
 
 
 class StreamingManus:
-    """Wraps Manus agent with WebSocket event emission and unified session tracking."""
+    """Wraps Manus agent with WebSocket event emission and unified session tracking.
+
+    SHS Code FIX (registry regression): records the agent's REAL final state
+    (state / step_count / error) so callers can close the session with
+    accurate values; the agent itself is the primary writer (BaseAgent.run
+    now always closes sessions, including injected ones).
+    """
 
     def __init__(self, session_id: str, mode: AgentMode = AgentMode.BUILD, max_steps: Optional[int] = None) -> None:
         self.session_id = session_id
         self.mode = mode
         self.max_steps = max_steps
+        self.last_state: str = ""
+        self.last_step_count: int = 0
+        self.last_error: Optional[str] = None
 
     async def run(self, prompt: str) -> str:
         from app.agent.manus import Manus
@@ -200,14 +240,26 @@ class StreamingManus:
 
         try:
             final = await agent.run(prompt)
+            self.last_state = getattr(agent.state, "value", str(agent.state))
+            self.last_step_count = agent._step_count
             await manager.send(self.session_id, {
                 "type": "agent_done",
                 "output": final[:4000],
                 "state": agent.state.value,
+                "steps": agent._step_count,
                 "ts": time.time(),
             })
             return final
+        except asyncio.CancelledError:
+            # Server shutdown / client cancellation — the agent's finally
+            # block has already closed the session as 'interrupted'.
+            self.last_state = "interrupted"
+            self.last_step_count = agent._step_count
+            raise
         except Exception as e:
+            self.last_state = "error"
+            self.last_step_count = agent._step_count
+            self.last_error = str(e)
             await manager.send(self.session_id, {
                 "type": "agent_error",
                 "error": str(e),
@@ -230,12 +282,12 @@ class RunResponse(BaseModel):
 
 @app.get("/healthz")
 async def healthz():
-    return {"status": "ok", "version": "5.1.1", "agent": "ManusClaw"}
+    return {"status": "ok", "version": "2.0.0", "agent": "SHS Code"}
 
 
 @app.get("/")
 async def root():
-    return {"message": "ManusClaw Agent Server v5.1.1 — connect via /ws/<session_id>"}
+    return {"message": "SHS Code Agent Server — connect via /ws/<session_id>"}
 
 
 @app.post("/run", response_model=RunResponse, dependencies=[Depends(require_api_key)])
@@ -248,8 +300,24 @@ async def run_agent(req: RunRequest):
         streamer = StreamingManus(session_id=session_id, mode=mode, max_steps=req.max_steps)
         try:
             await streamer.run(req.prompt)
+        except asyncio.CancelledError:
+            # Shutdown: BaseAgent.run's finally already closed the session as
+            # 'interrupted'. Nothing more to do.
+            raise
         except Exception as e:
             logger.error(f"[Server] Agent run error: {e}")
+            # Defense in depth: the agent closes its session in its own
+            # finally, but if anything slipped through, close it now with
+            # the real error so the registry never stays 'running'.
+            try:
+                row = await db.get_session(session_id)
+                if row and row.get("state") == "running":
+                    await db.close_session(
+                        session_id, state="error",
+                        step_count=streamer.last_step_count,
+                        error=str(e)[:2048])
+            except Exception:
+                pass
 
     # Fix: store task reference to prevent GC and lost errors
     task = asyncio.create_task(_run())
@@ -257,6 +325,10 @@ async def run_agent(req: RunRequest):
     _bg.add(task)
     task.add_done_callback(_bg.discard)
     app.state.background_tasks = _bg
+    _st = getattr(app.state, 'session_tasks', {})
+    _st[session_id] = task
+    task.add_done_callback(lambda _t, _sid=session_id: _st.pop(_sid, None))
+    app.state.session_tasks = _st
     return RunResponse(session_id=session_id, status="running")
 
 
@@ -270,10 +342,17 @@ async def run_agent_sync(req: RunRequest):
         agent = Manus(mode=mode, session_id=session_id)
         agent._max_steps = req.max_steps
         output = await agent.run(req.prompt)
-        await db.close_session(session_id, state="finished")
+        # SHS Code FIX (registry regression): BaseAgent.run closes the session
+        # itself (including injected ids) with the real state + step count.
+        # This close is a verification layer — it only fires if the agent's
+        # own close somehow missed, and uses REAL values (never 0).
+        row = await db.get_session(session_id)
+        if row and row.get("state") == "running":
+            await db.close_session(
+                session_id, state="finished", step_count=agent._step_count)
         return RunResponse(session_id=session_id, status="finished", output=output)
     except Exception as e:
-        await db.close_session(session_id, state="error")
+        await db.close_session(session_id, state="error", step_count=0, error=str(e)[:2048])
         raise HTTPException(status_code=500, detail=str(e))
 
 

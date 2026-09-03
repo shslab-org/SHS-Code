@@ -68,16 +68,26 @@ def _is_long_thinking_model(model: str) -> bool:
     return False
 
 
-def _get_adaptive_timeout(model: str, configured_timeout: int) -> int:
-    """Return the effective timeout based on model type.
+def _get_adaptive_timeout(model: str, configured_timeout: Optional[int]) -> int:
+    """Return the effective request timeout in seconds.
 
-    For long-thinking models, we use a minimum of 30 minutes regardless of
-    the configured timeout (unless the user explicitly set an even higher value).
-    For regular models, we respect the configured value with a floor of 10 minutes.
+    SHS Code policy (regression fix — the old code clamped every configured
+    timeout up to a 300s/1800s floor, silently overriding explicit user
+    configuration such as ``timeout = 90``):
+
+    * If the user EXPLICITLY configured a timeout (> 0), it is honored
+      EXACTLY — 30 means 30, 90 means 90, 300 means 300. No floors.
+    * If no timeout is configured (None/0), the adaptive default applies:
+      long-thinking models get 30 minutes, regular models 10 minutes.
+
+    The LLM is a replaceable reasoning engine; timeouts are an execution
+    policy that belongs to the user's configuration, never to the model.
     """
+    if configured_timeout is not None and int(configured_timeout) > 0:
+        return int(configured_timeout)
     if _is_long_thinking_model(model):
-        return max(configured_timeout, DEFAULT_TIMEOUT_LONG)
-    return max(configured_timeout, 300)  # At least 5 minutes even for regular models
+        return DEFAULT_TIMEOUT_LONG
+    return DEFAULT_TIMEOUT_SHORT
 
 
 def _msg_from_openai(choice: dict) -> Message:
@@ -182,9 +192,12 @@ class UniversalClient:
         self.max_tokens = kwargs.get("max_tokens", 8192)
         self.temperature = kwargs.get("temperature", 0.0)
         self._extra_headers: dict[str, str] = kwargs.get("extra_headers", {})
-        # FIX: Use adaptive timeout — long-thinking models need much more time
-        configured_timeout = kwargs.get("timeout", 300)
-        self._timeout_seconds = _get_adaptive_timeout(model, configured_timeout)
+        # SHS Code FIX (timeout regression): honor the configured timeout exactly.
+        # None/0 means "not configured" -> adaptive default (long-thinking models
+        # get 30 min, regular models 10 min). An explicit value is never clamped.
+        configured_timeout = kwargs.get("timeout")
+        self._timeout_seconds = _get_adaptive_timeout(
+            model, configured_timeout if configured_timeout else None)
         # FIX: Persistent session for connection pool reuse.
         # Creating a new aiohttp.ClientSession per request discards the connection
         # pool, causing TCP/TLS handshake overhead on every call. We now lazily
@@ -268,8 +281,9 @@ class UniversalClient:
 class OpenAIClient:
     def __init__(self, cfg: Any) -> None:
         from openai import AsyncOpenAI
-        # FIX: Use adaptive timeout — long-thinking models need much more time
-        configured_timeout = getattr(cfg, 'timeout', 300) or 300
+        # SHS Code FIX (timeout regression): honor the configured timeout exactly.
+        # None/0 means "not configured" -> adaptive default.
+        configured_timeout = getattr(cfg, 'timeout', None)
         timeout_val = _get_adaptive_timeout(cfg.model, configured_timeout)
         self._c = AsyncOpenAI(api_key=cfg.api_key, base_url=cfg.base_url or None, timeout=timeout_val)
         self.model: str = cfg.model
@@ -296,8 +310,9 @@ class OpenAIClient:
 class AnthropicClient:
     def __init__(self, cfg: Any) -> None:
         from anthropic import AsyncAnthropic
-        # FIX: Use adaptive timeout for long-thinking Claude models
-        configured_timeout = getattr(cfg, 'timeout', 300) or 300
+        # SHS Code FIX (timeout regression): honor the configured timeout exactly.
+        # None/0 means "not configured" -> adaptive default.
+        configured_timeout = getattr(cfg, 'timeout', None)
         timeout_val = _get_adaptive_timeout(cfg.model, configured_timeout)
         self._c = AsyncAnthropic(api_key=cfg.api_key, timeout=timeout_val)
         self.model: str = cfg.model

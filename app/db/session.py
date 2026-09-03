@@ -14,6 +14,7 @@ New features:
 
 import asyncio
 import json
+import os
 import random
 import sqlite3
 import time
@@ -23,7 +24,24 @@ from typing import Any, Optional
 
 from app.logger import logger
 
-_DB_PATH = Path("workspace/.sessions/manusclaw.db")
+
+def _default_db_path() -> Path:
+    """Resolve the session DB path lazily (SHS Code FIX).
+
+    The path used to be a module-level constant relative to the CURRENT
+    WORKING DIRECTORY (``workspace/.sessions/manusclaw.db``). Two processes
+    started from different directories (server from ~, CLI from the repo)
+    silently created TWO different session databases — a split-brain that
+    made the server registry and the CLI disagree about session state.
+    Now MANUSCLAW_WORKSPACE is honoured and re-read on every construction.
+    """
+    workspace = Path(os.getenv("MANUSCLAW_WORKSPACE", "workspace"))
+    return workspace / ".sessions" / "manusclaw.db"
+
+
+# Backward-compatible module constant (frozen at import; runtime resolution
+# goes through _default_db_path()).
+_DB_PATH = _default_db_path()
 
 _SCHEMA = """
 PRAGMA journal_mode=WAL;
@@ -39,6 +57,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     ended_at          REAL,
     state             TEXT DEFAULT 'running',
     step_count        INTEGER DEFAULT 0,
+    error             TEXT,
     compressed        INTEGER DEFAULT 0
 );
 
@@ -126,7 +145,7 @@ class SessionDB:
     """Thread-safe async SQLite wrapper with FTS5 and session branching."""
 
     def __init__(self, db_path: Optional[Path] = None) -> None:
-        self._db_path = db_path or _DB_PATH
+        self._db_path = db_path or _default_db_path()
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn: Optional[sqlite3.Connection] = None
         # FIX: Thread safety — use a reentrant lock to serialize access to the
@@ -148,6 +167,15 @@ class SessionDB:
                 except sqlite3.OperationalError:
                     pass  # FTS5 not available on this SQLite build — graceful degradation
                 self._conn.commit()
+                # SHS Code FIX (registry regression): idempotent migration for
+                # databases created before the `sessions.error` column existed.
+                try:
+                    cols = [r[1] for r in self._conn.execute("PRAGMA table_info(sessions)")]
+                    if "error" not in cols:
+                        self._conn.execute("ALTER TABLE sessions ADD COLUMN error TEXT")
+                        self._conn.commit()
+                except sqlite3.OperationalError:
+                    pass
             return self._conn
 
     def _execute_query(self, fn, *args, **kwargs):
@@ -202,12 +230,13 @@ class SessionDB:
                                          parent_session_id=parent_session_id)
 
     async def close_session(self, session_id: str, state: str = "finished",
-                             step_count: int = 0) -> None:
+                             step_count: int = 0,
+                             error: Optional[str] = None) -> None:
         def _close():
             self._execute_query(lambda conn: (
                 conn.execute(
-                    "UPDATE sessions SET ended_at=?, state=?, step_count=? WHERE id=?",
-                    (time.time(), state, step_count, session_id),
+                    "UPDATE sessions SET ended_at=?, state=?, step_count=?, error=? WHERE id=?",
+                    (time.time(), state, step_count, error, session_id),
                 ),
                 conn.commit(),
             )[-1])
@@ -289,6 +318,90 @@ class SessionDB:
             )[-1])
 
         await _with_retry(_log)
+
+    # ------------------------------------------------------------------
+    # SHS Code FIX (server /sessions registry regression): live progress +
+    # stale-session recovery. The session registry previously showed
+    # state=running / step_count=0 / messages=[] forever because nothing
+    # updated sessions during execution and injected sessions were never
+    # closed. These methods make the DB reflect reality.
+    # ------------------------------------------------------------------
+
+    async def update_progress(self, session_id: str, step_count: int) -> None:
+        """Live-update ``step_count`` on the sessions row while the agent runs."""
+        if not session_id:
+            return
+
+        def _upd():
+            self._execute_query(lambda conn: (
+                conn.execute(
+                    "UPDATE sessions SET step_count=? WHERE id=?",
+                    (int(step_count), session_id),
+                ),
+                conn.commit(),
+            )[-1])
+
+        await _with_retry(_upd)
+
+    async def set_session_error(self, session_id: str, error: str) -> None:
+        """Record the failure reason on the session row (state stays 'error')."""
+        if not session_id:
+            return
+
+        def _err():
+            self._execute_query(lambda conn: (
+                conn.execute(
+                    "UPDATE sessions SET error=? WHERE id=?",
+                    (str(error)[:2048], session_id),
+                ),
+                conn.commit(),
+            )[-1])
+
+        await _with_retry(_err)
+
+    async def recover_stale_sessions(self, before_ts: float,
+                                     new_state: str = "interrupted") -> int:
+        """Mark sessions stuck in 'running' from a PREVIOUS process.
+
+        Called at server startup. ``before_ts`` is the process boot time —
+        only sessions STARTED before that moment can be stale; sessions
+        created by the current process are live and untouched. Returns the
+        number of recovered sessions.
+        """
+        def _recover():
+            def _do(conn):
+                cur = conn.execute(
+                    "UPDATE sessions SET state=?, ended_at=?"
+                    " WHERE state='running' AND started_at < ?",
+                    (new_state, time.time(), float(before_ts)),
+                )
+                conn.commit()
+                return cur.rowcount
+            return self._execute_query(_do)
+        try:
+            return await _with_retry(_recover)
+        except Exception as e:
+            logger.warning(f"[SessionDB] stale-session recovery failed: {e}")
+            return 0
+
+    async def get_session(self, session_id: str) -> Optional[dict]:
+        """Fetch a single session row (used by the server to verify truth)."""
+        def _get():
+            return self._execute_query(lambda conn: conn.execute(
+                "SELECT id, goal, agent_name, mode, parent_session_id,"
+                " started_at, ended_at, state, step_count, error"
+                " FROM sessions WHERE id=?",
+                (session_id,),
+            ).fetchone())
+        try:
+            row = await _with_retry(_get)
+        except Exception:
+            return None
+        if not row:
+            return None
+        cols = ["id", "goal", "agent_name", "mode", "parent_session_id",
+                "started_at", "ended_at", "state", "step_count", "error"]
+        return dict(zip(cols, row))
 
     # ------------------------------------------------------------------
     # Tool call logging
@@ -431,13 +544,13 @@ class SessionDB:
                 where = "" if include_archived else " WHERE state != 'archived'"
                 rows = conn.execute(
                     "SELECT id, goal, agent_name, mode, parent_session_id,"
-                    " started_at, ended_at, state, step_count"
+                    " started_at, ended_at, state, step_count, error"
                     f" FROM sessions{where} ORDER BY started_at DESC LIMIT ?",
                     (limit,),
                 ).fetchall()
                 cols = [
                     "id", "goal", "agent_name", "mode", "parent_session_id",
-                    "started_at", "ended_at", "state", "step_count",
+                    "started_at", "ended_at", "state", "step_count", "error",
                 ]
                 return [dict(zip(cols, r)) for r in rows]
             return self._execute_query(_do_query)

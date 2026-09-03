@@ -21,6 +21,7 @@ import asyncio
 import json
 import os
 import sqlite3
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field, asdict
@@ -124,10 +125,22 @@ class TaskQueue:
     """
     Persistent task queue with SQLite backend.
 
-    - Tasks survive process restarts (stored in SQLite)
-    - Workers pull tasks from queue in priority order
-    - Checkpoints allow resuming interrupted tasks
-    - Background workers run independently
+    SHS Code FIX (cross-thread regression): the previous design created ONE
+    persistent ``sqlite3.Connection`` and reused it from every
+    ``asyncio.to_thread`` worker. SQLite connections are thread-bound by
+    default (``check_same_thread=True``), and the default executor rotates
+    threads — so the second DB call on a different pool thread raised
+    ``SQLite objects created in a thread can only be used in that same
+    thread`` on EVERY startup (reported as "TaskQueue Worker-0" errors).
+
+    Correct architecture (no error hiding, no check_same_thread=False):
+      * Per-THREAD connections via ``threading.local()`` — each executor
+        thread owns its connection; thread ownership is enforced by SQLite
+        itself (default ``check_same_thread=True`` stays ON).
+      * WAL journal + ``busy_timeout`` so multiple threads can read/write
+        concurrently without ``database is locked`` storms.
+      * All thread connections are tracked and closed by ``close()``/
+        ``stop_workers()`` so shutdown leaves nothing dangling.
     """
 
     def __init__(self, db_path: Optional[str] = None, max_workers: int = 2) -> None:
@@ -138,17 +151,20 @@ class TaskQueue:
         self._running = False
         self._task_executor: Optional[Callable] = None
         self._active_tasks: dict[str, asyncio.Task] = {}
-        # FIX: Persistent connection instead of opening new one per write.
-        # Reusing a single connection dramatically reduces I/O overhead.
-        self._conn: Optional[sqlite3.Connection] = None
+        # FIX: per-thread connection registry (thread-safe by construction).
+        self._tls = threading.local()
+        self._all_conns: list[sqlite3.Connection] = []
+        self._conn_registry_lock = threading.Lock()
         # FIX: Track recently submitted task prompts for deduplication.
         self._recent_prompts: dict[str, float] = {}  # prompt_hash -> submit_time
         self._dedup_window_s: int = 60  # 60-second dedup window
+        self._closed = False
         self._init_db()
 
     def _init_db(self) -> None:
-        """Initialize SQLite tables."""
-        with sqlite3.connect(str(self._db_path)) as conn:
+        """Initialize SQLite tables (own short-lived connection, closed after)."""
+        conn = sqlite3.connect(str(self._db_path))
+        try:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS tasks (
                     id TEXT PRIMARY KEY,
@@ -157,22 +173,66 @@ class TaskQueue:
                 )
             """)
             conn.commit()
+        finally:
+            conn.close()  # FIX: sqlite3 context manager only commits — it does NOT close
+
+    def _get_conn(self) -> sqlite3.Connection:
+        """Connection for the CURRENT thread only (thread-local by design).
+
+        WAL + busy_timeout are applied once per connection. Because each
+        connection is created and used inside one thread, SQLite's own
+        ``check_same_thread`` enforcement stays enabled — misuse raises
+        immediately instead of corrupting silently.
+        """
+        conn = getattr(self._tls, "conn", None)
+        if conn is None:
+            conn = sqlite3.connect(str(self._db_path), timeout=10.0)
+            try:
+                conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA busy_timeout=5000")
+                conn.execute("PRAGMA synchronous=NORMAL")
+            except sqlite3.OperationalError:
+                pass  # read-only FS / exotic builds — degradation is safe
+            self._tls.conn = conn
+            with self._conn_registry_lock:
+                self._all_conns.append(conn)
+        return conn
+
+    def _close_conn(self) -> None:
+        """Close the CURRENT thread's connection (if any)."""
+        conn = getattr(self._tls, "conn", None)
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            self._tls.conn = None
+            with self._conn_registry_lock:
+                if conn in self._all_conns:
+                    self._all_conns.remove(conn)
+
+    def close(self) -> None:
+        """Close every tracked connection (called from any thread).
+
+        SHS Code FIX (one-shot leak): one-shot execution previously left
+        the persistent task-queue connection open at process exit.
+        """
+        self._closed = True
+        with self._conn_registry_lock:
+            conns = list(self._all_conns)
+            self._all_conns.clear()
+        for conn in conns:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        # Also drop this thread's cached reference (it was just closed)
+        if getattr(self._tls, "conn", None) is not None:
+            self._tls.conn = None
 
     # ------------------------------------------------------------------
     # CRUD
     # ------------------------------------------------------------------
-
-    def _get_conn(self) -> sqlite3.Connection:
-        """Get or create the persistent database connection."""
-        if self._conn is None:
-            self._conn = sqlite3.connect(str(self._db_path))
-        return self._conn
-
-    def _close_conn(self) -> None:
-        """Close the persistent connection."""
-        if self._conn:
-            self._conn.close()
-            self._conn = None
 
     async def submit(self, prompt: str, priority: TaskPriority = TaskPriority.NORMAL,
                      metadata: Optional[dict] = None) -> TaskEntry:
@@ -331,8 +391,12 @@ class TaskQueue:
             self._workers.append(worker)
         logger.info(f"[TaskQueue] Started {self._max_workers} workers")
 
-    async def stop_workers(self) -> None:
-        """Gracefully stop all workers, saving task state."""
+    async def stop_workers(self, close_connections: bool = True) -> None:
+        """Gracefully stop all workers, saving task state.
+
+        SHS Code FIX: also closes every tracked SQLite connection so shutdown
+        (interactive exit AND one-shot exit) leaves nothing dangling.
+        """
         self._running = False
         for w in self._workers:
             w.cancel()
@@ -341,14 +405,20 @@ class TaskQueue:
             await asyncio.gather(*self._workers, return_exceptions=True)
         self._workers.clear()
         # Mark running tasks as paused for resume
-        for task_id, atask in self._active_tasks.items():
+        for task_id, atask in list(self._active_tasks.items()):
             if not atask.done():
                 atask.cancel()
+                try:
+                    await atask
+                except (asyncio.CancelledError, Exception):
+                    pass
                 task = await self._load(task_id)
                 if task and task.status == TaskStatus.RUNNING:
                     task.status = TaskStatus.PAUSED
                     await self._save(task)
         self._active_tasks.clear()
+        if close_connections:
+            self.close()
         logger.info("[TaskQueue] Workers stopped, running tasks paused for resume")
 
     async def _worker_loop(self, worker_id: int) -> None:
@@ -414,21 +484,35 @@ class TaskQueue:
 
     async def resume_interrupted(self) -> int:
         """Resume tasks that were RUNNING or PAUSED when the process last exited.
-        Returns the number of tasks resumed."""
+        Returns the number of tasks resumed.
+
+        SHS Code FIX (retry-inflation regression): resume events used to bump
+        ``retry_count`` on every startup, so merely launching the app several
+        times could exhaust max_retries WITHOUT a single execution attempt.
+        Interruptions are now tracked separately in ``metadata.interrupts``
+        (crash-loop protection: >5 interruptions -> FAILED) and never consume
+        execution retries.
+        """
         resumed = 0
         tasks = await self.list_tasks()
         for task in tasks:
             if task.status == TaskStatus.RUNNING:
-                # Was running when process exited — re-queue for retry
-                task.status = TaskStatus.QUEUED
-                task.retry_count += 1
-                if task.retry_count <= task.max_retries:
+                # Was running when process exited — re-queue for retry.
+                # Count the INTERRUPTION, not an execution failure.
+                md = dict(task.metadata or {})
+                md["interrupts"] = int(md.get("interrupts", 0)) + 1
+                task.metadata = md
+                if md["interrupts"] <= 5:
+                    task.status = TaskStatus.QUEUED
                     await self._save(task)
                     resumed += 1
-                    logger.info(f"[TaskQueue] Resumed interrupted task {task.id}")
+                    logger.info(
+                        f"[TaskQueue] Resumed interrupted task {task.id} "
+                        f"(interruption {md['interrupts']})"
+                    )
                 else:
                     task.status = TaskStatus.FAILED
-                    task.error = "Max retries exceeded after multiple interruptions"
+                    task.error = "Too many interruptions (likely crash loop) — task parked for manual /retry"
                     await self._save(task)
             elif task.status == TaskStatus.PAUSED:
                 # Was paused — re-queue with checkpoint for resume

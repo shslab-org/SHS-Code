@@ -77,6 +77,10 @@ execute step-by-step with progress tracking.
     async def think(self) -> str:
         response = await self.llm.ask(self.memory.messages)
         self.memory.add(response)
+        # SHS Code FIX (registry regression): persist assistant messages for
+        # plain-ReAct agents too, so /sessions/<id>/messages is populated.
+        if response.content:
+            self._log_db_message("assistant", response.content)
         return response.content or ""
 
     async def act(self, thought: str) -> Optional[str]:
@@ -123,7 +127,7 @@ execute step-by-step with progress tracking.
                 next_action=data.get("next_action"),
             )
         except Exception as e:
-            logger.debug(f"[{self.name}] Reflection parse error: {e}")
+            logger.debug(f"Reflection parse error: {e}")
             return Reflection(
                 step_goal=goal,
                 observation_summary=obs.summary(),
@@ -141,7 +145,7 @@ execute step-by-step with progress tracking.
 
         for attempt in range(1, self.MAX_REFLECT_RETRIES + 1):
             thought = await self.think()
-            logger.debug(f"[{self.name}] Thought: {thought[:160]}")
+            logger.debug(f"Thought: {thought[:160]}")
 
             result = await self.act(thought)
             obs = await self.observe(result)
@@ -160,7 +164,7 @@ execute step-by-step with progress tracking.
                 reflection = await self.reflect(goal, obs)
                 if current_step:
                     current_step.reflection = reflection
-                logger.debug(f"[{self.name}] Reflect: solved={reflection.solved} — {reflection.reason}")
+                logger.debug(f"Reflect: solved={reflection.solved} — {reflection.reason}")
 
                 if reflection.solved:
                     if current_step:
@@ -175,7 +179,7 @@ execute step-by-step with progress tracking.
                     "different approach in your next response."
                 )
                 self.memory.add(Message.user(retry_msg))
-                logger.info(f"[{self.name}] Retrying step (attempt {attempt+1})...")
+                logger.info(f"Retrying step (attempt {attempt+1})...")
             else:
                 if current_step:
                     current_step.resolved = bool(result)

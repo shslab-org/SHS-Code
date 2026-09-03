@@ -236,44 +236,57 @@ class BaseAgent(ABC):
         self.memory.add(Message.user(safe_prompt))
         mode_str = self.gate.mode.value
 
-        # SHS Code (spec §3): recall relevant long-term memories into context —
-        # memory is independent of the current model/provider, so a switch or
-        # restart never loses it.
-        await self._recall_long_term_memory(prompt)
-
-        if self._injected_session_id:
-            self._session_id = self._injected_session_id
-        else:
-            self._session_id = await self.db.create_session(
-                goal=prompt, agent_name=self.name, mode=mode_str
-            )
-
-        # SHS Code (spec §7/§8): open a persistent journal entry for this task
-        provider = model = ""
-        try:
-            if hasattr(self, "llm"):
-                info = self.llm.backend_info()
-                provider, model = info.get("provider", ""), info.get("model", "")
-        except Exception:
-            pass
-        if self.journal is not None:
-            try:
-                self._journal_task_id = await self.journal.task_start(
-                    goal=prompt, session_id=self._session_id or "",
-                    cwd=os.getcwd(), provider=provider, model=model)
-            except Exception as e:
-                logger.debug(f"[Journal] task_start failed (non-fatal): {e}")
-
-        # SHS Code Phase 2 (spec §2/§7): project intelligence + persisted plan
-        await self._inject_project_context(prompt)
-
-        logger.info(
-            f"Starting run task={self._task_history.task_id} "
-            f"session={self._session_id} mode={mode_str} max_steps={self._max_steps}"
-        )
-
+        # SHS Code FIX (protected-region regression): the try/finally used to
+        # start only around the step loop — a cancellation or crash during
+        # skill injection, memory recall, session creation, journal start or
+        # project-context injection (any of which can await LLM/DB calls)
+        # exited run() WITHOUT the finally, leaking the session row as
+        # 'running' forever. The protected region now starts BEFORE the first
+        # await that can be interrupted; the finally is None-safe
+        # (self._session_id unset => nothing to close).
         results: list[str] = []
         try:
+            # SHS Code (spec §3): recall relevant long-term memories into context —
+            # memory is independent of the current model/provider, so a switch or
+            # restart never loses it.
+            await self._recall_long_term_memory(prompt)
+
+            if self._injected_session_id:
+                self._session_id = self._injected_session_id
+            else:
+                self._session_id = await self.db.create_session(
+                    goal=prompt, agent_name=self.name, mode=mode_str
+                )
+
+            # SHS Code FIX (registry regression): persist the user message AFTER
+            # the session id is resolved (injected or freshly created) so
+            # /sessions/<id>/messages reflects the real conversation.
+            self._log_db_message("user", safe_prompt)
+
+            # SHS Code (spec §7/§8): open a persistent journal entry for this task
+            provider = model = ""
+            try:
+                if hasattr(self, "llm"):
+                    info = self.llm.backend_info()
+                    provider, model = info.get("provider", ""), info.get("model", "")
+            except Exception:
+                pass
+            if self.journal is not None:
+                try:
+                    self._journal_task_id = await self.journal.task_start(
+                        goal=prompt, session_id=self._session_id or "",
+                        cwd=os.getcwd(), provider=provider, model=model)
+                except Exception as e:
+                    logger.debug(f"[Journal] task_start failed (non-fatal): {e}")
+
+            # SHS Code Phase 2 (spec §2/§7): project intelligence + persisted plan
+            await self._inject_project_context(prompt)
+
+            logger.info(
+                f"Starting run task={self._task_history.task_id} "
+                f"session={self._session_id} mode={mode_str} max_steps={self._max_steps}"
+            )
+
             while self.state == AgentState.RUNNING and self._step_count < self._max_steps:
                 budget = self._effective_budget
 
@@ -296,6 +309,9 @@ class BaseAgent(ABC):
                 logger.info(f"Step {self._step_count}/{self._max_steps}")
                 from app.activity import emit
                 emit("step", step=self._step_count, max_steps=self._max_steps)
+                # SHS Code FIX (registry regression): live step_count so the
+                # session registry shows REAL progress while the agent runs.
+                self._update_db_progress()
 
                 # SHS Code (spec §8): checkpoint continuously — a crash after
                 # the next step must still leave restorable state on disk.
@@ -322,21 +338,27 @@ class BaseAgent(ABC):
                 if result:
                     results.append(result)
 
-                if self._is_stuck_by_duplicates():
-                    logger.warning("Duplicate-response loop detected. Nudging.")
-                    self.memory.add(Message.user(
-                        "You are repeating the same response. "
-                        "Try a completely different approach or call terminate."
-                    ))
+                # SHS Code FIX (post-terminate pollution): nudges/suggestions
+                # are only useful while the loop will actually continue. After
+                # a terminate() call the state is FINISHED — injecting "try a
+                # different approach" AFTER termination polluted the final
+                # memory snapshot and confused resume.
+                if self.state == AgentState.RUNNING:
+                    if self._is_stuck_by_duplicates():
+                        logger.warning("Duplicate-response loop detected. Nudging.")
+                        self.memory.add(Message.user(
+                            "You are repeating the same response. "
+                            "Try a completely different approach or call terminate."
+                        ))
 
-                if self._task_history and self._task_history.is_looping(window=3):
-                    logger.warning("Tool-call loop detected. Injecting escape prompt.")
-                    self.memory.add(Message.user(
-                        "You have called the same failing tool repeatedly. "
-                        "Switch to a completely different tool or strategy."
-                    ))
+                    if self._task_history and self._task_history.is_looping(window=3):
+                        logger.warning("Tool-call loop detected. Injecting escape prompt.")
+                        self.memory.add(Message.user(
+                            "You have called the same failing tool repeatedly. "
+                            "Switch to a completely different tool or strategy."
+                        ))
 
-                await self._maybe_suggest_skill()
+                    await self._maybe_suggest_skill()
 
             if self._step_count >= self._max_steps and self.state == AgentState.RUNNING:
                 logger.warning(f"Max steps reached ({self._max_steps}).")
@@ -391,12 +413,11 @@ class BaseAgent(ABC):
                 except Exception as e:
                     logger.debug(f"[Journal] final update failed (non-fatal): {e}")
             await self._store_long_term_memory(prompt, results)
-            if self._session_id and not self._injected_session_id:
-                await self.db.close_session(
-                    self._session_id,
-                    state=self.state.value,
-                    step_count=self._step_count,
-                )
+            # SHS Code FIX (registry regression): ALWAYS close the session —
+            # including server-INJECTED sessions. Previously injected sessions
+            # were never closed by anyone (the agent skipped them, the server
+            # forgot), leaving /sessions stuck at state=running / step_count=0.
+            await self._close_session_registry_safely()
             await self.cleanup()
             reset_log_context(log_tokens)
 
@@ -678,6 +699,119 @@ class BaseAgent(ABC):
         exc = task.exception()
         if exc:
             logger.warning(f"[BaseAgent] Background DB write failed: {exc}")
+
+    # ------------------------------------------------------------------
+    # SHS Code FIX (server /sessions registry regression): the agent runtime
+    # is the SOURCE OF TRUTH for session state. Every run now (a) logs the
+    # user message and assistant messages, (b) live-updates step_count, and
+    # (c) ALWAYS closes the session — including server-injected sessions,
+    # which previously stayed `state=running, step_count=0, messages=[]`
+    # forever because both the agent and the server assumed the other
+    # would close it.
+    # ------------------------------------------------------------------
+
+    def _log_db_message(self, role: str, content: Optional[str]) -> None:
+        """Persist a conversation message to the session DB (fire-and-forget,
+        same reliability pattern as tool-call logging)."""
+        if not self._session_id or not content:
+            return
+        try:
+            task = asyncio.create_task(
+                self.db.log_message(self._session_id, role, content)
+            )
+            task.add_done_callback(self._on_db_task_done)
+            self._pending_db_tasks.append(task)
+            if len(self._pending_db_tasks) > 50:
+                self._pending_db_tasks = [t for t in self._pending_db_tasks if not t.done()]
+        except RuntimeError:
+            pass  # no running loop (shutdown) — message persistence is best-effort
+        except Exception:
+            pass
+
+    def _update_db_progress(self) -> None:
+        """Live-update the session row's step_count so /sessions shows reality."""
+        if not self._session_id:
+            return
+        try:
+            task = asyncio.create_task(
+                self.db.update_progress(self._session_id, self._step_count)
+            )
+            task.add_done_callback(self._on_db_task_done)
+            self._pending_db_tasks.append(task)
+            if len(self._pending_db_tasks) > 50:
+                self._pending_db_tasks = [t for t in self._pending_db_tasks if not t.done()]
+        except RuntimeError:
+            pass
+        except Exception:
+            pass
+
+    async def _close_session_registry_safely(self) -> None:
+        """Close the session row with the agent's REAL final state.
+
+        Cancellation-safe: interruption (Ctrl+C / server shutdown) arrives as
+        CancelledError while the finally block runs. A plain ``await`` here
+        would itself be interrupted, skipping the close and leaving the
+        registry stuck at 'running'. The close is therefore shielded and
+        given a bounded second chance to complete.
+        """
+        if not self._session_id:
+            return
+        try:
+            # Flush pending message/tool writes first so the closed session
+            # has its full conversation on disk.
+            if self._pending_db_tasks:
+                await asyncio.gather(*self._pending_db_tasks, return_exceptions=True)
+                self._pending_db_tasks.clear()
+            final_state, final_err = self._final_session_state()
+            close_task = asyncio.ensure_future(self.db.close_session(
+                self._session_id,
+                state=final_state,
+                step_count=self._step_count,
+                error=final_err,
+            ))
+            try:
+                await asyncio.shield(close_task)
+            except asyncio.CancelledError:
+                # Outer cancellation arrived mid-close: the shielded task is
+                # still running — give it a bounded chance to finish.
+                try:
+                    await asyncio.wait_for(asyncio.shield(close_task), timeout=2.0)
+                except Exception:
+                    pass
+        except asyncio.CancelledError:
+            # Flush above was cancelled — try the close directly, bounded.
+            try:
+                final_state, final_err = self._final_session_state()
+                await asyncio.wait_for(
+                    self.db.close_session(self._session_id, state=final_state,
+                                          step_count=self._step_count,
+                                          error=final_err),
+                    timeout=2.0)
+            except Exception as e:
+                logger.debug(f"[SessionDB] close_session failed (non-fatal): {e}")
+        except Exception as e:
+            logger.debug(f"[SessionDB] close_session failed (non-fatal): {e}")
+
+    def _final_session_state(self) -> tuple[str, Optional[str]]:
+        """Map the agent's final state to a session-registry state + error.
+
+        AgentState values are UPPERCASE enums; the session registry stores
+        lowercase states (running/finished/error/interrupted) — normalize.
+        """
+        state = getattr(self.state, "value", str(self.state)).lower()
+        if state == "finished":
+            return "finished", None
+        if state == "error":
+            return "error", (
+                f"agent error after {self._step_count} steps "
+                f"({self._tool_call_count} tool calls)"
+            )
+        if state == "running":
+            # Loop exited while still RUNNING => interrupted (Ctrl+C / cancel)
+            return "interrupted", None
+        if state == "idle":
+            return "finished", None
+        return state, None
 
     async def cleanup(self) -> None:
         if self._pending_db_tasks:

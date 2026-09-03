@@ -1057,7 +1057,7 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             f"  base_url:    {llm.base_url or '-'}\n"
             f"  api_key:     {_mask(llm.api_key)}\n"
             f"  max_tokens:  {llm.max_tokens}  temperature: {llm.temperature}\n"
-            f"  timeout:     {llm.timeout}s  retries: {llm.max_retries}\n"
+            f"  timeout:     {llm.timeout if llm.timeout else 'adaptive (default)'}  retries: {llm.max_retries}\n"
             f"  rate_limit:  enabled={llm.rate_limit.enabled} rpm={llm.rate_limit.rpm or 'auto (NIM=40)'}\n"
             f"  max_steps:   {c.max_steps}  token_budget: {c.token_budget or 'unlimited'}\n"
             f"  workspace:   {c.workspace_dir}\n"
@@ -1961,10 +1961,18 @@ def main() -> None:
             if resumed:
                 _print_message("system", f"Resumed {resumed} background task(s).", skin)
 
-            with Spinner(verb="thinking", skin=skin):
-                result = await agent.run(prompt_text)
-            _print_message("assistant", result or "(no output)", skin)
-            await agent.cleanup()
+            try:
+                with Spinner(verb="thinking", skin=skin):
+                    result = await agent.run(prompt_text)
+                _print_message("assistant", result or "(no output)", skin)
+            finally:
+                # SHS Code FIX (one-shot leak regression): complete async
+                # resource lifecycle — agent (LLM aiohttp session, tools,
+                # subprocesses, DB) AND the task-queue connections. One-shot
+                # execution must exit without unclosed-session / closed-loop
+                # warnings or dangling background tasks.
+                await agent.cleanup()
+                await task_queue.stop_workers()
 
         asyncio.run(_run_once())
     else:

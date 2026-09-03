@@ -241,6 +241,10 @@ tool or different arguments — DO NOT repeat the same failing call.
         schemas = self.tools.to_openai_schemas()
         response = await self.llm.ask_tool(self.memory.messages, tools=schemas)
         self.memory.add(response)
+        # SHS Code FIX (registry regression): persist the assistant response
+        # so /sessions/<id>/messages shows the real conversation.
+        if response.content:
+            self._log_db_message("assistant", response.content)
         return response.content or ""
 
     async def act(self, thought: str) -> Optional[str]:
@@ -261,7 +265,10 @@ tool or different arguments — DO NOT repeat the same failing call.
                 args = json.loads(tc.function.arguments) if tc.function.arguments else {}
             except json.JSONDecodeError as e:
                 args = {}
-                logger.warning(f"[{self.name}] JSON decode error for {name} args: {e}")
+                # NOTE: no agent-name bracket prefix here — the structured log
+                # context already renders `agent@step`; bracketed names in the
+                # message body mangle as `anus]` in ANSI-fragile viewers.
+                logger.warning(f"JSON decode error for {name} args: {e}")
             calls.append((name, args, tc.id))
 
         outputs: list[str] = []
@@ -322,7 +329,7 @@ tool or different arguments — DO NOT repeat the same failing call.
         for attempt in range(1, MAX_TOOL_RETRIES + 1):
             try:
                 logger.info(
-                    f"[{self.name}] Tool call ({attempt}/{MAX_TOOL_RETRIES}): "
+                    f"Tool call ({attempt}/{MAX_TOOL_RETRIES}): "
                     f"{name}({self._fmt_args(args)})"
                 )
                 emit("tool_start", tool=name, args_preview=self._fmt_args(args)[:100],
@@ -339,7 +346,7 @@ tool or different arguments — DO NOT repeat the same failing call.
                     return denied_result
 
                 result = await self.tools.execute(name, **args)
-                logger.info(f"[{self.name}] Tool result: {str(result)[:300]}")
+                logger.info(f"Tool result: {str(result)[:300]}")
                 emit("tool_end", tool=name, success=not bool(result.error),
                      preview=(result.output or result.error or "")[:100])
 
@@ -387,7 +394,7 @@ tool or different arguments — DO NOT repeat the same failing call.
                         except json.JSONDecodeError:
                             corrected_args = {}
                         logger.info(
-                            f"[{self.name}] LLM self-corrected to: "
+                            f"LLM self-corrected to: "
                             f"{corrected_name}({self._fmt_args(corrected_args)})"
                         )
                         name, args = corrected_name, corrected_args
@@ -399,7 +406,7 @@ tool or different arguments — DO NOT repeat the same failing call.
                         continue
                     else:
                         logger.warning(
-                            f"[{self.name}] LLM self-correction did not yield a tool call. "
+                            f"LLM self-correction did not yield a tool call. "
                             f"Returning the original error for agent reconsideration."
                         )
                         return result
@@ -408,7 +415,7 @@ tool or different arguments — DO NOT repeat the same failing call.
 
             except Exception as exc:
                 logger.error(
-                    f"[{self.name}] Tool '{name}' raised exception "
+                    f"Tool '{name}' raised exception "
                     f"(attempt {attempt}): {exc}"
                 )
                 # SHS Code Phase 2 (spec §44/§45): classify the failure and
@@ -451,7 +458,7 @@ tool or different arguments — DO NOT repeat the same failing call.
                     await asyncio.sleep(min(wait, TOOL_RETRY_MAX))
                     wait = wait * 2 + random.uniform(0, 0.5)  # Fix: additive backoff
 
-        logger.error(f"[{self.name}] '{name}' failed after {MAX_TOOL_RETRIES} attempts.")
+        logger.error(f"'{name}' failed after {MAX_TOOL_RETRIES} attempts.")
         self.memory.add(Message.tool(
             content=str(last_result),
             tool_call_id=tool_call_id,
@@ -524,5 +531,16 @@ tool or different arguments — DO NOT repeat the same failing call.
         return s[:120] + "..." if len(s) > 120 else s
 
     async def cleanup(self) -> None:
+        # SHS Code FIX (one-shot leak regression): close the LLM backend's
+        # resources (aiohttp ClientSession / provider connections) BEFORE the
+        # event loop stops. Previously nothing in the agent cleanup chain
+        # called llm.cleanup_backend(), so every one-shot exit printed
+        # "Unclosed client session" + "Event loop is closed".
+        try:
+            llm = getattr(self, "llm", None)
+            if llm is not None and hasattr(llm, "cleanup_backend"):
+                await llm.cleanup_backend()
+        except Exception:
+            pass
         await self.tools.cleanup_all()
         await super().cleanup()
