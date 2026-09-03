@@ -1,0 +1,130 @@
+{
+  "agentic/hermes": {
+    "task": {
+      "A": "FAIL",
+      "C": "FAIL",
+      "D": "FAIL",
+      "E": "SKIPPED",
+      "H": "SKIPPED",
+      "I": "SKIPPED",
+      "M": "SKIPPED",
+      "V": "SKIPPED"
+    },
+    "fair_wins": 0,
+    "runs": 3,
+    "skipped": 5,
+    "total_wall": 41.9
+  },
+  "agentic/opencode": {
+    "task": {
+      "A": "TO",
+      "C": "TO",
+      "D": "SKIPPED",
+      "E": "SKIPPED",
+      "H": "SKIPPED",
+      "I": "SKIPPED",
+      "M": "SKIPPED",
+      "V": "SKIPPED"
+    },
+    "fair_wins": 0,
+    "runs": 2,
+    "skipped": 6,
+    "total_wall": 1080.2
+  },
+  "agentic/openhands": {
+    "task": {
+      "A": "TO",
+      "C": "PASS",
+      "D": "PASS",
+      "E": "TO",
+      "H": "TO",
+      "I": "FAIL",
+      "M": "PASS",
+      "V": "FAIL"
+    },
+    "fair_wins": 3,
+    "runs": 8,
+    "skipped": 0,
+    "total_wall": 2887.1000000000004
+  },
+  "agentic/shscode": {
+    "task": {
+      "A": "FAIL",
+      "C": "PASS",
+      "D": "PASS",
+      "E": "PASS",
+      "H": "PASS",
+      "I": "FAIL",
+      "M": "PASS",
+      "V": "PASS"
+    },
+    "fair_wins": 6,
+    "runs": 8,
+    "skipped": 0,
+    "total_wall": 2765.1
+  },
+  "fast/hermes": {
+    "task": {
+      "A": "FAIL",
+      "C": "FAIL",
+      "D": "FAIL",
+      "E": "FAIL",
+      "H": "FAIL",
+      "I": "TO",
+      "M": "FAIL",
+      "V": "FAIL"
+    },
+    "fair_wins": 0,
+    "runs": 8,
+    "skipped": 0,
+    "total_wall": 2130.6
+  },
+  "fast/opencode": {
+    "task": {
+      "A": "PASS",
+      "C": "TO",
+      "D": "TO",
+      "E": "TO",
+      "H": "TO",
+      "I": "TO",
+      "M": "TO",
+      "V": "TO"
+    },
+    "fair_wins": 1,
+    "runs": 8,
+    "skipped": 0,
+    "total_wall": 3316.5999999999995
+  },
+  "fast/openhands": {
+    "task": {
+      "A": "PASS",
+      "C": "PASS",
+      "D": "PASS",
+      "E": "PASS",
+      "H": "PASS",
+      "I": "PASS",
+      "M": "PASS",
+      "V": "FAIL"
+    },
+    "fair_wins": 7,
+    "runs": 8,
+    "skipped": 0,
+    "total_wall": 1106.1999999999998
+  },
+  "fast/shscode": {
+    "task": {
+      "A": "PASS",
+      "C": "PASS",
+      "D": "PASS",
+      "E": "FAIL",
+      "H": "PASS",
+      "I": "PASS",
+      "M": "PASS",
+      "V": "TO"
+    },
+    "fair_wins": 6,
+    "runs": 8,
+    "skipped": 0,
+    "total_wall": 2611.7999999999997
+  }
+}
