@@ -969,3 +969,76 @@ class TestNarrationGuard:
             assert any(p.search(t) for p in _NARRATION_PATTERNS), t
         for t in finals:
             assert not any(p.search(t) for p in _NARRATION_PATTERNS), t
+
+
+class TestGoalCompletionGate:
+    """LIVE NIM finding #3: mid-tier models summarise PARTIAL progress as a
+    final answer ('f1.py and f2.py created') while the persisted plan still
+    has unfinished steps. Per spec §34 completion is VERIFIED, never merely
+    claimed: the loop nudges the model to continue until the journaled DAG
+    has no pending/ready/active work (or the nudge budget runs out)."""
+
+    @pytest.mark.asyncio
+    async def test_final_answer_with_pending_plan_nudges(self, tmp_path):
+        from app.agent.manus import Manus
+        from tests.test_integration_e2e import ScriptedLLM
+        from app.state import Journal
+        agent = Manus()
+        # drive the loop manually: seed a task + plan with a pending node
+        await agent.run("noop bootstrap")   # registers journal task & plan
+        tid = agent._journal_task_id
+        j = Journal.get()
+        from app.task_dag import TaskGraph
+        g = await TaskGraph(j, tid).load()
+        if not g.nodes():
+            from app.task_dag import TaskNode
+            g._nodes["n1"] = TaskNode(node_id="n1", title="pending step")
+            await g.save()
+        agent.state = type(agent.state).IDLE
+        agent.llm = ScriptedLLM([
+            # work starts first — the refined gate only applies mid-work
+            ("tool", ("bash", {"command": "echo gate_work_started"})),
+            # partial-progress answer WHILE the plan has pending steps
+            ("text", "I created two of the files."),
+        ])
+        agent._max_steps = 10
+        result = await agent.run("finish the task")
+        assert agent._plan_gate_nudges >= 1, \
+            "partial-progress final answer must be gated by pending plan steps"
+        assert agent.state.name == "FINISHED"
+
+    @pytest.mark.asyncio
+    async def test_no_plan_answer_stands(self):
+        """No journal/plan => cannot judge => direct answer ends the run."""
+        from app.agent.manus import Manus
+        from tests.test_integration_e2e import ScriptedLLM
+        agent = Manus()
+        agent.journal = None
+        agent.llm = ScriptedLLM([("text", "NIM_LIVE_OK")])
+        agent._max_steps = 5
+        result = await agent.run("Reply with exactly: NIM_LIVE_OK")
+        assert agent._plan_gate_nudges == 0
+        assert "NIM_LIVE_OK" in (result or "")
+        assert agent.state.name == "FINISHED"
+
+    @pytest.mark.asyncio
+    async def test_gate_budget_exhausted(self, tmp_path):
+        from app.agent.manus import Manus
+        from tests.test_integration_e2e import ScriptedLLM
+        from app.state import Journal
+        agent = Manus()
+        await agent.run("noop bootstrap")
+        tid = agent._journal_task_id
+        from app.task_dag import TaskGraph
+        g = await TaskGraph(Journal.get(), tid).load()
+        if not g.nodes():
+            from app.task_dag import TaskNode
+            g._nodes["n1"] = TaskNode(node_id="n1", title="stuck step")
+            await g.save()
+        agent.state = type(agent.state).IDLE
+        agent.llm = ScriptedLLM([("text", "partial answer")])
+        agent._max_steps = 4
+        agent._plan_gate_nudges = 3     # budget already exhausted
+        await agent.run("do it")
+        assert agent._plan_gate_nudges == 3   # no 4th nudge
+        assert agent.state.name == "FINISHED"  # answer stands after budget

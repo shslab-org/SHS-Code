@@ -54,6 +54,7 @@ _NARRATION_PATTERNS = [
     )
 ]
 _MAX_NARRATION_NUDGES = 5
+_MAX_PLAN_GATE_NUDGES = 3
 
 # SHS Code Phase 2 (spec §19): tools that NEVER mutate state — safe to run
 # in parallel when the model requests several at once. Anything that writes
@@ -141,6 +142,9 @@ tool or different arguments — DO NOT repeat the same failing call.
         # SHS Code FIX (narration guard): bounded budget of
         # "narrate instead of tool call" nudges per run
         self._narration_nudges = 0
+        # SHS Code FIX (goal-completion gate): bounded budget of
+        # "final answer with unfinished plan" nudges per run
+        self._plan_gate_nudges = 0
 
     # ------------------------------------------------------------------
     # PAORR overrides
@@ -317,6 +321,39 @@ tool or different arguments — DO NOT repeat the same failing call.
                         "You described what you will do instead of calling the "
                         "tool. Continue NOW by actually calling the tool you "
                         "described (emit the tool call in this response)."
+                    ))
+                    return thought or None
+                # GOAL-COMPLETION GATE (spec §34: completion is VERIFIED,
+                # never merely claimed — live NIM finding #3): mid-tier
+                # models summarise PARTIAL progress as a final answer
+                # ("f1.py and f2.py created") while the persisted plan still
+                # has unfinished steps. The loop must not end while the
+                # journaled DAG shows pending/ready/active work — the model
+                # is nudged to continue executing the plan with tool calls.
+                # Refined discriminator: the gate applies ONLY once real
+                # work has started (_tool_call_count > 0). A pure Q&A task
+                # ("what is 2+2?") gets a boilerplate heuristic plan but
+                # zero tool calls — its direct answer must stand untouched.
+                # No plan / no journal => cannot judge => answer stands.
+                # Budgeted so a plan-stuck model still gets its answer out.
+                if (
+                    self._plan_gate_nudges < _MAX_PLAN_GATE_NUDGES
+                    and self._tool_call_count > 0
+                    and await self._plan_has_unfinished_work()
+                ):
+                    self._plan_gate_nudges += 1
+                    logger.info(
+                        "Final answer with unfinished plan steps — nudging "
+                        f"({self._plan_gate_nudges}/{_MAX_PLAN_GATE_NUDGES})")
+                    self.memory.add(Message.user(
+                        "Your persisted task plan still has UNFINISHED steps "
+                        "and you have already started executing them. A text "
+                        "summary is not completion. Continue executing the "
+                        "remaining plan steps with tool calls now. If a step "
+                        "is genuinely NOT needed for the user's request, mark "
+                        "it skipped via the task graph. Only give a final "
+                        "text answer when every plan step is completed or "
+                        "explicitly skipped."
                     ))
                     return thought or None
                 self.state = AgentState.FINISHED
@@ -570,6 +607,31 @@ tool or different arguments — DO NOT repeat the same failing call.
         "⚠ Tool",           # retry hint messages
         "[IDENTITY REINFORCEMENT",  # identity guard injections
     )
+
+    async def _plan_has_unfinished_work(self) -> bool:
+        """Goal-completion gate helper (spec §34). Reload the persisted
+        DAG from the journal (NOT the in-memory copy — the model may have
+        added/completed nodes via the task_dag tool, which writes to the
+        journal) and report whether any step is still
+        pending/ready/active/retryable/blocked. No plan or no journal
+        means we cannot judge goal completion — the answer stands."""
+        if self.journal is None or not getattr(self, "_journal_task_id", None):
+            return False
+        try:
+            from app.task_dag import TaskGraph
+            g = await TaskGraph(self.journal, self._journal_task_id).load()
+            unfinished = [
+                n for n in g.nodes()
+                if n.status in ("pending", "ready", "active", "retryable", "blocked")
+            ]
+            if unfinished:
+                logger.debug(
+                    f"[PlanGate] {len(unfinished)} unfinished plan step(s): "
+                    + ", ".join(n.title[:40] for n in unfinished[:4]))
+            return bool(unfinished)
+        except Exception as e:
+            logger.debug(f"[PlanGate] check skipped: {e}")
+            return False
 
     def _extract_current_goal(self) -> str:
         for m in reversed(self.memory.messages):
