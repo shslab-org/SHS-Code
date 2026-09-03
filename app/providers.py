@@ -220,10 +220,38 @@ class ProviderRegistry:
         llm.max_retries = e.get("max_retries", llm.max_retries)
         if e.get("headers"):
             llm.extra_headers = dict(e["headers"])
+        # Per-provider custom rate limit (spec §6/§7): entry rpm > 0 overrides
+        # the global [llm.rate_limit].rpm for this provider; entry rpm 0
+        # restores the global baseline. Provider DEFAULTS (e.g. NIM 40) are
+        # resolved later by the limiter when no custom limit applies.
+        if getattr(llm, "rate_limit", None) is not None:
+            overlay_rpm_apply(llm.rate_limit, e.get("rpm"))
         return True
 
 
 _registry: Optional[ProviderRegistry] = None
+
+# Baseline global [llm.rate_limit].rpm captured before any per-provider
+# overlay mutated it, so switching away from a provider restores the user's
+# global setting instead of leaking the previous provider's custom limit.
+_overlay_state: Dict[str, Any] = {"base_rpm": None}
+
+
+def overlay_rpm_apply(rl_cfg: Any, entry_rpm: Any) -> int:
+    """Apply a per-provider custom RPM onto the live rate-limit config.
+
+    Precedence (user spec §6/§7):
+      entry rpm > 0            -> custom limit for this provider (wins)
+      entry rpm 0/absent       -> restore the global baseline
+    Returns the effective rpm now set on the config object.
+    """
+    if _overlay_state["base_rpm"] is None:
+        _overlay_state["base_rpm"] = int(getattr(rl_cfg, "rpm", 0) or 0)
+    if int(entry_rpm or 0) > 0:
+        rl_cfg.rpm = int(entry_rpm)
+    else:
+        rl_cfg.rpm = int(_overlay_state["base_rpm"] or 0)
+    return int(rl_cfg.rpm)
 
 
 def get_providers() -> ProviderRegistry:

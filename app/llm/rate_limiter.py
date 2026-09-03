@@ -28,9 +28,21 @@ Usage:
 Configuration:
     [llm.rate_limit]
     enabled = true
-    rpm     = 40            # 0 or missing => provider default (NIM=40, else unlimited)
-    Auto-detection: base URLs containing "nvidia" (integrate.api.nvidia.com etc.)
-    are identified as NVIDIA NIM and default to 40 RPM unless overridden.
+    rpm     = 0    # 0/absent => automatic: provider default, else unlimited
+
+    Per-provider custom limits (override the global + provider default for
+    that provider only) live in the provider registry
+    (~/.shscode/providers.json, via `/provider add ... [rpm]`):
+      /provider add my-nim openai-compat https://... model key 30
+
+    RPM resolution order (per request):
+      1. per-provider custom RPM (registry entry rpm > 0)
+      2. global custom RPM ([llm.rate_limit].rpm > 0)
+      3. provider default (NVIDIA NIM endpoints => 40)
+      4. 0 => unlimited (no limiter; only server 429s throttle)
+
+    The limiter NEVER delays a request while the rolling window has
+    capacity — it only engages when the limit is actually reached.
 """
 
 import asyncio
@@ -51,12 +63,31 @@ _WINDOW_SECONDS = 60.0
 
 
 def detect_nim(base_url: Optional[str], provider: Optional[str]) -> bool:
-    """True when the endpoint looks like NVIDIA NIM (spec: current NIM config)."""
+    """True when the endpoint looks like NVIDIA NIM."""
     if base_url and "nvidia" in base_url.lower():
         return True
     if provider and ("nim" in provider.lower() or "nvidia" in provider.lower()):
         return True
     return False
+
+
+def resolve_rpm(provider: Optional[str], base_url: Optional[str],
+                custom_rpm: int = 0) -> int:
+    """Effective RPM for a provider (custom > provider default > unlimited).
+
+    - custom_rpm > 0            -> custom user-configured limit (wins)
+    - provider default known    -> e.g. NVIDIA NIM => 40
+    - otherwise                 -> 0 (unlimited; no artificial throttling)
+    """
+    custom_rpm = int(custom_rpm or 0)
+    if custom_rpm > 0:
+        return custom_rpm
+    p = (provider or "").strip().lower()
+    if p in DEFAULT_RPM:
+        return DEFAULT_RPM[p]
+    if detect_nim(base_url, provider):
+        return DEFAULT_RPM["nvidia-nim"]
+    return 0
 
 
 class RollingWindowRateLimiter:
@@ -142,15 +173,17 @@ class RollingWindowRateLimiter:
             self._blocked_until = 0.0
         return max(0.0, self._last_wait_s) if wait > 0 else 0.0
 
-    def on_rate_limit_response(self, retry_after_s: Optional[float] = None) -> None:
+    def on_rate_limit_response(self, retry_after_s: Optional[float] = None,
+                               now: Optional[float] = None) -> None:
         """Server told us 429. Record the request in the window AND (when the
         server told us Retry-After) block until that moment — this works even
         for unlimited (rpm=0) limiters, mirroring server-side pressure."""
+        now = time.monotonic() if now is None else now
         if retry_after_s and retry_after_s > 0:
             self._blocked_until = max(self._blocked_until,
-                                      time.monotonic() + float(retry_after_s))
+                                      now + float(retry_after_s))
         if self.rpm > 0:
-            self._timestamps.append(time.monotonic())
+            self._timestamps.append(now)
 
     # ------------------------------------------------------------------
     # Introspection
@@ -195,7 +228,7 @@ def get_limiter(provider: str, base_url: Optional[str] = None, model: str = "",
     """Get-or-create the limiter for this provider/endpoint/model.
 
     RPM resolution order:
-      1. explicit rpm argument (from [llm.rate_limit] config)
+      1. explicit rpm argument (custom: per-provider or global config)
       2. provider default (NVIDIA NIM => 40)
       3. 0 = unlimited
     """
@@ -209,10 +242,7 @@ def get_limiter(provider: str, base_url: Optional[str] = None, model: str = "",
         return _limiters[key]
 
     if rpm is None:
-        p = (provider or "").lower()
-        rpm = DEFAULT_RPM.get(p, 0)
-        if rpm == 0 and detect_nim(base_url, provider):
-            rpm = DEFAULT_RPM["nvidia-nim"]
+        rpm = resolve_rpm(provider, base_url)
 
     lim = RollingWindowRateLimiter(provider=key.split("|")[0], rpm=rpm)
     _limiters[key] = lim

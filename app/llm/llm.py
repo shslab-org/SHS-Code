@@ -748,16 +748,29 @@ class LLM:
     # ------------------------------------------------------------------
 
     def _limiter(self) -> Optional[Any]:
+        """Resolve the rolling-window limiter for the current provider/endpoint.
+
+        RPM resolution order (user spec: custom limit wins, else provider
+        default, else NO limiter — no artificial throttling while capacity
+        remains):
+          1. custom RPM — per-provider registry entry (applied onto
+             cfg.llm.rate_limit.rpm by provider_overlay) or the global
+             [llm.rate_limit].rpm, whichever is non-zero (per-provider wins)
+          2. provider default — NVIDIA NIM endpoints resolve to 40 RPM
+          3. anything else — no limiter; only server-side 429s throttle
+        """
         cfg = Config.get()
         rl = getattr(cfg.llm, "rate_limit", None)
         if rl is None or not getattr(rl, "enabled", True):
             return None
-        rpm = int(getattr(rl, "rpm", 0) or 0)
-        if rpm <= 0 and not detect_nim(self._base_url, self._provider):
-            # Unlimited and not NIM — no limiter needed.
-            if "nvidia" not in self._provider and "nim" not in self._provider:
-                return None
-        return get_limiter(self._provider, self._base_url, self._model, rpm=rpm or None)
+        custom_rpm = int(getattr(rl, "rpm", 0) or 0)
+        from app.llm.rate_limiter import resolve_rpm
+        effective = resolve_rpm(self._provider, self._base_url, custom_rpm)
+        if effective <= 0:
+            return None
+        # Always pass an explicit rpm so live adjustments (config reload,
+        # provider switch) update or clear existing limiters correctly.
+        return get_limiter(self._provider, self._base_url, self._model, rpm=effective)
 
     def _build_pool(self, cfg: Any) -> Optional[CredentialPool]:
         provider = (cfg.llm.provider or "").lower()

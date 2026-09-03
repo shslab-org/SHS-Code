@@ -15,9 +15,12 @@ timeout      = 1800   # 30 minutes — explicit user setting; honored exactly as
 
 [llm.rate_limit]
 # Rolling-window request pacing (true timestamp window, not naive 60s sleep).
-# NVIDIA NIM personal-key tier = 40 RPM. Set rpm = 0 for unlimited (NIM still auto-detects 40).
+# rpm = 0 -> automatic: provider default applies (NVIDIA NIM = 40 RPM,
+# other providers unlimited — NO artificial throttling below the limit).
+# A non-zero value sets a global custom RPM for every provider; a
+# per-provider custom RPM in the provider registry overrides this one.
 enabled = true
-rpm     = 40
+rpm     = 0
 
 [llm.streaming]
 enabled      = true
