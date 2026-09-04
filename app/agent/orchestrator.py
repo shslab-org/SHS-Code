@@ -79,7 +79,13 @@ def _triage(goal: str) -> str:
         pass
     text = (goal or "").strip()
     words = text.split()
-    if len(words) <= 12:
+    # v3.0.2 (benchmark finding): 12 words routed 15-25 word single-scope
+    # chains ("Read README.md, summarize ... into MODULES.txt"; "create a
+    # repo, add README, create one issue") into the full 4-role pipeline —
+    # 4x request amplification that cannot finish under shared rate
+    # limits. <= 25 words is a single-scope chain; multi-deliverable
+    # goals stay complex.
+    if len(words) <= 25:
         return "small"
     return "complex"
 

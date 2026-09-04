@@ -555,9 +555,13 @@ class TestMultiAgentTriage:
         assert _triage("2+2?") == "simple"
         assert _triage("hello") == "simple"
         assert _triage("Create hello.py") == "small"
-        long_goal = ("Build a complete REST API with authentication, database "
-                     "models, migration scripts, integration tests, CI config, "
-                     "and full documentation for the deployment process")
+        # v3.0.2: single-scope medium prompts are SMALL, not 4-role complex
+        assert _triage("Read README.md and summarize the project into MODULES.txt") == "small"
+        long_goal = ("Build a complete REST API with JWT authentication, user "
+                     "and role database models with Alembic migration scripts, "
+                     "pytest integration tests for every endpoint, a GitHub "
+                     "Actions CI config, Docker packaging, and full "
+                     "documentation for the deployment process")
         assert _triage(long_goal) == "complex"
 
     def test_simple_goal_takes_single_agent_path(self, tmp_path, monkeypatch):

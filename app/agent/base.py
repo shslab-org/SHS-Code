@@ -130,6 +130,11 @@ _ACTION_VERBS = (
     "modify", "edit", "change", "migrate", "port", "commit", "push", "clone",
     "search", "find", "analyze", "debug", "optimize", "validate", "verify",
     "document", "explain the codebase", "inspect", "list files", "show me the",
+    # v3.0.2 (benchmark task-21 finding): read/summarize/save and other
+    # file-oriented verbs are WORK, not conversation — "Read README.md and
+    # summarize into MODULES.txt" misrouted to chat and skipped tools.
+    "read", "summarize", "save", "store", "output", "list", "extract",
+    "compare", "count", "calculate", "compute", "check", "review", "print",
 )
 
 
@@ -413,6 +418,15 @@ class BaseAgent(ABC):
                     # SHS Code Phase 2 (spec §7/§41): plan progress awareness —
                     # the model always sees the current DAG state, not a stale plan.
                     await self._inject_plan_refresh()
+
+                # v3.0.2 KILL-ROBUST MEMORY CHECKPOINT (benchmark task-24/25
+                # finding): a SIGKILLed run never reaches run()'s finally, so
+                # nothing was written to long-term memory and a follow-up
+                # session answered from thin air. A compact progress memory
+                # every 2 steps survives even a hard kill — the recall path
+                # (FTS top-k) already deduplicates by relevance ranking.
+                if self._step_count % 2 == 0:
+                    await self._checkpoint_long_term_memory(prompt)
 
                 result = await self.step()
                 if result:
@@ -740,6 +754,31 @@ class BaseAgent(ABC):
                     ))
         except Exception as e:
             logger.debug(f"[Memory] recall failed (non-fatal): {e}")
+
+    async def _checkpoint_long_term_memory(self, prompt: str) -> None:
+        """v3.0.2: compact mid-run progress memory (survives SIGKILL).
+
+        The final store in run()'s finally never executes for hard-killed
+        runs — a follow-up session (or model switch) then had nothing to
+        recall. This checkpoint stores the goal + the freshest assistant
+        text every 2 steps so a kill loses at most 2 steps of recall."""
+        if self.long_term_memory is None:
+            return
+        try:
+            last_asst = ""
+            for m in reversed(self.memory.messages):
+                if m.role.value == "assistant" and (m.content or "").strip():
+                    last_asst = m.content.strip()[:400]
+                    break
+            if not last_asst:
+                return   # nothing new worth persisting yet
+            await self.long_term_memory.store(
+                f"TASK GOAL: {prompt[:500]}\nPROGRESS (step {self._step_count}): {last_asst}",
+                meta={"agent": self.name, "session": self._session_id,
+                      "steps": self._step_count, "checkpoint": True},
+            )
+        except Exception as e:
+            logger.debug(f"[Memory] checkpoint failed (non-fatal): {e}")
 
     async def _store_long_term_memory(self, prompt: str, results: list) -> None:
         """SHS Code (spec §3/§36): persist the goal + outcome so future tasks,
