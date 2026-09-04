@@ -1,0 +1,17 @@
+diff --git a/ANSWER.txt b/ANSWER.txt
+new file mode 100644
+index 0000000..c793025
+--- /dev/null
++++ b/ANSWER.txt
+@@ -0,0 +1 @@
++7
+\ No newline at end of file
+diff --git a/opencode.json b/opencode.json
+new file mode 100644
+index 0000000..1a855b7
+--- /dev/null
++++ b/opencode.json
+@@ -0,0 +1,2 @@
++{
++  "$schema": "https://opencode.ai/config.json","provider": {"nim": {"options": {"baseURL": "http://127.0.0.1:8391"}}}}
+\ No newline at end of file

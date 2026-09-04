@@ -1,0 +1,41 @@
+diff --git a/fizzbuzz.py b/fizzbuzz.py
+new file mode 100644
+index 0000000..5090b09
+--- /dev/null
++++ b/fizzbuzz.py
+@@ -0,0 +1,8 @@
++def fizzbuzz(n):
++    if n % 15 == 0:
++        return 'fizzbuzz'
++    if n % 3 == 0:
++        return 'fizz'
++    if n % 5 == 0:
++        return 'buzz'
++    return str(n)
+diff --git a/test_fizzbuzz.py b/test_fizzbuzz.py
+new file mode 100644
+index 0000000..e778a2f
+--- /dev/null
++++ b/test_fizzbuzz.py
+@@ -0,0 +1,21 @@
++from fizzbuzz import fizzbuzz
++
++
++def test_fizzbuzz_15():
++    assert fizzbuzz(15) == 'fizzbuzz'
++
++
++def test_fizz_9():
++    assert fizzbuzz(9) == 'fizz'
++
++
++def test_buzz_10():
++    assert fizzbuzz(10) == 'buzz'
++
++
++def test_number_7():
++    assert fizzbuzz(7) == '7'
++
++
++def test_zero_edge_case():
++    assert fizzbuzz(0) == 'fizzbuzz'

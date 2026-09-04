@@ -1,0 +1,41 @@
+{
+ "task": "task-09",
+ "agent": "openhands",
+ "title": "P4 debugging task (root cause of failing tests)",
+ "category": "planning",
+ "turns": {
+  "t1": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 300.1
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 9,
+  "responses": 8,
+  "ok": 5,
+  "429": 3,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 0,
+  "chat_calls": 9,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 1,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "suite": "12p/0f",
+  "all_pass": true,
+  "implementation_fixed": false,
+  "tests_untouched": true
+ }
+}

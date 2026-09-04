@@ -1,0 +1,90 @@
+diff --git a/logs/20260904_114549.log b/logs/20260904_114549.log
+new file mode 100644
+index 0000000..fececf2
+--- /dev/null
++++ b/logs/20260904_114549.log
+@@ -0,0 +1,51 @@
++2026-09-04 11:45:49,526 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:100 — [Orchestrator:63f6e819] ▶ Multi-agent run | mode=build | goal=Important project fact to remember for future sessions: this project's deploymen
++2026-09-04 11:45:49,529 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:118 — [Orchestrator:63f6e819] Execution order: product_manager → architect → engineer → qa
++2026-09-04 11:45:49,530 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:135 — [Orchestrator:63f6e819] ── Role: product_manager ──
++2026-09-04 11:45:49,536 | INFO     | agent=system step=0 trace=———— task= | shscode:_build_backend:810 — Universal LLM — http://127.0.0.1:8395 model=minimaxai/minimax-m3
++2026-09-04 11:45:49,537 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:206 — [UniversalClient] model=minimaxai/minimax-m3 timeout=300s (long_thinking=False)
++2026-09-04 11:45:49,537 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:82 — [product_manager] Generating PRD for goal: Important project fact to remember for future sessions: this project's deploymen
++2026-09-04 11:45:49,640 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
++2026-09-04 11:46:13,985 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:240 — [UniversalClient] Response received after 24.3s (status=200)
++2026-09-04 11:46:13,986 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:118 — [product_manager] PRD complete (2347 chars). Publishing to Architect.
++2026-09-04 11:46:13,986 | INFO     | agent=system step=0 trace=———— task= | shscode:run:160 — [product_manager] ■ Done in 24.4s
++2026-09-04 11:46:13,986 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:147 — [Orchestrator:63f6e819] product_manager ✓ (2347 chars, 24.5s)
++2026-09-04 11:46:13,987 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:135 — [Orchestrator:63f6e819] ── Role: architect ──
++2026-09-04 11:46:13,987 | INFO     | agent=system step=0 trace=———— task= | shscode:_build_backend:810 — Universal LLM — http://127.0.0.1:8395 model=minimaxai/minimax-m3
++2026-09-04 11:46:13,988 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:206 — [UniversalClient] model=minimaxai/minimax-m3 timeout=300s (long_thinking=False)
++2026-09-04 11:46:13,988 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:92 — [architect] Generating system design from PRD (2596 chars).
++2026-09-04 11:46:13,988 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
++2026-09-04 11:46:23,724 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:240 — [UniversalClient] Response received after 9.7s (status=429)
++2026-09-04 11:46:23,724 | WARNING  | agent=system step=0 trace=———— task= | shscode:mark_exhausted:37 — [CredentialPool] Key ...VC-6Jk exhausted, cooling 60s
++2026-09-04 11:46:23,725 | WARNING  | agent=system step=0 trace=———— task= | shscode:_call_with_retry:971 — [LLM] Rate limited (attempt 1). Retry-After=None. Waiting 1.0s — state preserved.
++2026-09-04 11:46:24,727 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
++2026-09-04 11:46:57,865 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:240 — [UniversalClient] Response received after 33.1s (status=429)
++2026-09-04 11:46:57,866 | WARNING  | agent=system step=0 trace=———— task= | shscode:_call_with_retry:971 — [LLM] Rate limited (attempt 2). Retry-After=None. Waiting 2.4s — state preserved.
++2026-09-04 11:47:00,307 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
++2026-09-04 11:49:03,297 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:240 — [UniversalClient] Response received after 123.0s (status=200)
++2026-09-04 11:49:03,297 | INFO     | agent=system step=0 trace=———— task= | shscode:_call_with_retry:910 — [LLM] Long response received after 123s (model=minimaxai/minimax-m3). This is normal for deep-thinking models.
++2026-09-04 11:49:03,298 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:125 — [architect] Design complete (7597 chars). Publishing to Engineer.
++2026-09-04 11:49:03,298 | INFO     | agent=system step=0 trace=———— task= | shscode:run:160 — [architect] ■ Done in 169.3s
++2026-09-04 11:49:03,298 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:147 — [Orchestrator:63f6e819] architect ✓ (7597 chars, 169.3s)
++2026-09-04 11:49:03,299 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:135 — [Orchestrator:63f6e819] ── Role: engineer ──
++2026-09-04 11:49:03,299 | INFO     | agent=system step=0 trace=———— task= | shscode:_build_backend:810 — Universal LLM — http://127.0.0.1:8395 model=minimaxai/minimax-m3
++2026-09-04 11:49:03,299 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:206 — [UniversalClient] model=minimaxai/minimax-m3 timeout=300s (long_thinking=False)
++2026-09-04 11:49:03,299 | WARNING  | agent=system step=0 trace=———— task= | shscode:run:139 — [engineer] Input validation failed: Input does not appear to be a design document — '[TASK-' or 'IMPLEMENTATION PLAN' not found. Ensure the Architect ran first.
++2026-09-04 11:49:03,299 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:147 — [Orchestrator:63f6e819] engineer ✓ (401 chars, 0.0s)
++2026-09-04 11:49:03,299 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:135 — [Orchestrator:63f6e819] ── Role: qa ──
++2026-09-04 11:49:03,299 | INFO     | agent=system step=0 trace=———— task= | shscode:_build_backend:810 — Universal LLM — http://127.0.0.1:8395 model=minimaxai/minimax-m3
++2026-09-04 11:49:03,299 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:206 — [UniversalClient] model=minimaxai/minimax-m3 timeout=300s (long_thinking=False)
++2026-09-04 11:49:03,322 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:102 — [qa] Delegating QA validation to SHSCode.
++2026-09-04 11:49:03,323 | INFO     | agent=system step=0 trace=———— task= | shscode:_build_backend:810 — Universal LLM — http://127.0.0.1:8395 model=minimaxai/minimax-m3
++2026-09-04 11:49:03,324 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:206 — [UniversalClient] model=minimaxai/minimax-m3 timeout=300s (long_thinking=False)
++2026-09-04 11:49:03,334 | DEBUG    | agent=SHSCode step=0 trace=a41cb90a-d1e7-4787-9ac1-7ef5c25d6ea9 task=71fff832 | shscode:_load_builtin:216 — [SkillEngine] Loaded 29 built-in skills
++2026-09-04 11:49:03,335 | DEBUG    | agent=SHSCode step=0 trace=a41cb90a-d1e7-4787-9ac1-7ef5c25d6ea9 task=71fff832 | shscode:_inject_relevant_skills:582 — [BaseAgent] Injected skill: deep_research
++2026-09-04 11:49:03,335 | DEBUG    | agent=SHSCode step=0 trace=a41cb90a-d1e7-4787-9ac1-7ef5c25d6ea9 task=71fff832 | shscode:_inject_relevant_skills:582 — [BaseAgent] Injected skill: testing
++2026-09-04 11:49:03,346 | INFO     | agent=SHSCode step=0 trace=a41cb90a-d1e7-4787-9ac1-7ef5c25d6ea9 task=71fff832 | shscode:refresh:193 — [Intel] refresh repo: {'files': 6, 'symbols': 26, 'changed': 1, 'removed': 0, 'skipped': 5, 'ms': 0}
++2026-09-04 11:49:03,358 | INFO     | agent=SHSCode step=0 trace=a41cb90a-d1e7-4787-9ac1-7ef5c25d6ea9 task=71fff832 | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
++2026-09-04 11:49:03,438 | INFO     | agent=SHSCode step=0 trace=a41cb90a-d1e7-4787-9ac1-7ef5c25d6ea9 task=71fff832 | shscode:_post:240 — [UniversalClient] Response received after 0.1s (status=429)
++2026-09-04 11:49:03,438 | WARNING  | agent=SHSCode step=0 trace=a41cb90a-d1e7-4787-9ac1-7ef5c25d6ea9 task=71fff832 | shscode:mark_exhausted:37 — [CredentialPool] Key ...VC-6Jk exhausted, cooling 60s
++2026-09-04 11:49:03,438 | WARNING  | agent=SHSCode step=0 trace=a41cb90a-d1e7-4787-9ac1-7ef5c25d6ea9 task=71fff832 | shscode:_call_with_retry:971 — [LLM] Rate limited (attempt 1). Retry-After=None. Waiting 1.0s — state preserved.
++2026-09-04 11:49:04,439 | INFO     | agent=SHSCode step=0 trace=a41cb90a-d1e7-4787-9ac1-7ef5c25d6ea9 task=71fff832 | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
++2026-09-04 11:49:37,555 | INFO     | agent=SHSCode step=0 trace=a41cb90a-d1e7-4787-9ac1-7ef5c25d6ea9 task=71fff832 | shscode:_post:240 — [UniversalClient] Response received after 33.1s (status=429)
++2026-09-04 11:49:37,555 | WARNING  | agent=SHSCode step=0 trace=a41cb90a-d1e7-4787-9ac1-7ef5c25d6ea9 task=71fff832 | shscode:_call_with_retry:971 — [LLM] Rate limited (attempt 2). Retry-After=None. Waiting 2.8s — state preserved.
++2026-09-04 11:49:40,321 | INFO     | agent=SHSCode step=0 trace=a41cb90a-d1e7-4787-9ac1-7ef5c25d6ea9 task=71fff832 | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
+diff --git a/logs/20260904_114949.log b/logs/20260904_114949.log
+new file mode 100644
+index 0000000..73fa4c5
+--- /dev/null
++++ b/logs/20260904_114949.log
+@@ -0,0 +1,11 @@
++2026-09-04 11:49:49,655 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:100 — [Orchestrator:b8a84929] ▶ Multi-agent run | mode=build | goal=Without asking me any question: what is this project's deployment port? If you k
++2026-09-04 11:49:49,659 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:118 — [Orchestrator:b8a84929] Execution order: product_manager → architect → engineer → qa
++2026-09-04 11:49:49,659 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:135 — [Orchestrator:b8a84929] ── Role: product_manager ──
++2026-09-04 11:49:49,665 | INFO     | agent=system step=0 trace=———— task= | shscode:_build_backend:810 — Universal LLM — http://127.0.0.1:8395 model=minimaxai/minimax-m3
++2026-09-04 11:49:49,665 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:206 — [UniversalClient] model=minimaxai/minimax-m3 timeout=300s (long_thinking=False)
++2026-09-04 11:49:49,666 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:82 — [product_manager] Generating PRD for goal: Without asking me any question: what is this project's deployment port? If you k
++2026-09-04 11:49:49,763 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
++2026-09-04 11:50:45,583 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:240 — [UniversalClient] Response received after 55.8s (status=429)
++2026-09-04 11:50:45,584 | WARNING  | agent=system step=0 trace=———— task= | shscode:mark_exhausted:37 — [CredentialPool] Key ...VC-6Jk exhausted, cooling 60s
++2026-09-04 11:50:45,586 | WARNING  | agent=system step=0 trace=———— task= | shscode:_call_with_retry:971 — [LLM] Rate limited (attempt 1). Retry-After=None. Waiting 1.0s — state preserved.
++2026-09-04 11:50:46,587 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
+diff --git a/workspace/.memory/long_term.db b/workspace/.memory/long_term.db
+new file mode 100644
+index 0000000..c07a3c8
+Binary files /dev/null and b/workspace/.memory/long_term.db differ
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..f3526f4
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..c3822e7
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ

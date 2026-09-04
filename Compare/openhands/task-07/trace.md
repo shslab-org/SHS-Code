@@ -1,0 +1,54 @@
+# task-07 — P2 simple coding task (slugify)
+
+- **Agent**: OpenHands CLI 1.13.1
+- **Category**: Category 2: Planning & Autonomous Execution
+- **Model**: minimaxai/minimax-m3 via NVIDIA NIM (http://127.0.0.1:8392 forensic proxy)
+- **Score**: 2/10
+
+## Canonical task prompt
+
+**Turn 1:**
+
+```
+Add a function slugify(text) to textproc.py: convert to lowercase, replace any run of non-alphanumeric characters with a single hyphen, collapse multiple hyphens, strip leading/trailing hyphens. slugify('') and slugify('   ') must return empty strings. Do not change other functions.
+```
+
+## Execution summary
+
+- Turn 1: wall **300.1s**, exit `-9`, KILLED (timeout)
+- Model requests (wire-level, via forensic proxy): **9** total, 9 chat calls
+- Upstream results: 2 OK, 6 HTTP 429, 0 HTTP 502
+- Git: 0 changed paths, 3 commits
+- Visible tool calls in trace: 0
+
+## Model request log (wire-level)
+
+| # | method/path | model | status | dur | injected | paced-wait |
+|---|-------------|-------|--------|-----|----------|------------|
+| req1 | POST /chat/completions | — | 200 | 11.53s | — | — |
+| req2 | POST /chat/completions | — | 200 | 31.92s | — | 21.8 |
+| req3 | POST /chat/completions | — | 429 | 24.09s | — | 23.8 |
+| req4 | POST /chat/completions | — | 429 | 33.59s | — | 33.3 |
+| req5 | POST /chat/completions | — | 429 | 33.04s | — | 32.8 |
+| req6 | POST /chat/completions | — | 429 | 26.0s | — | 25.7 |
+| req7 | POST /chat/completions | — | 429 | 33.59s | — | 33.3 |
+| req8 | POST /chat/completions | — | 429 | 33.1s | — | 32.9 |
+| req9 | POST /chat/completions | — | — | —s | — | 17.7 |
+
+## Final verification
+
+```json
+{
+ "error": "module 'textproc' has no attribute 'slugify'",
+ "all_pass": false
+}
+```
+
+**Score justification:** no slugify: module 'textproc' has no attribute 'slugify' [TIMEOUT] | t1=300.1s exit=-9 reqs=9 429=6 tools~3
+
+## Artifacts
+
+- `trace.jsonl` — full CLI stdout/stderr stream with timestamps
+- `proxy.jsonl` — wire-level request/response log (secrets redacted)
+- `diff.patch` — cumulative git diff of the agent's repository changes
+- `result.json` — machine-readable metrics + verification

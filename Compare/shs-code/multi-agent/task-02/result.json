@@ -1,0 +1,39 @@
+{
+ "task": "task-02",
+ "agent": "shs-multi",
+ "title": "M2 long-term memory across sessions (2 new sessions)",
+ "category": "memory",
+ "turns": {
+  "t1": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 240.1
+  },
+  "t2": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 150.1
+  }
+ },
+ "proxy": {
+  "requests": 9,
+  "responses": 7,
+  "ok": 2,
+  "429": 5,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 1,
+  "chat_calls": 9,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 6,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "answer": "",
+  "correct": false
+ }
+}

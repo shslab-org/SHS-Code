@@ -1,0 +1,63 @@
+diff --git a/calc.py b/calc.py
+index 1652188..26fab7b 100644
+--- a/calc.py
++++ b/calc.py
+@@ -1,19 +1,47 @@
+ # benchlib — small utility library used for agent benchmarking
+ 
+ 
++class Calculator:
++    """Arithmetic operations implemented as methods."""
++
++    def add(self, a: float, b: float) -> float:
++        """Return the sum of a and b."""
++        return a + b
++
++    def sub(self, a: float, b: float) -> float:
++        """Return a minus b."""
++        return a - b
++
++    def mul(self, a: float, b: float) -> float:
++        """Return the product of a and b."""
++        return a * b
++
++    def div(self, a: float, b: float) -> float:
++        """Safely divide a by b.
++
++        Raises ZeroDivisionError when b is zero.
++        """
++        if b == 0:
++            raise ZeroDivisionError("division by zero")
++        return a / b
++
++
++_default = Calculator()
++
++
+ def add(a: float, b: float) -> float:
+     """Return the sum of a and b."""
+-    return a + b
++    return _default.add(a, b)
+ 
+ 
+ def sub(a: float, b: float) -> float:
+     """Return a minus b."""
+-    return a - b
++    return _default.sub(a, b)
+ 
+ 
+ def mul(a: float, b: float) -> float:
+     """Return the product of a and b."""
+-    return a * b
++    return _default.mul(a, b)
+ 
+ 
+ def div(a: float, b: float) -> float:
+@@ -21,6 +49,4 @@ def div(a: float, b: float) -> float:
+ 
+     Raises ZeroDivisionError when b is zero.
+     """
+-    if b == 0:
+-        raise ZeroDivisionError("division by zero")
+-    return a / b
++    return _default.div(a, b)

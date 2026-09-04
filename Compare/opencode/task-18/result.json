@@ -1,0 +1,40 @@
+{
+ "task": "task-18",
+ "agent": "opencode",
+ "title": "T3 MCP tool usage (get_time)",
+ "category": "tools",
+ "turns": {
+  "t1": {
+   "exit": 0,
+   "killed": false,
+   "wall_s": 254.1
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 8,
+  "responses": 8,
+  "ok": 4,
+  "429": 4,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 0,
+  "chat_calls": 8,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 2,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "time_file": "MCP-UNAVAILABLE",
+  "nonempty": true,
+  "plausible": true
+ }
+}

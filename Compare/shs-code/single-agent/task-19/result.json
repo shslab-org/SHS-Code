@@ -1,0 +1,45 @@
+{
+ "task": "task-19",
+ "agent": "shs-single",
+ "title": "T4 terminal + filesystem operations",
+ "category": "tools",
+ "turns": {
+  "t1": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 330.1
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 9,
+  "responses": 8,
+  "ok": 7,
+  "429": 1,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 0,
+  "chat_calls": 9,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 12,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "todos_has_readme_line": true,
+  "archive_created": true,
+  "md_copied": 2,
+  "md_list": [
+   "CHANGELOG.md",
+   "README.md"
+  ],
+  "env_example": true
+ }
+}

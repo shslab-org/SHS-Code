@@ -1,0 +1,58 @@
+{
+ "task": "task-11",
+ "agent": "opencode",
+ "title": "O1 feature implementation (hidden-test email validator)",
+ "category": "output",
+ "turns": {
+  "t1": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 330.1
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 10,
+  "responses": 9,
+  "ok": 7,
+  "429": 2,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 0,
+  "chat_calls": 10,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 3,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "hidden_cases": {
+   "'user@example.com'": true,
+   "'user.name+tag@domain.co'": true,
+   "'a@b.io'": true,
+   "'USER@EXAMPLE.COM'": true,
+   "'user@example.c'": true,
+   "'user@@example.com'": true,
+   "'@example.com'": true,
+   "'user@'": true,
+   "'user@exa mple.com'": true,
+   "'user@..com'": true,
+   "'.user@example.com'": true,
+   "'user.@example.com'": true,
+   "'user@-example.com'": true,
+   "'us er@example.com'": true,
+   "'us@er@example.com'": true,
+   "'user@example..com'": true,
+   "'user@EXAMPLE.com'": true
+  },
+  "all_pass": true,
+  "pass_count": "17/17"
+ }
+}

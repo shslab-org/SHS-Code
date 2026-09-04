@@ -1,0 +1,49 @@
+diff --git a/logs/20260904_131810.log b/logs/20260904_131810.log
+new file mode 100644
+index 0000000..e64b072
+--- /dev/null
++++ b/logs/20260904_131810.log
+@@ -0,0 +1,31 @@
++2026-09-04 13:18:10,554 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:100 — [Orchestrator:88aa5cbc] ▶ Multi-agent run | mode=build | goal=Create a git branch named feat/logger. On that branch, implement logger.py with 
++2026-09-04 13:18:10,558 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:118 — [Orchestrator:88aa5cbc] Execution order: product_manager → architect → engineer → qa
++2026-09-04 13:18:10,558 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:135 — [Orchestrator:88aa5cbc] ── Role: product_manager ──
++2026-09-04 13:18:10,565 | INFO     | agent=system step=0 trace=———— task= | shscode:_build_backend:810 — Universal LLM — http://127.0.0.1:8395 model=minimaxai/minimax-m3
++2026-09-04 13:18:10,565 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:206 — [UniversalClient] model=minimaxai/minimax-m3 timeout=300s (long_thinking=False)
++2026-09-04 13:18:10,565 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:82 — [product_manager] Generating PRD for goal: Create a git branch named feat/logger. On that branch, implement logger.py with 
++2026-09-04 13:18:10,661 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
++2026-09-04 13:18:10,849 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:240 — [UniversalClient] Response received after 0.2s (status=429)
++2026-09-04 13:18:10,850 | WARNING  | agent=system step=0 trace=———— task= | shscode:mark_exhausted:37 — [CredentialPool] Key ...VC-6Jk exhausted, cooling 60s
++2026-09-04 13:18:10,851 | WARNING  | agent=system step=0 trace=———— task= | shscode:_call_with_retry:971 — [LLM] Rate limited (attempt 1). Retry-After=None. Waiting 1.0s — state preserved.
++2026-09-04 13:18:11,852 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
++2026-09-04 13:18:44,870 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:240 — [UniversalClient] Response received after 33.0s (status=429)
++2026-09-04 13:18:44,871 | WARNING  | agent=system step=0 trace=———— task= | shscode:_call_with_retry:971 — [LLM] Rate limited (attempt 2). Retry-After=None. Waiting 2.3s — state preserved.
++2026-09-04 13:18:47,219 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
++2026-09-04 13:19:18,875 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:240 — [UniversalClient] Response received after 31.7s (status=429)
++2026-09-04 13:19:18,875 | WARNING  | agent=system step=0 trace=———— task= | shscode:_call_with_retry:971 — [LLM] Rate limited (attempt 3). Retry-After=None. Waiting 4.7s — state preserved.
++2026-09-04 13:19:23,615 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
++2026-09-04 13:22:44,512 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:240 — [UniversalClient] Response received after 200.9s (status=200)
++2026-09-04 13:22:44,512 | INFO     | agent=system step=0 trace=———— task= | shscode:_call_with_retry:910 — [LLM] Long response received after 201s (model=minimaxai/minimax-m3). This is normal for deep-thinking models.
++2026-09-04 13:22:44,512 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:118 — [product_manager] PRD complete (6166 chars). Publishing to Architect.
++2026-09-04 13:22:44,513 | INFO     | agent=system step=0 trace=———— task= | shscode:run:160 — [product_manager] ■ Done in 273.9s
++2026-09-04 13:22:44,513 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:147 — [Orchestrator:88aa5cbc] product_manager ✓ (6166 chars, 274.0s)
++2026-09-04 13:22:44,513 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:135 — [Orchestrator:88aa5cbc] ── Role: architect ──
++2026-09-04 13:22:44,513 | INFO     | agent=system step=0 trace=———— task= | shscode:_build_backend:810 — Universal LLM — http://127.0.0.1:8395 model=minimaxai/minimax-m3
++2026-09-04 13:22:44,513 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:206 — [UniversalClient] model=minimaxai/minimax-m3 timeout=300s (long_thinking=False)
++2026-09-04 13:22:44,514 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:92 — [architect] Generating system design from PRD (3396 chars).
++2026-09-04 13:22:44,514 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
++2026-09-04 13:22:44,596 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:240 — [UniversalClient] Response received after 0.1s (status=429)
++2026-09-04 13:22:44,597 | WARNING  | agent=system step=0 trace=———— task= | shscode:mark_exhausted:37 — [CredentialPool] Key ...VC-6Jk exhausted, cooling 60s
++2026-09-04 13:22:44,597 | WARNING  | agent=system step=0 trace=———— task= | shscode:_call_with_retry:971 — [LLM] Rate limited (attempt 1). Retry-After=None. Waiting 1.0s — state preserved.
++2026-09-04 13:22:45,598 | INFO     | agent=system step=0 trace=———— task= | shscode:_post:236 — [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..ea9bff1
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..675fc83
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ

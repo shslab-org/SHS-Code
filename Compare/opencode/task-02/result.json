@@ -1,0 +1,39 @@
+{
+ "task": "task-02",
+ "agent": "opencode",
+ "title": "M2 long-term memory across sessions (2 new sessions)",
+ "category": "memory",
+ "turns": {
+  "t1": {
+   "exit": 0,
+   "killed": false,
+   "wall_s": 38.5
+  },
+  "t2": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 150.1
+  }
+ },
+ "proxy": {
+  "requests": 6,
+  "responses": 5,
+  "ok": 5,
+  "429": 0,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 0,
+  "chat_calls": 6,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 1,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "answer": "",
+  "correct": false
+ }
+}

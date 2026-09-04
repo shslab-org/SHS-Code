@@ -1,0 +1,202 @@
+diff --git a/opencode.json b/opencode.json
+new file mode 100644
+index 0000000..1a855b7
+--- /dev/null
++++ b/opencode.json
+@@ -0,0 +1,2 @@
++{
++  "$schema": "https://opencode.ai/config.json","provider": {"nim": {"options": {"baseURL": "http://127.0.0.1:8391"}}}}
+\ No newline at end of file
+diff --git a/test_validators.py b/test_validators.py
+new file mode 100644
+index 0000000..6bca1eb
+--- /dev/null
++++ b/test_validators.py
+@@ -0,0 +1,128 @@
++from validators import validate_email
++
++import pytest
++
++
++def test_valid_simple():
++    assert validate_email("user@example.com") == "user@example.com"
++
++
++def test_valid_lowercases_result():
++    assert validate_email("User@Example.COM") == "user@example.com"
++
++
++def test_valid_plus_tag_and_dots_in_local():
++    assert validate_email("first.last+tag@sub.example.co") == "first.last+tag@sub.example.co"
++
++
++def test_valid_all_allowed_local_chars():
++    local = "aA1._%+-"
++    assert validate_email(f"{local}@example.com") == f"{local}@example.com"
++
++
++def test_valid_long_local_at_limit():
++    local = "a" * 64
++    assert validate_email(f"{local}@example.com") == f"{local}@example.com"
++
++
++def test_valid_long_domain_at_limit():
++    labels = ["a" * 63] * 4
++    domain = ".".join(labels)
++    assert len(domain) <= 255
++    assert validate_email(f"u@{domain}") == f"u@{domain}"
++
++
++def test_invalid_missing_at():
++    with pytest.raises(ValueError):
++        validate_email("userexample.com")
++
++
++def test_invalid_empty_local():
++    with pytest.raises(ValueError):
++        validate_email("@example.com")
++
++
++def test_invalid_empty_domain():
++    with pytest.raises(ValueError):
++        validate_email("user@")
++
++
++def test_invalid_non_string():
++    with pytest.raises(ValueError):
++        validate_email(123)
++
++
++def test_invalid_local_too_long():
++    with pytest.raises(ValueError):
++        validate_email(f"{'a' * 65}@example.com")
++
++
++def test_invalid_local_starts_with_dot():
++    with pytest.raises(ValueError):
++        validate_email(".user@example.com")
++
++
++def test_invalid_local_ends_with_dot():
++    with pytest.raises(ValueError):
++        validate_email("user.@example.com")
++
++
++def test_invalid_local_disallowed_char():
++    with pytest.raises(ValueError):
++        validate_email("us er@example.com")
++
++
++def test_invalid_local_other_disallowed_char():
++    with pytest.raises(ValueError):
++        validate_email("user!@example.com")
++
++
++def test_invalid_domain_starts_with_dash():
++    with pytest.raises(ValueError):
++        validate_email("user@-example.com")
++
++
++def test_invalid_domain_ends_with_dash():
++    with pytest.raises(ValueError):
++        validate_email("user@example.com-")
++
++
++def test_invalid_domain_starts_with_dot():
++    with pytest.raises(ValueError):
++        validate_email("user@.example.com")
++
++
++def test_invalid_domain_ends_with_dot():
++    with pytest.raises(ValueError):
++        validate_email("user@example.com.")
++
++
++def test_invalid_domain_consecutive_dots():
++    with pytest.raises(ValueError):
++        validate_email("user@example..com")
++
++
++def test_invalid_domain_no_dot():
++    with pytest.raises(ValueError):
++        validate_email("user@localhost")
++
++
++def test_invalid_tld_too_short():
++    with pytest.raises(ValueError):
++        validate_email("user@example.c")
++
++
++def test_invalid_tld_with_digit():
++    with pytest.raises(ValueError):
++        validate_email("user@example.c1")
++
++
++def test_invalid_empty_string():
++    with pytest.raises(ValueError):
++        validate_email("")
++
++
++def test_invalid_domain_too_long():
++    domain = ("a" * 63 + ".") * 4 + "a" * 63
++    with pytest.raises(ValueError):
++        validate_email(f"u@{domain}")
+diff --git a/validators.py b/validators.py
+new file mode 100644
+index 0000000..1527704
+--- /dev/null
++++ b/validators.py
+@@ -0,0 +1,53 @@
++# benchlib validators
++
++import re
++
++
++_LOCAL_CHARS = re.compile(r"^[A-Za-z0-9._%+-]+$")
++_DOMAIN_CHARS = re.compile(r"^[A-Za-z0-9.-]+$")
++_TLD_RE = re.compile(r"^[A-Za-z]{2,}$")
++
++
++def validate_email(s: str) -> str:
++    """Validate an email address per the benchlib spec.
++
++    Returns the lowercased email when valid; raises ValueError otherwise.
++    """
++    if not isinstance(s, str):
++        raise ValueError("email must be a string")
++
++    if not s or len(s) > 320:
++        raise ValueError("email length out of range")
++
++    at_index = s.rfind("@")
++    if at_index <= 0 or at_index == len(s) - 1:
++        raise ValueError("email must contain a single '@' separating local and domain")
++
++    local = s[:at_index]
++    domain = s[at_index + 1:]
++
++    if not (1 <= len(local) <= 64):
++        raise ValueError("local part must be 1-64 characters")
++    if not (1 <= len(domain) <= 255):
++        raise ValueError("domain must be 1-255 characters")
++
++    if not _LOCAL_CHARS.match(local):
++        raise ValueError("local part contains invalid characters")
++    if local.startswith(".") or local.endswith("."):
++        raise ValueError("local part must not start or end with '.'")
++
++    if not _DOMAIN_CHARS.match(domain):
++        raise ValueError("domain contains invalid characters")
++    if domain.startswith("-") or domain.endswith("-") or domain.startswith(".") or domain.endswith("."):
++        raise ValueError("domain must not start or end with '-' or '.'")
++    if ".." in domain:
++        raise ValueError("domain must not contain consecutive dots")
++
++    if "." not in domain:
++        raise ValueError("domain must contain at least one dot")
++
++    tld = domain.rsplit(".", 1)[-1]
++    if not _TLD_RE.match(tld):
++        raise ValueError("TLD must be 2+ letters")
++
++    return s.lower()

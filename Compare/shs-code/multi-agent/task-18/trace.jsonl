@@ -1,0 +1,101 @@
+{"event": "turn_start", "agent": "shs-multi", "prompt": "Use the MCP tool get_time provided by the configured MCP server 'bench' to obtain the current server time, and write exactly what the tool returns to a file named TIME.txt. If the MCP server is unavailable, write MCP-UNAVAILABLE instead.", "turn2": false, "model_switch": false, "timeout": 330, "ts": 0.0}
+{"event": "spawn", "cmd": "/home/z/.venv/bin/python3 /home/z/my-project/SHS-Code/run_multi_agent.py Use the MCP tool get_time provided by the configured MCP server 'bench' to obtain the current server time, and write exactly what the tool returns to a file named TIME.txt. If the MCP server is unavailable, write MCP-UNAVAILABLE instead.", "cwd": "/home/z/my-project/benchmark/runs/task-18/shs-multi/repo", "ts": 0.0}
+{"event": "stream", "stream": "out", "text": "", "ts": 0.37}
+{"event": "stream", "stream": "out", "text": "[SHS Code] Running multi-agent pipeline...", "ts": 0.37}
+{"event": "stream", "stream": "out", "text": "[SHS Code] Goal: Use the MCP tool get_time provided by the configured MCP server 'bench' to obtain the current server time, and write exactly what the tool returns to a file named TIME.txt. If the MCP server is unavailable, write MCP-UNAVAILABLE instead.", "ts": 0.37}
+{"event": "stream", "stream": "out", "text": "[SHS Code] Mode: build", "ts": 0.37}
+{"event": "stream", "stream": "out", "text": "", "ts": 0.37}
+{"event": "stream", "stream": "out", "text": "13:32:15 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [Orchestrator:8855a207] \u25b6 Multi-agent run | mode=build | goal=Use the MCP tool get_time provided by the configured MCP server 'bench' to obtai", "ts": 0.37}
+{"event": "stream", "stream": "out", "text": "13:32:15 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [Orchestrator:8855a207] Execution order: product_manager \u2192 architect \u2192 engineer \u2192 qa", "ts": 0.38}
+{"event": "stream", "stream": "out", "text": "13:32:15 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [Orchestrator:8855a207] \u2500\u2500 Role: product_manager \u2500\u2500", "ts": 0.38}
+{"event": "stream", "stream": "out", "text": "13:32:15 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 Universal LLM \u2014 http://127.0.0.1:8395 model=minimaxai/minimax-m3", "ts": 0.38}
+{"event": "stream", "stream": "out", "text": "13:32:15 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [UniversalClient] model=minimaxai/minimax-m3 timeout=300s (long_thinking=False)", "ts": 0.38}
+{"event": "stream", "stream": "out", "text": "13:32:15 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [product_manager] Generating PRD for goal: Use the MCP tool get_time provided by the configured MCP server 'bench' to obtai", "ts": 0.38}
+{"event": "stream", "stream": "out", "text": "13:32:15 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)", "ts": 0.48}
+{"event": "stream", "stream": "out", "text": "13:33:09 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [UniversalClient] Response received after 54.2s (status=200)", "ts": 54.66}
+{"event": "stream", "stream": "out", "text": "13:33:09 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [product_manager] PRD complete (4495 chars). Publishing to Architect.", "ts": 54.66}
+{"event": "stream", "stream": "out", "text": "13:33:09 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [product_manager] \u25a0 Done in 54.3s", "ts": 54.66}
+{"event": "stream", "stream": "out", "text": "13:33:09 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [Orchestrator:8855a207] product_manager \u2713 (4495 chars, 54.3s)", "ts": 54.66}
+{"event": "stream", "stream": "out", "text": "13:33:09 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [Orchestrator:8855a207] \u2500\u2500 Role: architect \u2500\u2500", "ts": 54.66}
+{"event": "stream", "stream": "out", "text": "13:33:09 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 Universal LLM \u2014 http://127.0.0.1:8395 model=minimaxai/minimax-m3", "ts": 54.66}
+{"event": "stream", "stream": "out", "text": "13:33:09 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [UniversalClient] model=minimaxai/minimax-m3 timeout=300s (long_thinking=False)", "ts": 54.66}
+{"event": "stream", "stream": "out", "text": "13:33:09 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [architect] Generating system design from PRD (3279 chars).", "ts": 54.66}
+{"event": "stream", "stream": "out", "text": "13:33:09 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)", "ts": 54.66}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [UniversalClient] Response received after 134.6s (status=200)", "ts": 189.25}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [LLM] Long response received after 135s (model=minimaxai/minimax-m3). This is normal for deep-thinking models.", "ts": 189.25}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [architect] Design complete (7962 chars). Publishing to Engineer.", "ts": 189.25}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [architect] \u25a0 Done in 134.6s", "ts": 189.25}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [Orchestrator:8855a207] architect \u2713 (7962 chars, 134.6s)", "ts": 189.25}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [Orchestrator:8855a207] \u2500\u2500 Role: engineer \u2500\u2500", "ts": 189.25}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 Universal LLM \u2014 http://127.0.0.1:8395 model=minimaxai/minimax-m3", "ts": 189.25}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [UniversalClient] model=minimaxai/minimax-m3 timeout=300s (long_thinking=False)", "ts": 189.25}
+{"event": "stream", "stream": "out", "text": "13:35:24 | WARNING  | system@0 [\u2014\u2014\u2014\u2014] \u2014 [engineer] Input validation failed: Input does not appear to be a design document \u2014 '[TASK-' or 'IMPLEMENTATION PLAN' not found. Ensure the Architect ran first.", "ts": 189.25}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [Orchestrator:8855a207] engineer \u2713 (401 chars, 0.0s)", "ts": 189.25}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [Orchestrator:8855a207] \u2500\u2500 Role: qa \u2500\u2500", "ts": 189.26}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 Universal LLM \u2014 http://127.0.0.1:8395 model=minimaxai/minimax-m3", "ts": 189.26}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [UniversalClient] model=minimaxai/minimax-m3 timeout=300s (long_thinking=False)", "ts": 189.26}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [qa] Delegating QA validation to SHSCode.", "ts": 189.29}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 Universal LLM \u2014 http://127.0.0.1:8395 model=minimaxai/minimax-m3", "ts": 189.29}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | system@0 [\u2014\u2014\u2014\u2014] \u2014 [UniversalClient] model=minimaxai/minimax-m3 timeout=300s (long_thinking=False)", "ts": 189.29}
+{"event": "stream", "stream": "out", "text": "13:35:24 | DEBUG    | SHSCode@0 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [SkillEngine] Loaded 29 built-in skills", "ts": 189.31}
+{"event": "stream", "stream": "out", "text": "13:35:24 | DEBUG    | SHSCode@0 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [BaseAgent] Injected skill: deep_research", "ts": 189.32}
+{"event": "stream", "stream": "out", "text": "13:35:24 | DEBUG    | SHSCode@0 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [BaseAgent] Injected skill: data_analysis", "ts": 189.32}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | SHSCode@0 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [Intel] refresh repo: {'files': 6, 'symbols': 26, 'changed': 6, 'removed': 0, 'skipped': 0, 'ms': 4}", "ts": 189.34}
+{"event": "stream", "stream": "out", "text": "13:35:24 | INFO     | SHSCode@0 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)", "ts": 189.38}
+{"event": "stream", "stream": "out", "text": "13:35:41 | INFO     | SHSCode@0 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [UniversalClient] Response received after 17.3s (status=200)", "ts": 206.72}
+{"event": "stream", "stream": "out", "text": "13:35:41 | INFO     | SHSCode@0 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 Starting run task=4b71a315 session=8c894367-605 mode=build max_steps=30", "ts": 206.72}
+{"event": "stream", "stream": "out", "text": "13:35:41 | INFO     | SHSCode@1 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 Step 1/30", "ts": 206.72}
+{"event": "stream", "stream": "out", "text": "13:35:41 | DEBUG    | SHSCode@1 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [ToolSelector] Goal: You are a QA engineer. Validate the following implementation", "ts": 206.73}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  50%  str_replace_editor      \u2190 str_replace_editor is a good fit for this step (conf=0.50, signals: write(+0.40)  (signals: write(+0.40))", "ts": 206.73}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  40%  web_search              \u2190 web_search is a possible option for this step (conf=0.40, signals: current(+0.50  (signals: current(+0.50), file(-0.20))", "ts": 206.73}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  10%  python_execute          \u2190 python_execute is a low relevance for this step (conf=0.10, signals: no strong s  (signals: general capability)", "ts": 206.73}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  10%  node_execute            \u2190 node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)", "ts": 206.73}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  10%  bash                    \u2190 bash is a low relevance for this step (conf=0.10, signals: no strong signals)  (signals: general capability)", "ts": 206.73}
+{"event": "stream", "stream": "out", "text": "13:35:41 | INFO     | SHSCode@1 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)", "ts": 206.73}
+{"event": "stream", "stream": "out", "text": "13:36:05 | INFO     | SHSCode@1 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [UniversalClient] Response received after 23.8s (status=200)", "ts": 230.52}
+{"event": "stream", "stream": "out", "text": "13:36:05 | INFO     | SHSCode@1 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 Tool call (1/3): bash({\"command\": \"ls -la workspace/ 2>/dev/null && echo \\\"---\\\" && ls -la TIME.txt 2>/dev/null && echo \\\"---\\\" && pwd\"})", "ts": 230.52}
+{"event": "stream", "stream": "out", "text": "13:36:05 | INFO     | SHSCode@1 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 Tool result: total 16", "ts": 230.52}
+{"event": "stream", "stream": "out", "text": "drwxrwxr-x 4 z z 4096 Sep  4 13:35 .", "ts": 230.52}
+{"event": "stream", "stream": "out", "text": "drwxrwxr-x 5 z z 4096 Sep  4 13:32 ..", "ts": 230.52}
+{"event": "stream", "stream": "out", "text": "drwxrwxr-x 2 z z 4096 Sep  4 13:35 .memory", "ts": 230.52}
+{"event": "stream", "stream": "out", "text": "drwxrwxr-x 2 z z 4096 Sep  4 13:32 .sessions", "ts": 230.52}
+{"event": "stream", "stream": "out", "text": "---", "ts": 230.52}
+{"event": "stream", "stream": "out", "text": "ERROR: Command exited with code 2.", "ts": 230.52}
+{"event": "stream", "stream": "out", "text": "Output:", "ts": 230.52}
+{"event": "stream", "stream": "out", "text": "total 16", "ts": 230.52}
+{"event": "stream", "stream": "out", "text": "drwxrwxr-x 4 z z 4096 Sep  4 13:35 .", "ts": 230.52}
+{"event": "stream", "stream": "out", "text": "drwxrwxr-x 5 z z 4096 Sep  4 13:32 ", "ts": 230.52}
+{"event": "stream", "stream": "out", "text": "13:36:05 | DEBUG    | SHSCode@1 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [ToolSelector] Goal: I'll analyze this QA task carefully. The engineer output sho", "ts": 230.53}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  10%  python_execute          \u2190 python_execute is a low relevance for this step (conf=0.10, signals: no strong s  (signals: general capability)", "ts": 230.53}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  10%  node_execute            \u2190 node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)", "ts": 230.53}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  10%  str_replace_editor      \u2190 str_replace_editor is a low relevance for this step (conf=0.10, signals: no stro  (signals: general capability)", "ts": 230.53}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  10%  browser_use             \u2190 browser_use is a low relevance for this step (conf=0.10, signals: no strong sign  (signals: general capability)", "ts": 230.53}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  10%  web_search              \u2190 web_search is a low relevance for this step (conf=0.10, signals: no strong signa  (signals: general capability)", "ts": 230.53}
+{"event": "stream", "stream": "out", "text": "13:36:05 | INFO     | SHSCode@1 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)", "ts": 230.53}
+{"event": "stream", "stream": "out", "text": "13:37:37 | INFO     | SHSCode@1 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [UniversalClient] Response received after 91.4s (status=200)", "ts": 321.9}
+{"event": "stream", "stream": "out", "text": "13:37:37 | INFO     | SHSCode@1 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [LLM] Long response received after 91s (model=minimaxai/minimax-m3). This is normal for deep-thinking models.", "ts": 321.9}
+{"event": "stream", "stream": "out", "text": "13:37:37 | INFO     | SHSCode@1 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 LLM self-corrected to: python_execute({\"code\": \"\\nimport os\\nimport subprocess\\n\\n# Check current directory and workspace\\nprint(\\\"Current working directory:\\...)", "ts": 321.9}
+{"event": "stream", "stream": "out", "text": "13:37:38 | INFO     | SHSCode@1 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 Tool call (2/3): python_execute({\"code\": \"\\nimport os\\nimport subprocess\\n\\n# Check current directory and workspace\\nprint(\\\"Current working directory:\\...)", "ts": 322.9}
+{"event": "stream", "stream": "out", "text": "13:37:38 | INFO     | SHSCode@1 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 Tool result: Current working directory: /home/z/my-project/benchmark/runs/task-18/shs-multi/repo", "ts": 322.92}
+{"event": "stream", "stream": "out", "text": "", "ts": 322.92}
+{"event": "stream", "stream": "out", "text": "Workspace contents:", "ts": 322.92}
+{"event": "stream", "stream": "out", "text": "  .sessions (dir)", "ts": 322.92}
+{"event": "stream", "stream": "out", "text": "  .memory (dir)", "ts": 322.92}
+{"event": "stream", "stream": "out", "text": "", "ts": 322.92}
+{"event": "stream", "stream": "out", "text": "Searching for TIME.txt:", "ts": 322.92}
+{"event": "stream", "stream": "out", "text": "", "ts": 322.92}
+{"event": "stream", "stream": "out", "text": "Searching for MCP-related files:", "ts": 322.92}
+{"event": "stream", "stream": "out", "text": "", "ts": 322.92}
+{"event": "stream", "stream": "out", "text": "Checking for MCP configuration:", "ts": 322.92}
+{"event": "stream", "stream": "out", "text": "  Not found: /home/z/.config/claude/mcp_servers.json", "ts": 322.92}
+{"event": "stream", "stream": "out", "text": "  Not found: /ho", "ts": 322.92}
+{"event": "stream", "stream": "out", "text": "13:37:38 | INFO     | SHSCode@2 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 Step 2/30", "ts": 322.93}
+{"event": "stream", "stream": "out", "text": "13:37:38 | DEBUG    | SHSCode@2 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [ToolSelector] Goal: Let me use python_execute to investigate the state of the wo", "ts": 322.94}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  65%  str_replace_editor      \u2190 str_replace_editor is a good fit for this step (conf=0.65, signals: file(+0.40),  (signals: file(+0.40), check(+0.15))", "ts": 322.94}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  10%  python_execute          \u2190 python_execute is a low relevance for this step (conf=0.10, signals: no strong s  (signals: general capability)", "ts": 322.94}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  10%  node_execute            \u2190 node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)", "ts": 322.94}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  10%  crawl                   \u2190 crawl is a low relevance for this step (conf=0.10, signals: no strong signals)  (signals: general capability)", "ts": 322.94}
+{"event": "stream", "stream": "out", "text": "  [\u2588\u2588\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591]  10%  image_generate          \u2190 image_generate is a low relevance for this step (conf=0.10, signals: no strong s  (signals: general capability)", "ts": 322.94}
+{"event": "stream", "stream": "out", "text": "13:37:38 | INFO     | SHSCode@2 [7ba74e6a-040a-43d7-ad29-29213532afa8] \u2014 [UniversalClient] Sending request to http://127.0.0.1:8395/chat/completions (timeout=300s)", "ts": 322.94}
+{"event": "timeout_kill", "at_s": 330.1, "ts": 330.11}
+{"event": "turn_end", "exit_code": -9, "killed": true, "wall_s": 330.1, "ts": 330.11}

@@ -1,0 +1,8 @@
+diff --git a/SAFEFUNC.txt b/SAFEFUNC.txt
+new file mode 100644
+index 0000000..af1ff13
+--- /dev/null
++++ b/SAFEFUNC.txt
+@@ -0,0 +1 @@
++div
+\ No newline at end of file

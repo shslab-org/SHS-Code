@@ -1,0 +1,42 @@
+{
+ "task": "task-16",
+ "agent": "hermes",
+ "title": "T1 git branch workflow",
+ "category": "tools",
+ "turns": {
+  "t1": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 330.1
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 29,
+  "responses": 25,
+  "ok": 7,
+  "429": 2,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 3,
+  "chat_calls": 11,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 0,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "branch_created": false,
+  "commit_msg_conventional": false,
+  "logger_implemented": false,
+  "tests_still_pass": false,
+  "main_unchanged": false
+ }
+}

@@ -1,0 +1,4 @@
+{"event": "turn_start", "agent": "hermes", "prompt": "What is 2+2? Reply with just the number.", "turn2": false, "model_switch": false, "timeout": 240, "ts": 0.0}
+{"event": "spawn", "cmd": "/home/z/.local/bin/hermes -z What is 2+2? Reply with just the number. --yolo", "cwd": "/home/z/my-project/benchmark/runs/task-06/hermes/repo", "ts": 0.0}
+{"event": "stream", "stream": "out", "text": "4", "ts": 10.5}
+{"event": "turn_end", "exit_code": 0, "killed": false, "wall_s": 11.0, "ts": 11.03}

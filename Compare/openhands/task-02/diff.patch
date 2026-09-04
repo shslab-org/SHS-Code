@@ -1,0 +1,20 @@
+diff --git a/AGENTS.md b/AGENTS.md
+new file mode 100644
+index 0000000..e6b9c58
+--- /dev/null
++++ b/AGENTS.md
+@@ -0,0 +1,7 @@
++# Project Memory
++
++## Deployment
++- **Deployment port**: 7331
++
++## Testing
++- **Preferred test runner**: pytest
+diff --git a/PORT.txt b/PORT.txt
+new file mode 100644
+index 0000000..d124deb
+--- /dev/null
++++ b/PORT.txt
+@@ -0,0 +1 @@
++7331
