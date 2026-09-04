@@ -114,6 +114,63 @@ When a user provides a large or complex task:
 """
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# v3.0 — Local request classifier (chat vs task)
+# ─────────────────────────────────────────────────────────────────────────────
+# Benchmark finding (task-06): "2+2?" took 2 LLM requests and 96s because
+# every run paid the LLM-planner call + plan-gate machinery. This purely
+# LOCAL heuristic classifies simple conversation/Q&A so the agent can skip
+# the planner LLM call and answer directly — normal chat stays normal chat,
+# real tasks keep the full pipeline.
+
+_ACTION_VERBS = (
+    "create", "write", "build", "make", "implement", "add", "fix", "patch",
+    "refactor", "delete", "remove", "rename", "move", "copy", "run", "execute",
+    "test", "install", "deploy", "setup", "init", "generate", "convert", "update",
+    "modify", "edit", "change", "migrate", "port", "commit", "push", "clone",
+    "search", "find", "analyze", "debug", "optimize", "validate", "verify",
+    "document", "explain the codebase", "inspect", "list files", "show me the",
+)
+
+
+def classify_request(prompt: str) -> str:
+    """Classify a user prompt as 'chat' or 'task' using local heuristics.
+
+    'chat'  — simple questions / small talk / quick math: the agent answers
+              directly with ONE LLM request; no planner call, no review
+              phases, no self-check injections.
+    'task'  — anything mentioning an action verb, a file/artifact, or a
+              multi-step objective: the full autonomous pipeline runs.
+    """
+    text = (prompt or "").strip()
+    if not text:
+        return "task"
+    words = text.split()
+    lower = text.lower()
+
+    # An explicit question mark with a short prompt is chat unless it asks
+    # for an action ("can you create x?" / "how do I implement y?").
+    has_question = "?" in text
+    is_short = len(words) <= 18
+
+    # Directive verbs anywhere signal work ("fix the bug in calc.py").
+    starts_with_verb = words[0].lower().rstrip("s!?.") in _ACTION_VERBS
+    contains_verb = any(v in lower for v in _ACTION_VERBS)
+
+    # Greetings / identity / thanks are always chat.
+    if lower.rstrip("!.? ") in (
+            "hi", "hello", "hey", "yo", "thanks", "thank you", "ok", "okay",
+            "who are you", "what are you", "what can you do"):
+        return "chat"
+
+    if has_question and is_short and not contains_verb:
+        return "chat"
+    if not has_question and is_short and not starts_with_verb and not contains_verb:
+        # plain statement, short, no action — treat as conversation
+        return "chat"
+    return "task"
+
+
 class BaseAgent(ABC):
     name: str = "base"
     system_prompt: Optional[str] = None
@@ -233,6 +290,17 @@ class BaseAgent(ABC):
         self.memory.add(Message.user(safe_prompt))
         mode_str = self.gate.mode.value
 
+        # v3.0 chat fast-path: purely local classification. Chat requests
+        # (greetings, simple Q&A, quick math) skip the LLM planner call,
+        # review phases and self-check injections — they get a direct
+        # answer with ONE request. Real tasks keep the full pipeline.
+        self._request_kind = classify_request(prompt)
+        self._chat_mode = (self._request_kind == "chat")
+        if self._chat_mode:
+            from app.activity import emit
+            emit("chat_fast_path", prompt_words=len(prompt.split()))
+            logger.info("[FastPath] chat request — planner LLM call skipped")
+
         # SHS Code FIX (protected-region regression): the try/finally used to
         # start only around the step loop — a cancellation or crash during
         # skill injection, memory recall, session creation, journal start or
@@ -250,6 +318,17 @@ class BaseAgent(ABC):
 
             if self._injected_session_id:
                 self._session_id = self._injected_session_id
+                # v3.0 CONVERSATION CONTINUITY (benchmark task-01/task-25
+                # root-cause fix): a one-shot run continuing an existing
+                # session used to start from an EMPTY context — turn 2 of
+                # "remember the number 7" … "what was the number?" answered
+                # from thin air, and context never survived model switches.
+                # The prior dialogue is persisted in the session DB (which
+                # already survives everything), so we re-inject it BEFORE
+                # the new user message. Long conversations are capped to the
+                # most recent turns; each is truncated to keep the context
+                # compact.
+                await self._inject_conversation_history()
             else:
                 self._session_id = await self.db.create_session(
                     goal=prompt, agent_name=self.name, mode=mode_str
@@ -370,6 +449,36 @@ class BaseAgent(ABC):
             self.state = AgentState.ERROR
             results.append(f"Agent error: {e}")
         finally:
+            # v3.0 conversation continuity: persist the FINAL textual answer
+            # so the next run in this session can recall it. Tool-loop
+            # narration is already logged by think(); this stores the real
+            # final answer exactly once (no duplicates).
+            try:
+                # Drain fire-and-forget message writes FIRST so the dedup
+                # check below sees the true last row (race fix: the pending
+                # write from think() could land after our read otherwise).
+                for t in list(getattr(self, "_pending_db_tasks", [])):
+                    try:
+                        if not t.done():
+                            await t
+                    except Exception:
+                        pass
+                final_answer = (getattr(self, "_final_answer", None) or "").strip()
+                if final_answer and self._session_id:
+                    prior = await self.db.get_messages(self._session_id, limit=1)
+                    already = (prior and prior[-1]["role"] == "assistant"
+                               and (prior[-1]["content"] or "").strip() == final_answer)
+                    if not already:
+                        self._log_db_message("assistant", final_answer[:4000])
+                        # flush immediately — the next process may read soon
+                        for t in list(getattr(self, "_pending_db_tasks", [])):
+                            try:
+                                if not t.done():
+                                    await t
+                            except Exception:
+                                pass
+            except Exception:
+                pass
             # SHS Code (spec §7/§8/§34): final journal verdict + persistent memory.
             # Completion is recorded ONLY when the loop actually finished — never
             # marked complete merely because the model believed it (spec §34).
@@ -500,7 +609,11 @@ class BaseAgent(ABC):
 
         # 2) plan graph (spec §7: persisted; updated, not lost, if task changes)
         # Phase 2 (spec §36): mode controls plan depth — none|heuristic|llm
+        # v3.0: chat requests NEVER pay the LLM planner call — the heuristic
+        # planner is instant and a Q&A answer needs no DAG anyway.
         mode_plan = (getattr(self, "_mode_cfg", {}) or {}).get("plan", "llm")
+        if getattr(self, "_chat_mode", False):
+            mode_plan = "heuristic"
         if self.journal is not None and self._journal_task_id and mode_plan != "none":
             try:
                 from app.planner import generate_plan
@@ -534,6 +647,45 @@ class BaseAgent(ABC):
                     "[PLAN STATUS REFRESH]\n" + plan_prompt))
         except Exception as e:
             logger.debug(f"[Planner] refresh skipped: {e}")
+
+    # ------------------------------------------------------------------
+    # v3.0 — Conversation continuity + chat fast-path
+    # ------------------------------------------------------------------
+
+    async def _inject_conversation_history(self, max_turns: int = 20) -> None:
+        """Re-inject the prior dialogue of the injected session so a
+        continued one-shot run starts with REAL conversational context
+        (benchmark task-01 fix) — and because the history lives in the
+        session DB, it survives restarts AND model/provider switches
+        (benchmark task-25 fix). Non-fatal by design."""
+        try:
+            msgs = await self.db.get_messages(self._session_id, limit=max_turns * 2)
+            # drop the last stored assistant row if it IS this run's echo —
+            # the new user message is added after this call anyway.
+            if not msgs:
+                return
+            lines = []
+            for m in msgs:
+                role = "User" if m["role"] == "user" else "Assistant"
+                text = (m["content"] or "").strip()
+                if not text:
+                    continue
+                lines.append(f"{role}: {text[:600]}")
+            if lines:
+                block = "\n".join(lines[-max_turns:])
+                self.memory.add(Message.system(
+                    "CONVERSATION HISTORY (same session, restored from the "
+                    "persistent session store — the user's earlier turns and "
+                    "your earlier answers below are REAL prior context. Use "
+                    "them: recall facts the user told you, continue prior "
+                    "work instead of restarting it):\n\n" + block))
+                from app.activity import emit
+                emit("conversation_restored", turns=len(lines))
+                logger.info(
+                    f"[Continuity] restored {len(lines)} dialogue turns "
+                    f"from session {self._session_id}")
+        except Exception as e:
+            logger.debug(f"[Continuity] history injection skipped: {e}")
 
     async def _recall_long_term_memory(self, prompt: str) -> None:
         """SHS Code (spec §3/§35): recall persistent memories relevant to the

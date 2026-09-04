@@ -24,10 +24,24 @@ from app.llm.token_tracker import TokenBudget, TokenUsage
 from app.llm.credential_pool import CredentialPool, build_pool_from_config
 from app.llm.rate_limiter import detect_nim, get_limiter
 from app.activity import emit
+import os
 
 MAX_RETRIES     = 8
 RETRY_BASE_WAIT = 1.0
 RETRY_MAX_WAIT  = 60.0
+
+# v3.0 (benchmark finding: sustained organic 429 contention killed the
+# agent after 8 retries while competitors kept retrying to completion).
+# Rate limits are CAPACITY events, not errors — the request is valid and
+# WILL succeed once capacity frees. They get their own generous budget;
+# every other error class keeps the tight MAX_RETRIES.
+RATE_LIMIT_MAX_RETRIES = 40
+
+# v3.0: optional wall-clock deadline for the whole retry sequence. When set
+# (seconds, SHSCODE_LLM_RETRY_DEADLINE), the loop keeps retrying transient
+# errors ONLY while time remains, then raises with a clear reason. 0/unset
+# = unlimited (matches harness-owned timeouts).
+_RETRY_DEADLINE_S = float(os.getenv("SHSCODE_LLM_RETRY_DEADLINE", "0") or 0)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Long-wait intelligent response handling
@@ -851,7 +865,17 @@ class LLM:
     async def _call_with_retry(self, messages: list[dict[str, Any]],
                                 tools: Optional[list[dict[str, Any]]]) -> dict[str, Any]:
         wait = RETRY_BASE_WAIT
+        rl_wait = 2.0                       # v3.0: rate-limit backoff track
+        rl_attempts = 0                     # v3.0: separate 429 budget
+        deadline = (time.monotonic() + _RETRY_DEADLINE_S
+                    if _RETRY_DEADLINE_S > 0 else None)
         last_err: Optional[Exception] = None
+
+        # v3.0: rate limits are capacity events with their own generous
+        # budget (see RATE_LIMIT_MAX_RETRIES); every other transient error
+        # class keeps the tight generic budget. Either budget exhausted
+        # (or the optional deadline passed) ends the sequence.
+        generic_attempts = 0                # v3.0: non-429 error budget
 
         # SHS Code Phase 2 (spec §21/§24): live provider health + usage telemetry
         from app.provider_health import get_health
@@ -874,7 +898,11 @@ class LLM:
         model_name = getattr(self._backend, 'model', '')
         is_deep_thinker = _is_long_thinking_model(model_name)
 
-        for attempt in range(1, self._max_retries + 1):
+        while True:
+            if deadline is not None and time.monotonic() >= deadline:
+                raise RuntimeError(
+                    f"LLM retry deadline ({_RETRY_DEADLINE_S:.0f}s) exceeded. "
+                    f"Last error: {last_err}")
             # SHS Code (spec §18/§19): rolling-window rate limiting BEFORE the
             # request. The wait happens with messages untouched — context,
             # tool results and task state all survive (they live outside LLM).
@@ -914,6 +942,13 @@ class LLM:
 
                 if cred and self._pool:
                     await self._pool.mark_success(cred)
+                # v3.0: decay adaptive rate-limit pressure after success so
+                # the limiter converges back to the configured rate.
+                if limiter is not None:
+                    try:
+                        limiter.on_success()
+                    except Exception:
+                        pass
                 # SHS Code Phase 2: record successful call (latency + usage tokens)
                 try:
                     usage = result.get("usage") or {}
@@ -962,18 +997,26 @@ class LLM:
                                         error=str(e), rate_limited=True)
                 except Exception:
                     pass
-                # SHS Code: honor server Retry-After when provided (spec §18)
+                # v3.0: 429s are capacity events — dedicated budget, adaptive
+                # penalty on the limiter, capped backoff. The agent's task
+                # context is never touched, so waiting is always safe.
+                rl_attempts += 1
+                if rl_attempts > RATE_LIMIT_MAX_RETRIES:
+                    logger.error(
+                        f"[LLM] Rate-limited {RATE_LIMIT_MAX_RETRIES} times — "
+                        f"giving up this request.")
+                    raise
                 retry_after = getattr(e, "retry_after", None)
                 if limiter is not None:
                     limiter.on_rate_limit_response(retry_after)
                 if retry_after and retry_after > 0:
-                    wait = max(wait, min(float(retry_after), RETRY_MAX_WAIT))
+                    rl_wait = max(rl_wait, min(float(retry_after), RETRY_MAX_WAIT))
                 logger.warning(
-                    f"[LLM] Rate limited (attempt {attempt}). Retry-After={retry_after}. "
-                    f"Waiting {wait:.1f}s — state preserved."
+                    f"[LLM] Rate limited (attempt {rl_attempts}/{RATE_LIMIT_MAX_RETRIES}). "
+                    f"Retry-After={retry_after}. Waiting {rl_wait:.1f}s — state preserved."
                 )
-                await asyncio.sleep(wait)
-                wait = min(wait * 2 + random.uniform(0, 1), RETRY_MAX_WAIT)
+                await asyncio.sleep(rl_wait)
+                rl_wait = min(rl_wait * 1.5 + random.uniform(0, 1), RETRY_MAX_WAIT)
 
             except (asyncio.TimeoutError, TimeoutError) as e:
                 # FIX: For long-thinking models, timeouts after the adaptive period
@@ -988,10 +1031,11 @@ class LLM:
                         f"timeout. NOT retrying to avoid API spam."
                     )
                     raise
-                # Regular model timeout — allow retry with backoff
-                if attempt < self._max_retries:
+                # Regular model timeout — allow retry with backoff (generic budget)
+                generic_attempts += 1
+                if generic_attempts < self._max_retries:
                     logger.warning(
-                        f"[LLM] Timeout (attempt {attempt}/{self._max_retries}) "
+                        f"[LLM] Timeout (attempt {generic_attempts}/{self._max_retries}) "
                         f"for model '{model_name}'. Retrying in {wait:.1f}s..."
                     )
                     await asyncio.sleep(wait)
@@ -1012,13 +1056,14 @@ class LLM:
                     "connection", "network", "reset", "broken pipe",
                     "temporary", "502", "503", "504", "server error",
                 ))
-                if not is_transient and attempt >= 2:
+                if not is_transient and generic_attempts >= 1:
                     # Non-transient error (bad request, auth, etc.) — fail fast
                     logger.error(f"[LLM] Non-transient error: {e}. Not retrying.")
                     raise
-                if attempt == self._max_retries:
+                generic_attempts += 1
+                if generic_attempts >= self._max_retries:
                     raise
-                logger.warning(f"[LLM] Error (attempt {attempt}/{self._max_retries}): {e}. Retry in {wait:.1f}s...")
+                logger.warning(f"[LLM] Error (attempt {generic_attempts}/{self._max_retries}): {e}. Retry in {wait:.1f}s...")
                 await asyncio.sleep(wait)
                 wait = min(wait * 2 + random.uniform(0, 1), RETRY_MAX_WAIT)
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Optional
 
@@ -116,6 +117,14 @@ QUALITY RULES:
   - For code: always RUN it and check output before claiming success.
   - Save every meaningful artefact to workspace/.
 
+CONVERSATION RULES (IMPORTANT):
+  - If the user's message is a simple question, greeting, small talk, or
+    quick arithmetic — ANSWER IT DIRECTLY in one response. No plan, no
+    tools, no workspace files. Normal conversation gets a normal reply.
+  - Only spin up the PLAN→ACT→VERIFY machinery when actual WORK is asked
+    for (files to create/change, code to run, research to perform).
+  - Match your response length to the request: short question, short answer.
+
 CODE INTELLIGENCE:
   - code_search: semantic/symbol/regex/import/usages search over the indexed
     project. USE IT before bash grep. Ask "where is X handled" as semantic mode.
@@ -200,14 +209,95 @@ class SHSCode(ToolCallAgent):
     def _note_file_edit(self) -> None:
         self._file_edit_count += 1
 
+    # ------------------------------------------------------------------
+    # v3.0 — MCP tools in the MAIN agent (benchmark task-18 fix)
+    # ------------------------------------------------------------------
+    # MCP server tools previously existed ONLY inside the separate MCPAgent
+    # class — the main SHSCode agent never connected to configured MCP
+    # servers, so their tools never reached the model's tool list and the
+    # honest fallback "MCP-UNAVAILABLE" was the only possible outcome.
+    # Now every run connects configured servers (bounded timeout, strictly
+    # non-fatal) and merges their tools into the live ToolCollection.
+
+    async def _load_mcp_tools(self, timeout_s: float = 6.0) -> int:
+        """Connect configured MCP servers and merge their tools into this
+        agent's toolset. Returns the number of tools added (0 on failure
+        or when nothing is configured). NEVER raises."""
+        added = 0
+        try:
+            from app.mcp.client import MCPClient
+            cfg = Config.get()
+            servers = cfg.mcp_servers or []
+            if not servers:
+                return 0
+            if not getattr(self, "_mcp_clients", None):
+                self._mcp_clients = []
+            # de-dup: already-connected this agent lifetime
+            connected = {c.name for c in self._mcp_clients}
+            for srv in servers:
+                if srv.name in connected:
+                    continue
+                client = MCPClient(
+                    name=srv.name,
+                    transport=srv.transport,
+                    command=srv.command,
+                    args=srv.args,
+                    url=srv.url,
+                )
+                try:
+                    srv_tools = await asyncio.wait_for(
+                        client.connect(), timeout=timeout_s)
+                    self._mcp_clients.append(client)
+                    for tool in srv_tools:
+                        # Name-collision guard: first registration wins.
+                        if self.tools.get(tool.name) is None:
+                            self.tools.add(tool)
+                            added += 1
+                    if srv_tools:
+                        logger.info(
+                            f"[MCP] {srv.name}: {len(srv_tools)} tools live "
+                            f"in main agent")
+                except Exception as e:
+                    logger.warning(
+                        f"[MCP] server '{srv.name}' unavailable (non-fatal): {e}")
+            if added:
+                # rebuild the tool selector so new tools are scored too
+                from app.tool.selector import ToolSelector
+                self._selector = ToolSelector(
+                    tool_names=list(self.tools._tools.keys()))
+                from app.activity import emit
+                emit("mcp_tools_loaded", count=added)
+            return added
+        except Exception as e:
+            logger.debug(f"[MCP] tool loading skipped: {e}")
+            return 0
+
+    async def run(self, prompt: str) -> str:
+        # v3.0: surface MCP tools BEFORE the first think so the model can
+        # actually use them in this run (bounded, non-fatal).
+        await self._load_mcp_tools()
+        try:
+            return await super().run(prompt)
+        finally:
+            for client in getattr(self, "_mcp_clients", []) or []:
+                try:
+                    await client.disconnect()
+                except Exception:
+                    pass
+            self._mcp_clients = []
+
     async def step(self) -> Optional[str]:
         if self._task_history:
             self._task_history.add_step(f"step {self._step_count}")
 
+        # v3.0 chat fast-path: review phases and self-check injections are
+        # task machinery — a conversational Q&A must not pay for them.
+        chat = getattr(self, "_chat_mode", False)
+
         # Automatic review phase after every 3 file edits — injected BEFORE
         # the next think so the model reviews its own diff before building
         # further on top of it.
-        if self._file_edit_count >= 3 and \
+        if not chat and self._file_edit_count >= 3 and \
                 self._file_edit_count - self._last_review_at >= 3:
             self._last_review_at = self._file_edit_count
             self.memory.add(Message.user(_REVIEW_PROMPT))
@@ -220,7 +310,7 @@ class SHSCode(ToolCallAgent):
         if self.state == AgentState.FINISHED:
             return result
 
-        if self._step_count % 3 == 0:
+        if not chat and self._step_count % 3 == 0:
             history_ctx = (
                 self._task_history.context_summary(max_steps=3)
                 if self._task_history else ""

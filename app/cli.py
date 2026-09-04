@@ -2082,6 +2082,9 @@ def main() -> None:
     parser.add_argument("--skin", default="default", choices=list(SKINS.keys()), help="UI skin")
     parser.add_argument("--model", help="Override LLM model")
     parser.add_argument("--profile", help="Config profile name")
+    parser.add_argument("--session", metavar="ID", help="Continue a specific session (conversation history is restored)")
+    parser.add_argument("--continue", dest="continue_last", action="store_true",
+                        help="Continue the most recent session in this workspace")
     parser.add_argument("--no-color", action="store_true", help="Disable colors (forces plain text)")
     parser.add_argument("--version", action="version", version=f"SHS Code v{VERSION}")
     args = parser.parse_args()
@@ -2104,7 +2107,36 @@ def main() -> None:
             from app.agent.shscode import SHSCode
             from app.task_queue import TaskQueue
             skin = _get_skin(args.skin)
-            agent = SHSCode()
+
+            # v3.0 conversation continuity: resolve the session to continue.
+            # --session ID wins; --continue picks the most recent session in
+            # this workspace. Fresh runs get a brand-new session as before.
+            session_id = None
+            try:
+                if args.session:
+                    from app.db.session import SessionDB
+                    row = await SessionDB().get_session(args.session)
+                    if row is None:
+                        _print_message("system",
+                            f"Session {args.session} not found — starting a new session.",
+                            skin)
+                    else:
+                        session_id = args.session
+                elif args.continue_last:
+                    from app.db.session import SessionDB
+                    row = await SessionDB().latest_session()
+                    if row is None:
+                        _print_message("system",
+                            "No previous session found — starting a new session.", skin)
+                    else:
+                        session_id = row["id"]
+                        _print_message("system",
+                            f"Continuing session {session_id} "
+                            f"(goal: {row.get('goal', '')[:60]})", skin)
+            except Exception as e:
+                _print_message("system", f"Session lookup failed: {e}", skin)
+
+            agent = SHSCode(session_id=session_id)
 
             task_queue = TaskQueue(max_workers=1)
             resumed = await task_queue.resume_interrupted()
@@ -2115,6 +2147,11 @@ def main() -> None:
                 with Spinner(verb="thinking", skin=skin):
                     result = await agent.run(prompt_text)
                 _print_message("assistant", result or "(no output)", skin)
+                # v3.0: surface the session id so the next one-shot can
+                # continue this conversation (SHSCode --session <id> ...).
+                sid = getattr(agent, "_session_id", None)
+                if sid:
+                    _print_message("system", f"session: {sid}", skin)
             finally:
                 # SHS Code FIX (one-shot leak regression): complete async
                 # resource lifecycle — agent (LLM aiohttp session, tools,

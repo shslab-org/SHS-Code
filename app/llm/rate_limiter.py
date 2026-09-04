@@ -91,7 +91,27 @@ def resolve_rpm(provider: Optional[str], base_url: Optional[str],
 
 
 class RollingWindowRateLimiter:
-    """Per-provider rolling-window request limiter (timestamps, spec §18)."""
+    """Per-provider rolling-window request limiter (timestamps, spec §18).
+
+    v3.0 ADAPTIVE LEARNING (benchmark finding: shared NIM endpoints enforce
+    an EFFECTIVE rate far below the documented 40 RPM, and 429s arrive
+    WITHOUT Retry-After headers — the plain rolling window kept refilling
+    capacity every ~1.5s, so every retry hit another 429 until the retry
+    budget died). The limiter now LEARNS the real capacity:
+
+      - Every 429 (with or without Retry-After) increments a consecutive
+        pressure counter and sets a penalty cooldown with exponential
+        growth (2s → 4s → 8s … capped at ADAPTIVE_MAX_BLOCK_S).
+      - Every 429 WITHOUT Retry-After also records occupancy timestamps
+        in the window, so the assumed capacity is consumed faster and the
+        next natural wait is longer.
+      - Every SUCCESS decays the pressure: counter halves, penalty backoff
+        halves — after a streak of successes the limiter converges back to
+        the configured rolling-window rate.
+    """
+
+    ADAPTIVE_BASE_BLOCK_S = 2.0
+    ADAPTIVE_MAX_BLOCK_S = 60.0
 
     def __init__(self, provider: str, rpm: int, window_s: float = _WINDOW_SECONDS) -> None:
         self.provider = provider or "unknown"
@@ -102,6 +122,12 @@ class RollingWindowRateLimiter:
         self._total_requests = 0
         self._total_wait_s = 0.0
         self._last_wait_s = 0.0
+        # v3.0 adaptive learning state
+        self._pressure: int = 0            # consecutive 429 pressure level
+        self._success_streak: int = 0
+        self._consecutive_429: int = 0
+        self._adaptive_block_until: float = 0.0
+        self._total_429: int = 0
 
     # ------------------------------------------------------------------
     # Pure calculation (unit-testable without sleeping)
@@ -121,7 +147,12 @@ class RollingWindowRateLimiter:
         429 pressure (blocked_until) is respected even when rpm is unlimited.
         """
         now = time.monotonic() if now is None else now
-        blocked = max(0.0, self._blocked_until - now) if self._blocked_until else 0.0
+        blocked = max(
+            (self._blocked_until - now) if self._blocked_until else 0.0,
+            (self._adaptive_block_until - now) if self._adaptive_block_until else 0.0,
+        )
+        if blocked < 0:
+            blocked = 0.0
         if self.rpm <= 0:
             return blocked
         self._evict(now)
@@ -177,13 +208,46 @@ class RollingWindowRateLimiter:
                                now: Optional[float] = None) -> None:
         """Server told us 429. Record the request in the window AND (when the
         server told us Retry-After) block until that moment — this works even
-        for unlimited (rpm=0) limiters, mirroring server-side pressure."""
+        for unlimited (rpm=0) limiters, mirroring server-side pressure.
+
+        v3.0 ADAPTIVE: a 429 without Retry-After is REAL evidence the endpoint
+        is more congested than the rolling window assumes — instead of
+        refilling capacity after ~1.5s and walking straight into the next
+        429, the limiter grows an exponential penalty cooldown (decayed on
+        every subsequent success). The 429 also occupies window capacity so
+        the natural rolling wait lengthens too."""
         now = time.monotonic() if now is None else now
+        self._consecutive_429 += 1
+        self._total_429 += 1
+        self._success_streak = 0
         if retry_after_s and retry_after_s > 0:
             self._blocked_until = max(self._blocked_until,
                                       now + float(retry_after_s))
+        else:
+            # No Retry-After: grow adaptive penalty (2s → 4s → 8s → … cap 60s)
+            self._pressure = min(self._pressure + 1, 8)
+            block = min(self.ADAPTIVE_BASE_BLOCK_S * (2 ** (self._pressure - 1)),
+                        self.ADAPTIVE_MAX_BLOCK_S)
+            self._adaptive_block_until = max(self._adaptive_block_until,
+                                             now + block)
+        # The 429'd request still consumed server capacity — occupy the window.
         if self.rpm > 0:
             self._timestamps.append(now)
+
+    def on_success(self) -> None:
+        """v3.0 ADAPTIVE: decay pressure after a successful request so the
+        limiter converges back to the configured rate once contention
+        clears. Called by the LLM retry loop on every 2xx response."""
+        self._success_streak += 1
+        if self._consecutive_429 > 0:
+            self._consecutive_429 = max(0, self._consecutive_429 - 1)
+        if self._pressure > 0 and self._success_streak >= 2:
+            self._pressure = max(0, self._pressure - 1)
+            # shrink any outstanding adaptive penalty
+            now = time.monotonic()
+            if self._adaptive_block_until > now:
+                remaining = self._adaptive_block_until - now
+                self._adaptive_block_until = now + remaining / 2
 
     # ------------------------------------------------------------------
     # Introspection
@@ -199,11 +263,18 @@ class RollingWindowRateLimiter:
             "next_wait_s": round(self.wait_seconds(now), 2),
             "total_requests": self._total_requests,
             "total_wait_s": round(self._total_wait_s, 1),
+            "adaptive_pressure": self._pressure,
+            "consecutive_429": self._consecutive_429,
+            "total_429": self._total_429,
         }
 
     def reset(self) -> None:
         self._timestamps.clear()
         self._blocked_until = 0.0
+        self._adaptive_block_until = 0.0
+        self._pressure = 0
+        self._consecutive_429 = 0
+        self._success_streak = 0
 
 
 # ──────────────────────────────────────────────────────────────────────────────

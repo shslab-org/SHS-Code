@@ -62,6 +62,28 @@ _DEFAULT_DEPS: dict[str, list[str]] = {
 }
 
 
+def _triage(goal: str) -> str:
+    """v3.0 workload triage (benchmark: the 4-role pipeline multiplied
+    requests ~4x and could not finish even trivial Q&A within the budget).
+
+    'simple'  — conversation/Q&A: one SHSCode agent answers directly.
+    'small'   — short single-scope task: Engineer agent executes directly
+                (it plans itself); no PM/Architect/QA overhead.
+    'complex' — full 4-role pipeline (PM → Architect → Engineer → QA).
+    """
+    try:
+        from app.agent.base import classify_request
+        if classify_request(goal) == "chat":
+            return "simple"
+    except Exception:
+        pass
+    text = (goal or "").strip()
+    words = text.split()
+    if len(words) <= 12:
+        return "small"
+    return "complex"
+
+
 class MultiAgentOrchestrator:
     """
     Runs specialist roles in dependency order (topological sort via Kahn's algorithm).
@@ -97,9 +119,18 @@ class MultiAgentOrchestrator:
         import uuid
         pipeline_id = str(uuid.uuid4())[:8]
 
+        # v3.0 triage: match pipeline weight to workload size.
+        tier = _triage(goal)
+        if tier == "simple":
+            return await self._run_single_agent(
+                pipeline_id, goal, note="triage=simple (direct answer)")
+        if tier == "small":
+            return await self._run_single_agent(
+                pipeline_id, goal, note="triage=small (engineer direct)")
+
         logger.info(
             f"[Orchestrator:{pipeline_id}] ▶ Multi-agent run "
-            f"| mode={self.mode.value} | goal={goal[:80]}"
+            f"| mode={self.mode.value} | triage=complex | goal={goal[:80]}"
         )
 
         session_id = await self.db.create_session(
@@ -210,6 +241,65 @@ class MultiAgentOrchestrator:
             f"duration={pipeline_result.total_duration_s:.1f}s"
         )
         return pipeline_result
+
+    # ------------------------------------------------------------------
+    # v3.0 — single-agent fast path (triage simple/small)
+    # ------------------------------------------------------------------
+
+    async def _run_single_agent(self, pipeline_id: str, goal: str,
+                                note: str = "") -> PipelineResult:
+        """Run ONE SHSCode agent for simple/small workloads — 1-3 requests
+        instead of the 4-role pipeline's 12+. Session + result bookkeeping
+        match the pipeline path so downstream consumers see one shape."""
+        from app.agent.shscode import SHSCode
+
+        session_id = await self.db.create_session(
+            goal, agent_name="orchestrator", mode=self.mode.value)
+        result = PipelineResult(pipeline_id=pipeline_id, goal=goal)
+        t0 = time.monotonic()
+        agent = None
+        try:
+            try:
+                agent = SHSCode(mode=self.mode, session_id=session_id)
+                output = await asyncio.wait_for(agent.run(goal), self.timeout)
+                result.stages.append(PipelineStageResult(
+                    role_name="engineer",
+                    status="completed",
+                    output=output,
+                    duration_s=round(time.monotonic() - t0, 2),
+                ))
+                await self.db.log_message(session_id, "assistant", output[:2048])
+                await self._fire_hook(self._on_stage_complete, "engineer", output)
+            except asyncio.TimeoutError:
+                result.timed_out = True
+                result.stages.append(PipelineStageResult(
+                    role_name="engineer", status="error",
+                    output="TIMEOUT", duration_s=round(time.monotonic() - t0, 2)))
+            except Exception as e:
+                logger.error(f"[Orchestrator:{pipeline_id}] fast path error: {e}")
+                result.stages.append(PipelineStageResult(
+                    role_name="engineer", status="error",
+                    output=f"ERROR: {e}", duration_s=round(time.monotonic() - t0, 2)))
+        finally:
+            result.total_duration_s = round(time.monotonic() - t0, 2)
+            result.verdict = ("timeout" if result.timed_out
+                              else "approved" if result.stages
+                              and result.stages[-1].status == "completed"
+                              else "error")
+            await self.db.close_session(
+                session_id,
+                state="timeout" if result.timed_out else "finished",
+                step_count=1)
+            if agent is not None:
+                try:
+                    await agent.cleanup()
+                except Exception:
+                    pass
+        logger.info(
+            f"[Orchestrator:{pipeline_id}] ■ fast path complete "
+            f"({note}) verdict={result.verdict} "
+            f"duration={result.total_duration_s:.1f}s")
+        return result
 
     def _topological_sort(self) -> list[str]:
         in_degree = {r: len(self.deps.get(r, [])) for r in self.pipeline}

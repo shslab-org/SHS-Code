@@ -47,14 +47,13 @@ Rules:
     # ──────────────────────────────────────────────────────────────────────────
 
     def validate_input(self, context: str) -> tuple[bool, str]:
-        upper = context.upper()
-        if _TASK_MARKER.upper() not in upper and "IMPLEMENTATION PLAN" not in upper:
-            return (
-                False,
-                f"Input does not appear to be a design document — "
-                f"'{_TASK_MARKER}' or 'IMPLEMENTATION PLAN' not found. "
-                f"Ensure the Architect ran first.",
-            )
+        # v3.0 (benchmark finding: the live run recorded a real pipeline
+        # failure — "Input does not appear to be a design document" — when
+        # the Architect's output drifted from the expected format. A format
+        # sniff must NEVER kill the pipeline: SHSCode plans and executes
+        # from ANY textual input, so only empty input is rejected now.
+        if not context or not context.strip():
+            return False, "Input is empty."
         return True, ""
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -92,10 +91,21 @@ Rules:
 
         engineer_agent = SHSCode()
         try:
+            # v3.0: format-agnostic instruction — the design may be a
+            # [TASK-N] plan, a PRD, or free-form guidance; SHSCode extracts
+            # the work items either way (the old fixed prompt assumed one
+            # exact format and confused the model when it drifted).
+            has_task_items = _TASK_MARKER in (design or "").upper()
+            item_instruction = (
+                "Implement EVERY [TASK-N] item in the plan."
+                if has_task_items else
+                "Extract the concrete work items from the design/plan above "
+                "and implement ALL of them."
+            )
             implementation_result = await engineer_agent.run(
                 f"You are implementing code based on this design plan.\n\n"
                 f"DESIGN PLAN:\n{design}\n\n"
-                f"Implement EVERY [TASK-N] item in the plan. Run and verify each one. "
+                f"{item_instruction} Run and verify each one. "
                 f"Save all outputs and generated files to workspace/. "
                 f"When all tasks are done, call terminate with a completion summary "
                 f"listing each task and its status."

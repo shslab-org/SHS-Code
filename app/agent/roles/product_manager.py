@@ -54,13 +54,12 @@ directly. Missing sections or vague language cause failures downstream.
     # ──────────────────────────────────────────────────────────────────────────
 
     def validate_input(self, context: str) -> tuple[bool, str]:
-        words = context.strip().split()
-        if len(words) < _MIN_GOAL_WORDS:
-            return (
-                False,
-                f"Goal is too short ({len(words)} words). "
-                f"Please provide a more descriptive task (at least {_MIN_GOAL_WORDS} words).",
-            )
+        # v3.0 (benchmark finding: short goals like "answer this question"
+        # were REJECTED by the 5-word gate and the pipeline never answered
+        # anything). Short goals produce a LIGHTWEIGHT PRD instead of a
+        # rejection — only genuinely empty input is invalid.
+        if not context or not context.strip():
+            return False, "Input is empty."
         return True, ""
 
     # ──────────────────────────────────────────────────────────────────────────

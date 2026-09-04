@@ -416,6 +416,60 @@ class SessionDB:
         return dict(zip(cols, row))
 
     # ------------------------------------------------------------------
+    # v3.0 — Conversation continuity (benchmark task-01/task-25 fixes)
+    # ------------------------------------------------------------------
+
+    async def get_messages(self, session_id: str,
+                           limit: int = 40) -> list[dict]:
+        """Return the conversation messages of a session, oldest first.
+
+        Only real dialogue turns (role user/assistant) are returned —
+        system/tool bookkeeping rows are skipped so re-injection stays
+        compact. Each dict: {role, content}.
+        """
+        if not session_id:
+            return []
+
+        def _get():
+            return self._execute_query(lambda conn: conn.execute(
+                "SELECT role, content FROM messages"
+                " WHERE session_id=? AND role IN ('user','assistant')"
+                " ORDER BY id DESC LIMIT ?",
+                (session_id, int(limit)),
+            ).fetchall())
+        try:
+            rows = await _with_retry(_get)
+        except Exception:
+            return []
+        msgs = [{"role": r[0], "content": r[1] or ""} for r in rows]
+        msgs.reverse()  # oldest first
+        return msgs
+
+    async def latest_session(self, include_interrupted: bool = True) -> Optional[dict]:
+        """Most recently started session in this workspace (for --continue).
+
+        Sessions whose state is 'running' from a live process are excluded
+        only when they started AFTER this process booted (they may be live);
+        simpler and safe: pick the newest row regardless of state and let
+        the caller decide. Interrupted sessions are the primary target.
+        """
+        def _get():
+            return self._execute_query(lambda conn: conn.execute(
+                "SELECT id, goal, agent_name, mode, parent_session_id,"
+                " started_at, ended_at, state, step_count, error"
+                " FROM sessions ORDER BY started_at DESC LIMIT 1"
+            ).fetchone())
+        try:
+            row = await _with_retry(_get)
+        except Exception:
+            return None
+        if not row:
+            return None
+        cols = ["id", "goal", "agent_name", "mode", "parent_session_id",
+                "started_at", "ended_at", "state", "step_count", "error"]
+        return dict(zip(cols, row))
+
+    # ------------------------------------------------------------------
     # Tool call logging
     # ------------------------------------------------------------------
 

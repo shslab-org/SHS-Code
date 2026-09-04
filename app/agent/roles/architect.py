@@ -55,14 +55,11 @@ explicitly so the Engineer can execute tasks in the correct order.
     # ──────────────────────────────────────────────────────────────────────────
 
     def validate_input(self, context: str) -> tuple[bool, str]:
-        if len(context.strip()) < 50:
-            return False, "Input is too short to be a valid PRD."
-        if "objective" not in context.lower() and "goal" not in context.lower():
-            return (
-                False,
-                "Input does not appear to be a PRD — 'OBJECTIVE' or 'GOAL' not found. "
-                "Ensure the ProductManager ran first.",
-            )
+        # v3.0 (benchmark: strict PRD-format sniffing caused pipeline-wide
+        # rejections when upstream output drifted — a design agent must be
+        # able to work from ANY upstream description, not one exact shape).
+        if not context or not context.strip():
+            return False, "Input is empty."
         return True, ""
 
     # ──────────────────────────────────────────────────────────────────────────

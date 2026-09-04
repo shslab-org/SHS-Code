@@ -193,10 +193,20 @@ tool or different arguments — DO NOT repeat the same failing call.
                 if code:
                     await self.journal.record_command(
                         tid, f"python: {code}", status="ok" if ok else "failed")
-            # Continual checkpoint (spec §8 — after every meaningful operation)
-            await self.journal.checkpoint(
-                tid, self._step_count,
-                [m.to_dict() for m in self.memory.messages])
+            # Continual checkpoint (spec §8) — v3.0 throttled: the full-message
+            # checkpoint runs once per STEP (base.py already checkpoints every
+            # step); serialising the ENTIRE memory after every single tool call
+            # was O(n²) CPU on long tasks. record_action/file-change/command
+            # entries stay per-tool — only the heavyweight snapshot is gated.
+            try:
+                self._journal_checkpoint_counter = getattr(
+                    self, "_journal_checkpoint_counter", 0) + 1
+                if self._journal_checkpoint_counter % 4 == 0:
+                    await self.journal.checkpoint(
+                        tid, self._step_count,
+                        [m.to_dict() for m in self.memory.messages])
+            except Exception as e:
+                logger.debug(f"[Journal] tool checkpoint failed (non-fatal): {e}")
         except Exception as e:
             logger.debug(f"[Journal] tool record failed (non-fatal): {e}")
 
@@ -358,6 +368,10 @@ tool or different arguments — DO NOT repeat the same failing call.
                     ))
                     return thought or None
                 self.state = AgentState.FINISHED
+                # v3.0 conversation continuity: remember the exact final
+                # answer so run()'s finally-block persists it to the session
+                # DB for the next turn / model switch.
+                self._final_answer = content
                 return last_msg.content
             return thought or None
 
@@ -471,6 +485,15 @@ tool or different arguments — DO NOT repeat the same failing call.
                 if result.error and attempt < MAX_TOOL_RETRIES:
                     self._selector.record_failure(name)
 
+                    # v3.0 REQUEST-EFFICIENCY FIX (benchmark: multi-request
+                    # turns starved the clock under shared rate limits):
+                    # the OLD code made an EXTRA LLM call here to "self-
+                    # correct" the arguments — but the main agent loop's next
+                    # think() sees the exact error + this guidance and
+                    # self-corrects naturally, so the inline call was a pure
+                    # duplicate request (plus its rate-limit wait) per failed
+                    # tool. Standard function-calling loop semantics: surface
+                    # the error, rescore tools, let the next turn decide.
                     goal = self._extract_current_goal()
                     alt_selection = self._selector.score(goal, recently_failed=[name])
                     alt_hint = alt_selection.to_prompt_hint()
@@ -480,39 +503,11 @@ tool or different arguments — DO NOT repeat the same failing call.
                         f"  Error: {result.error}\n\n"
                         f"Re-scoring tools with '{name}' penalised:\n"
                         f"{alt_hint}\n\n"
-                        f"Analyse the error and call a DIFFERENT tool or use CORRECTED arguments. "
+                        f"Next call: use a DIFFERENT tool or CORRECTED arguments. "
                         f"Do NOT repeat the identical call."
                     )
                     self.memory.add(Message.user(retry_msg))
-
-                    schemas = self.tools.to_openai_schemas()
-                    correction = await self.llm.ask_tool(self.memory.messages, tools=schemas)
-                    self.memory.add(correction)
-
-                    if correction.tool_calls:
-                        corrected_tc = correction.tool_calls[0]
-                        corrected_name = corrected_tc.function.name
-                        try:
-                            corrected_args = json.loads(corrected_tc.function.arguments or "{}")
-                        except json.JSONDecodeError:
-                            corrected_args = {}
-                        logger.info(
-                            f"LLM self-corrected to: "
-                            f"{corrected_name}({self._fmt_args(corrected_args)})"
-                        )
-                        name, args = corrected_name, corrected_args
-                        # FIX: Update tool_call_id to the corrected call's ID so that
-                        # the next tool message has a consistent chain.
-                        tool_call_id = corrected_tc.id
-                        await asyncio.sleep(min(wait, TOOL_RETRY_MAX))
-                        wait = wait * 2 + random.uniform(0, 0.5)
-                        continue
-                    else:
-                        logger.warning(
-                            f"LLM self-correction did not yield a tool call. "
-                            f"Returning the original error for agent reconsideration."
-                        )
-                        return result
+                    return result
 
                 return result
 
