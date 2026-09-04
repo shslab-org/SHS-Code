@@ -19,6 +19,8 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description="SHS Code Multi-Agent Pipeline")
     parser.add_argument("goal", nargs="?", default=None, help="Task goal")
     parser.add_argument("--mode", choices=["build", "plan"], default="build")
+    parser.add_argument("--session", metavar="ID", default=None,
+                        help="Continue a specific conversation session")
     args = parser.parse_args()
 
     goal = args.goal
@@ -38,8 +40,17 @@ async def main() -> None:
     print(f"[SHS Code] Goal: {goal}")
     print(f"[SHS Code] Mode: {args.mode}\n")
 
-    result = await orch.run(goal)
+    result = await orch.run(goal, session_id=args.session)
     print(result)
+    # v3.0.1: surface the session id so turn 2 can continue (harness
+    # extracts it for two-turn continuity tasks)
+    if getattr(orch, "db", None):
+        try:
+            row = await orch.db.latest_session()
+            if row:
+                print(f"session: {row['id']}")
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

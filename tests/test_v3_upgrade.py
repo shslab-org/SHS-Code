@@ -300,10 +300,40 @@ class TestChatFastPath:
         # a real journal: the LLM planner call is gated on journal+task id
         agent.journal = Journal(db_path=tmp_path / "journal.db")
 
-        asyncio.run(agent.run("Create hello.py that prints hi"))
+        # >30 words: complex goal keeps the LLM planner path
+        long_task = (
+            "Refactor the authentication module into a class-based design "
+            "with proper session handling, add integration tests for login "
+            "and logout flows, update the README documentation to describe "
+            "the new API, and verify everything passes the test suite")
+        asyncio.run(agent.run(long_task))
 
         assert agent._chat_mode is False
         assert llm.calls >= 2   # planner + at least one loop turn
+
+    def test_small_task_skips_llm_planner(self, tmp_path, monkeypatch):
+        """v3.0.1: short single-scope tasks get the instant heuristic DAG —
+        the LLM planner call costs a full ~30s request slot under shared
+        capacity (live NIM finding)."""
+        monkeypatch.setenv("SHSCODE_WORKSPACE", str(tmp_path))
+        from app.config import Config
+        Config.reset()
+        from app.agent.shscode import SHSCode
+        from app.db.session import SessionDB
+        from app.state import Journal
+
+        agent = SHSCode()
+        llm = CountingLLM(replies=[
+            "Task complete.",        # loop only — NO planner JSON consumed
+        ])
+        agent.llm = llm
+        agent.db = SessionDB(db_path=tmp_path / "small.db")
+        agent.journal = Journal(db_path=tmp_path / "journal.db")
+
+        asyncio.run(agent.run("Create utils.py with slugify"))
+
+        assert agent._chat_mode is False
+        assert llm.calls == 1      # loop turn only, planner was heuristic
 
     def test_chat_skips_self_check_injections(self, tmp_path, monkeypatch):
         monkeypatch.setenv("SHSCODE_WORKSPACE", str(tmp_path))

@@ -111,11 +111,12 @@ class MultiAgentOrchestrator:
         self._on_stage_complete = on_stage_complete
         self._hook_tasks: list[asyncio.Task] = []  # Fix: store hook tasks to prevent GC
 
-    async def run(self, goal: str) -> str:
-        result = await self.run_pipeline(goal)
+    async def run(self, goal: str, session_id: Optional[str] = None) -> str:
+        result = await self.run_pipeline(goal, session_id=session_id)
         return result.to_summary()
 
-    async def run_pipeline(self, goal: str) -> PipelineResult:
+    async def run_pipeline(self, goal: str,
+                           session_id: Optional[str] = None) -> PipelineResult:
         import uuid
         pipeline_id = str(uuid.uuid4())[:8]
 
@@ -123,7 +124,8 @@ class MultiAgentOrchestrator:
         tier = _triage(goal)
         if tier == "simple":
             return await self._run_single_agent(
-                pipeline_id, goal, note="triage=simple (direct answer)")
+                pipeline_id, goal, note="triage=simple (direct answer)",
+                session_id=session_id)
         if tier == "small":
             return await self._run_single_agent(
                 pipeline_id, goal, note="triage=small (engineer direct)")
@@ -247,14 +249,18 @@ class MultiAgentOrchestrator:
     # ------------------------------------------------------------------
 
     async def _run_single_agent(self, pipeline_id: str, goal: str,
-                                note: str = "") -> PipelineResult:
+                                note: str = "",
+                                session_id: Optional[str] = None) -> PipelineResult:
         """Run ONE SHSCode agent for simple/small workloads — 1-3 requests
         instead of the 4-role pipeline's 12+. Session + result bookkeeping
-        match the pipeline path so downstream consumers see one shape."""
+        match the pipeline path so downstream consumers see one shape.
+        session_id: continue an EXISTING conversation (v3.0.1 benchmark
+        continuity — the CLI passes --session through)."""
         from app.agent.shscode import SHSCode
 
         session_id = await self.db.create_session(
-            goal, agent_name="orchestrator", mode=self.mode.value)
+            goal, agent_name="orchestrator", mode=self.mode.value
+        ) if not session_id else session_id
         result = PipelineResult(pipeline_id=pipeline_id, goal=goal)
         t0 = time.monotonic()
         agent = None

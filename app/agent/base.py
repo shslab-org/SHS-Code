@@ -618,6 +618,12 @@ class BaseAgent(ABC):
         mode_plan = (getattr(self, "_mode_cfg", {}) or {}).get("plan", "llm")
         if getattr(self, "_chat_mode", False):
             mode_plan = "heuristic"
+        # v3.0.1 request-budget fix (live NIM: ~30s per request, shared
+        # capacity — the LLM planner call costs a FULL request slot):
+        # short single-scope prompts get the instant heuristic DAG.
+        # Complex multi-part goals keep the LLM planner.
+        elif mode_plan == "llm" and len(prompt.split()) <= 30:
+            mode_plan = "heuristic"
         if self.journal is not None and self._journal_task_id and mode_plan != "none":
             try:
                 from app.planner import generate_plan
