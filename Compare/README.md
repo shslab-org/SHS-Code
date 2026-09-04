@@ -115,3 +115,10 @@ evidence. What a CLI does not expose (e.g. its internal system prompt) is marked
 - Per-task traces: 125 directories under this folder (625 files, all secret-scanned).
 - Raw run data: `../runs/` (harness output), `../scores.json`, `../metrics.json`.
 - Harness: `../harness.py`, tasks: `../tasks.py`, proxy: `../../scripts/bench_proxy.py`.
+
+## Earlier pilot run (same day, 06:12 UTC)
+
+An earlier 40-run pilot (4 CLIs × 5 tasks × 2 models: gpt-oss-20b + minimax-m3) from
+this same investigation is preserved under [pilot-0612/](pilot-0612/) for continuity.
+The pilot used a different task set and scoring model; the benchmark documented in
+this README supersedes it.
