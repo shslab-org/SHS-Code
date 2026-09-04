@@ -512,7 +512,17 @@ class Config:
                     with open(p, "rb") as f:
                         data = tomllib.load(f)
                 if isinstance(data, dict):
-                    merged = _deep_merge(merged, data)
+                    # v3.0.1: an EMPTY list in a higher layer means "no
+                    # opinion", not "erase" — the MCP manager writes
+                    # ``mcp_servers: []`` into the home yaml whenever
+                    # nothing is configured interactively, which used to
+                    # shadow project-level MCP servers entirely.
+                    data = {
+                        k: v for k, v in data.items()
+                        if not (isinstance(v, list) and not v)
+                    }
+                    if data:
+                        merged = _deep_merge(merged, data)
             except Exception as e:
                 raise ConfigError(f"Failed to parse {p}: {e}") from e
         return merged
