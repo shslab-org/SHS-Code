@@ -809,8 +809,9 @@ class TestConfigLayerDeepMerge:
         # llm config from project toml SURVIVES the partial home yaml
         assert got.get("llm", {}).get("provider") == "universal"
         assert got.get("llm", {}).get("model") == "openai/gpt-oss-120b"
-        # and the home yaml's own key is present too
-        assert got.get("mcp_servers") == []
+        # v3.0.1: an empty list is 'no opinion' — the key is dropped so it
+        # can never shadow lower layers; the Config default ([]) applies
+        assert got.get("mcp_servers") in ([], None)
 
 
 class TestBashHeredocWrap:
