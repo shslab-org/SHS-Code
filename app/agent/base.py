@@ -269,9 +269,17 @@ class BaseAgent(ABC):
         # plan depth. Persisted in ~/.shscode — survives restarts.
         self._apply_mode_and_profile()
 
+        # v3.0 chat fast-path: purely local classification, hoisted BEFORE
+        # skill injection so chat requests can also skip skill noise (a
+        # trivial "2+2?" does not need deep_research / android-development
+        # skill cards burying the question).
+        self._request_kind = classify_request(prompt)
+        self._chat_mode = (self._request_kind == "chat")
+
         # FIX: Inject relevant skills only once per agent lifetime, not on every run.
         # Re-injecting on every run pollutes the context window with duplicate skill messages.
-        if not self._skills_injected:
+        # v3.0.1: chat requests get a clean context — no skill cards.
+        if not self._skills_injected and not self._chat_mode:
             await self._inject_relevant_skills(prompt)
             self._skills_injected = True
 
@@ -290,12 +298,8 @@ class BaseAgent(ABC):
         self.memory.add(Message.user(safe_prompt))
         mode_str = self.gate.mode.value
 
-        # v3.0 chat fast-path: purely local classification. Chat requests
-        # (greetings, simple Q&A, quick math) skip the LLM planner call,
-        # review phases and self-check injections — they get a direct
-        # answer with ONE request. Real tasks keep the full pipeline.
-        self._request_kind = classify_request(prompt)
-        self._chat_mode = (self._request_kind == "chat")
+        # v3.0 chat fast-path (classification itself now happens earlier,
+        # before skill injection): emit + log the chat decision.
         if self._chat_mode:
             from app.activity import emit
             emit("chat_fast_path", prompt_words=len(prompt.split()))
@@ -328,7 +332,7 @@ class BaseAgent(ABC):
                 # the new user message. Long conversations are capped to the
                 # most recent turns; each is truncated to keep the context
                 # compact.
-                await self._inject_conversation_history()
+                await self._inject_conversation_history(new_prompt=safe_prompt)
             else:
                 self._session_id = await self.db.create_session(
                     goal=prompt, agent_name=self.name, mode=mode_str
@@ -652,40 +656,63 @@ class BaseAgent(ABC):
     # v3.0 — Conversation continuity + chat fast-path
     # ------------------------------------------------------------------
 
-    async def _inject_conversation_history(self, max_turns: int = 20) -> None:
-        """Re-inject the prior dialogue of the injected session so a
-        continued one-shot run starts with REAL conversational context
-        (benchmark task-01 fix) — and because the history lives in the
-        session DB, it survives restarts AND model/provider switches
-        (benchmark task-25 fix). Non-fatal by design."""
+    async def _inject_conversation_history(self, new_prompt: Optional[str] = None,
+                                            max_turns: int = 20) -> None:
+        """Replay the prior dialogue of the injected session as REAL
+        user/assistant messages (benchmark task-01/task-25 root fix).
+
+        v3.0.1 (live NIM finding): a single system-blob summary placed
+        AFTER the new user message did not work — mid-tier models attend
+        to the TAIL of the context (tool/goal layers) and dismissed the
+        mid-context blob as stale noise ("I don't have any context about
+        a secret number"). The fix is structural: replay the prior turns
+        as genuine dialogue messages and keep the NEW user message as
+        the LAST user turn, exactly like a chat client does. Because the
+        dialogue lives in the session DB it survives restarts AND
+        model/provider switches. Non-fatal by design."""
         try:
             msgs = await self.db.get_messages(self._session_id, limit=max_turns * 2)
-            # drop the last stored assistant row if it IS this run's echo —
-            # the new user message is added after this call anyway.
             if not msgs:
                 return
-            lines = []
+            from app.schema import Role
+            # 1) remove the just-added NEW user message (it may sit under
+            #    later system injections like PERSISTENT MEMORY — search
+            #    backwards for it) so the replayed dialogue ends … and the
+            #    new question lands after it as the freshest turn.
+            new_user = None
+            if new_prompt:
+                for i in range(len(self.memory.messages) - 1, -1, -1):
+                    m = self.memory.messages[i]
+                    if m.role == Role.USER and (m.content or "") == new_prompt:
+                        new_user = self.memory.messages.pop(i)
+                        break
+
+            # 2) replay prior turns (oldest → newest), compact per turn
+            replayed = 0
             for m in msgs:
-                role = "User" if m["role"] == "user" else "Assistant"
                 text = (m["content"] or "").strip()
                 if not text:
                     continue
-                lines.append(f"{role}: {text[:600]}")
-            if lines:
-                block = "\n".join(lines[-max_turns:])
-                self.memory.add(Message.system(
-                    "CONVERSATION HISTORY (same session, restored from the "
-                    "persistent session store — the user's earlier turns and "
-                    "your earlier answers below are REAL prior context. Use "
-                    "them: recall facts the user told you, continue prior "
-                    "work instead of restarting it):\n\n" + block))
+                # skip the row that IS this run's new prompt (the DB write
+                # can land before injection when message logging races)
+                if new_prompt and text == new_prompt and m["role"] == "user":
+                    continue
+                role = (Role.USER if m["role"] == "user" else Role.ASSISTANT)
+                self.memory.add(Message(role=role, content=text[:800]))
+                replayed += 1
+
+            # 3) re-add the new user message as the final turn
+            if new_user is not None:
+                self.memory.add(new_user)
+
+            if replayed:
                 from app.activity import emit
-                emit("conversation_restored", turns=len(lines))
+                emit("conversation_restored", turns=replayed)
                 logger.info(
-                    f"[Continuity] restored {len(lines)} dialogue turns "
+                    f"[Continuity] replayed {replayed} dialogue messages "
                     f"from session {self._session_id}")
         except Exception as e:
-            logger.debug(f"[Continuity] history injection skipped: {e}")
+            logger.debug(f"[Continuity] history replay skipped: {e}")
 
     async def _recall_long_term_memory(self, prompt: str) -> None:
         """SHS Code (spec §3/§35): recall persistent memories relevant to the

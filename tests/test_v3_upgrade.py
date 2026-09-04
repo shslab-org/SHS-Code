@@ -354,14 +354,23 @@ class TestConversationContinuity:
         a2.db = db
         a2.journal = None
         a2.llm = CountingLLM(replies=["7"])
-        history = " | ".join(m.content for m in a2.memory.messages)
         asyncio.run(a2.run("what was the number?"))
 
-        # The restored history must contain the turn-1 exchange.
-        restored = [m.content for m in a2.memory.messages
-                    if m.content and "CONVERSATION HISTORY" in m.content]
-        assert restored, "conversation history must be injected"
-        assert "7" in restored[0]
+        # The prior dialogue must be replayed as REAL turns (v3.0.1: a
+        # system-blob summary after the new user message did not reach the
+        # model's attention; genuine user/assistant turns do).
+        from app.schema import Role
+        replayed_user = [
+            m for m in a2.memory.messages
+            if m.role == Role.USER and "Remember the number 7" in (m.content or "")]
+        replayed_asst = [
+            m for m in a2.memory.messages
+            if m.role == Role.ASSISTANT and "7" in (m.content or "")]
+        assert replayed_user, "turn-1 user message must be replayed"
+        assert replayed_asst, "turn-1 assistant answer must be replayed"
+        # and the NEW user question must be the LAST user message
+        last_user = [m for m in a2.memory.messages if m.role == Role.USER][-1]
+        assert "what was the number" in (last_user.content or "")
         db.close()
 
     def test_final_answer_persisted_once(self, tmp_path, monkeypatch):
@@ -638,3 +647,162 @@ class TestToolErrorEfficiency:
         # turn 1: failing tool call, turn 2: terminate.
         # If the inline self-correction still existed there would be 3+.
         assert llm.calls == 2
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 11. v3.0.1 — narration false-positive fix + chat answer acceptance
+# (live NIM finding: "What was the secret number?" — the model's text
+# answer "Now I remember — the number is 7" matched the OLD broad
+# narration patterns (\bnow I\b, \blet me\b); the nudger forced 4 extra
+# requests; the model terminated in frustration with NO answer. This was
+# benchmark task-01's killer.)
+# ═════════════════════════════════════════════════════════════════════════════
+
+class RecallLLM:
+    """Answers a recall question with a phrase the OLD patterns would
+    misread as narration."""
+
+    def __init__(self, replies):
+        self.replies = list(replies)
+        self.calls = 0
+
+    async def ask_tool(self, messages, tools, **k):
+        from app.schema import Message
+        self.calls += 1
+        content = self.replies.pop(0) if self.replies else "done"
+        if content.startswith("TOOL:"):
+            _, spec = content.split("TOOL:", 1)
+            name, arg = spec.strip().split("|", 1)
+            msg = Message.assistant(content="")
+            from app.schema import Role
+            msg.role = Role.ASSISTANT
+            msg.tool_calls = [{
+                "id": f"call_{self.calls}", "type": "function",
+                "function": {"name": name, "arguments": arg}}
+            ]
+            return msg
+        return Message.assistant(content=content)
+
+    async def ask(self, messages, **k):
+        return await self.ask_tool(messages, None)
+
+    async def cleanup(self):
+        pass
+
+
+class TestNarrationFalsePositiveFix:
+
+    def test_answers_with_intent_phrases_are_not_narration(self):
+        from app.agent.toolcall import _NARRATION_PATTERNS
+        answers = [
+            "Now I remember — the secret number is 7.",
+            "Let me answer: 7",
+            "Now I can say for certain: the port is 8080.",
+            "Let me be clear — the answer is yes.",
+            "I will remember this for you.",
+            "The secret number is 7.",
+        ]
+        for t in answers:
+            assert not any(p.search(t) for p in _NARRATION_PATTERNS), \
+                f"false narration positive on a genuine answer: {t!r}"
+
+    def test_real_narration_still_detected(self):
+        from app.agent.toolcall import _NARRATION_PATTERNS
+        narrations = [
+            "I'll create the test file next.",
+            "Let me check the file first.",
+            "I will now run the tests.",
+            "I'm going to fix the bug.",
+            "Now I need to inspect the output.",
+            "Next, I'll add the second file.",
+            "I will write the implementation now.",
+            "Let me run a quick search for that.",
+        ]
+        for t in narrations:
+            assert any(p.search(t) for p in _NARRATION_PATTERNS), \
+                f"narration not detected: {t!r}"
+
+    def test_chat_text_answer_accepted_immediately(self, tmp_path, monkeypatch):
+        """Chat-mode run, model answers with an intent-phrase answer —
+        must be accepted on the FIRST response (no nudge, 1 request)."""
+        monkeypatch.setenv("SHSCODE_WORKSPACE", str(tmp_path))
+        from app.config import Config
+        Config.reset()
+        from app.agent.shscode import SHSCode
+        from app.db.session import SessionDB
+
+        agent = SHSCode()
+        llm = RecallLLM(["Now I remember — the secret number is 7."])
+        agent.llm = llm
+        agent.db = SessionDB(db_path=tmp_path / "nfp.db")
+        agent.journal = None
+
+        result = asyncio.run(agent.run("what was the secret number?"))
+
+        assert llm.calls == 1, "chat answer must be accepted immediately"
+        assert agent._narration_nudges == 0
+        assert "7" in (result or "")
+        assert agent.state.name == "FINISHED"
+
+    def test_continued_session_recall_after_fix(self, tmp_path, monkeypatch):
+        """Full task-01 shape: turn 1 teaches, turn 2 recalls — turn 2's
+        intent-phrase answer must survive the nudger."""
+        monkeypatch.setenv("SHSCODE_WORKSPACE", str(tmp_path))
+        from app.config import Config
+        Config.reset()
+        from app.agent.shscode import SHSCode
+        from app.db.session import SessionDB
+
+        db = SessionDB(db_path=tmp_path / "recall.db")
+        sid = asyncio.run(db.create_session("memory test"))
+
+        a1 = SHSCode(session_id=sid)
+        a1.db = db
+        a1.journal = None
+        a1.llm = RecallLLM(["stored"])
+        asyncio.run(a1.run("Remember the secret number 7. Reply: stored"))
+        try:
+            asyncio.run(a1.cleanup())
+        except Exception:
+            pass
+
+        a2 = SHSCode(session_id=sid)
+        a2.db = db
+        a2.journal = None
+        a2.llm = RecallLLM(["Now I remember — the secret number is 7."])
+        result = asyncio.run(a2.run("what was the secret number?"))
+        try:
+            asyncio.run(a2.cleanup())
+        except Exception:
+            pass
+
+        assert "7" in (result or "")
+        assert a2.llm.calls == 1
+        db.close()
+
+    def test_chat_bypass_off_after_tool_calls(self, tmp_path, monkeypatch):
+        """If the model already made tool calls, chat mode must NOT
+        bypass the completion machinery (misclassified prompts keep
+        task semantics)."""
+        monkeypatch.setenv("SHSCODE_WORKSPACE", str(tmp_path))
+        from app.config import Config
+        Config.reset()
+        from app.agent.shscode import SHSCode
+        from app.db.session import SessionDB
+        from tests.test_integration_e2e import ScriptedLLM
+
+        agent = SHSCode()
+        # "finish the task" misclassifies as chat; the model acts first
+        # (bash), then gives an answer — the bypass must be inert because
+        # tool calls happened.
+        agent.llm = ScriptedLLM([
+            ("tool", ("bash", {"command": "echo ok"})),
+            ("text", "Task complete — the work is finished."),
+        ])
+        agent.db = SessionDB(db_path=tmp_path / "byp.db")
+        agent.journal = None
+        agent._max_steps = 6
+
+        result = asyncio.run(agent.run("finish the task"))
+        assert agent._tool_call_count >= 1
+        assert "finished" in (result or "").lower() or result

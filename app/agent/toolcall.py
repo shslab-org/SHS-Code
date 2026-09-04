@@ -41,17 +41,23 @@ _DONE_PATTERNS = [
 # answers ("42", "the function is in rate_limiter.py", "use add(2,3)")
 # never match.
 _NARRATION_PATTERNS = [
+    # v3.0.1 (live NIM finding): the OLD broad patterns (\bnow I\b,
+    # \blet me\b, \bI will\b …) matched perfectly good ANSWERS like
+    # "Now I remember — the number is 7" or "Let me answer: 7". The
+    # nudger then forced 4+ extra LLM requests, the model got frustrated
+    # and terminated WITHOUT delivering the answer it had already given
+    # (benchmark task-01: answered '0'). Narration now requires an
+    # ACTION VERB after the intent phrase — "I'll create the file",
+    # "let me check the tests" — which genuine answers virtually never
+    # contain as their main clause.
     re.compile(p, re.IGNORECASE)
     for p in (
-        r"\bI(?:'ll|’ll| will)\b",
-        r"\bI(?:'m|’m| am) (?:going|about) to\b",
-        r"\blet me\b",
-        r"\bnow I\b",
-        r"\bnext,?\s+I\b",
-        r"\bI'(?:ll|m) now\b",
-        r"\bproceed(?:ing|s)? to\b",
-        r"\bI'll first\b",
-        r"\bI'?m going ahead\b",
+        r"\bI(?:'ll|’ll| will)\s+(?:now\s+)?(?:create|write|run|check|read|look|search|implement|fix|patch|test|update|delete|remove|make|build|call|use|open|edit|add|verify|explore|inspect|analyze|see|find|review|commit|push|generate|set|install|copy|move|refactor)\b",
+        r"\bI(?:'m|’m| am)\s+(?:now\s+)?(?:going|about)\s+to\s+(?:create|write|run|check|read|look|search|implement|fix|test|update|delete|make|build|call|use|open|edit|add|verify|explore|inspect|analyze|see|find)\b",
+        r"\blet me\s+(?:now\s+)?(?:create|write|run|check|read|look|search|implement|fix|patch|test|update|delete|remove|make|build|call|use|open|edit|add|verify|explore|inspect|analyze|see|find|review|commit|push|generate|set|install|copy|move|refactor)\b",
+        r"\bnext,?\s+I\s+will\s+(?:create|write|run|check|read|look|search|implement|fix|test|update|delete|make|build|verify|explore|inspect|analyze)\b",
+        r"\bproceed(?:ing|s)?\s+to\s+(?:create|write|run|check|read|search|implement|fix|test|update|delete|make|build|verify|explore|inspect|analyze)\b",
+        r"\b(?:now|next|first)\s+I\s+(?:need|want)\s+to\s+(?:create|write|run|check|read|look|search|implement|fix|test|update|delete|make|build|call|use|open|edit|add|verify|explore|inspect|analyze|see|find|review)\b",
     )
 ]
 _MAX_NARRATION_NUDGES = 5
@@ -270,13 +276,19 @@ tool or different arguments — DO NOT repeat the same failing call.
         recently_failed = self._get_recently_failed_tools()
         selection = self._selector.score(goal, recently_failed=recently_failed)
 
-        hint = selection.to_prompt_hint()
-        self.memory.add(Message.user(
-            f"\n{hint}\n\n"
-            "Using the tool intelligence scores above as guidance, choose the best tool "
-            "for the current step. You are not forced to pick the top-ranked tool — "
-            "use your judgement — but if you deviate, explain why in your reasoning."
-        ))
+        # v3.0.1 (live NIM finding): the tool-intelligence hint is TASK
+        # machinery. For chat requests it lands as the LAST message before
+        # the request and buries the user's question under a ranking box —
+        # mid-tier models then answer the ranking box instead of the user
+        # ("I don't have any context about..."). Chat gets a clean context.
+        if not getattr(self, "_chat_mode", False):
+            hint = selection.to_prompt_hint()
+            self.memory.add(Message.user(
+                f"\n{hint}\n\n"
+                "Using the tool intelligence scores above as guidance, choose the best tool "
+                "for the current step. You are not forced to pick the top-ranked tool — "
+                "use your judgement — but if you deviate, explain why in your reasoning."
+            ))
 
         schemas = self.tools.to_openai_schemas()
         response = await self.llm.ask_tool(self.memory.messages, tools=schemas)
@@ -311,6 +323,23 @@ tool or different arguments — DO NOT repeat the same failing call.
                 and last_msg.role == Role.ASSISTANT
                 and content
             ):
+                # v3.0.1 CHAT BYPASS (live NIM finding, benchmark task-01
+                # killer): in chat mode the system prompt TOLD the model to
+                # answer directly — a text-only response IS the expected
+                # outcome, not narration. Nudging here burns 2-5 extra
+                # requests under rate limits, confuses the model into
+                # tool-calling for facts it already stated, and ends in a
+                # frustrated terminate with NO answer delivered.
+                # Guard: only when NO tool calls happened in this run yet —
+                # if the model already acted, a misclassified chat prompt
+                # still gets the full task semantics (plan gate etc.).
+                if (
+                    getattr(self, "_chat_mode", False)
+                    and self._tool_call_count == 0
+                ):
+                    self._final_answer = content
+                    self.state = AgentState.FINISHED
+                    return content
                 # NARRATION GUARD (live NIM finding #2): mid-tier models
                 # sometimes narrate their NEXT action as plain text
                 # ("I'll create the test file next") instead of emitting the
