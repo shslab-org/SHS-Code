@@ -321,6 +321,14 @@ class BaseAgent(ABC):
 
         self.memory.add(Message.user(safe_prompt))
 
+        # v3.0.3: publish lightweight run context (goal + request kind) for
+        # tools that need it (e.g. skill_manager one-off guard)
+        try:
+            from app.agent.context import set_run_context
+            set_run_context(goal=prompt, request_kind=self._request_kind)
+        except Exception:
+            pass
+
         # v3.0.3: chat-mode directive as the LAST system message before the
         # user's turn — mid-tier models reliably attend to the context tail,
         # so this keeps casual chat natural (no random file creation).

@@ -1100,3 +1100,41 @@ class TestTerminateToolGate:
         agent._max_steps = 8
         result = await agent.run("do it")
         assert agent.state.name == "FINISHED"
+
+
+class TestSkillOneOffGuard:
+    """v3.0.3: models saved a 'skill' for every one-off task (file_creator,
+    calculator_project_setup, weather_query …) — pure clutter. The
+    skill_manager create action now rejects skills whose name+description
+    substantially overlap the CURRENT goal (task-specific = one-off)."""
+
+    @pytest.mark.asyncio
+    async def test_task_specific_skill_rejected(self):
+        from app.tool.skill_manager import SkillManagerTool
+        from app.agent.context import set_run_context, clear_run_context
+        set_run_context(goal="Create words.txt with the 10 most common English words")
+        try:
+            tool = SkillManagerTool()
+            r = await tool.execute(
+                action="create", name="words_file_creation",
+                description="create a words file with common words",
+                content="# steps")
+            assert r.output and "SKILL CREATION SKIPPED" in r.output
+        finally:
+            clear_run_context()
+
+    @pytest.mark.asyncio
+    async def test_reusable_skill_allowed(self, tmp_path, monkeypatch):
+        from app.tool.skill_manager import SkillManagerTool
+        from app.agent.context import set_run_context, clear_run_context
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path))
+        set_run_context(goal="Create words.txt with the 10 most common English words")
+        try:
+            tool = SkillManagerTool()
+            r = await tool.execute(
+                action="create", name="git_commit_workflow",
+                description="how to commit code with git",
+                content="# git workflow")
+            assert r.output and "Skill created" in r.output
+        finally:
+            clear_run_context()

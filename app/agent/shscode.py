@@ -77,7 +77,10 @@ TOOLBOX:
   crawl               — extract clean text from any URL
   image_generate      — generate images from text prompts
   memory              — read/write MEMORY.md and USER.md (persistent context)
-  skill_manager       — create/patch/delete/list skills
+  skill_manager       — create/patch/delete/list skills (ONLY for reusable
+                        multi-step workflows the user will repeat — NEVER
+                        for one-off tasks; a single task does not need a
+                        skill file)
   cross_session_search — full-text search across all past sessions
   delegate            — spawn isolated subagent for parallel subtasks
   ask_human           — request clarification from the user
