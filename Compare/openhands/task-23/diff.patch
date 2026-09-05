@@ -1,8 +1,0 @@
-diff --git a/MODULES.txt b/MODULES.txt
-new file mode 100644
-index 0000000..e4aff86
---- /dev/null
-+++ b/MODULES.txt
-@@ -0,0 +1,2 @@
-+calc.py
-+textproc.py

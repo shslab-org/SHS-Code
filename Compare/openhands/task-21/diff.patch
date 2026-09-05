@@ -1,7 +1,0 @@
-diff --git a/HEADLINE.txt b/HEADLINE.txt
-new file mode 100644
-index 0000000..8d9e4b1
---- /dev/null
-+++ b/HEADLINE.txt
-@@ -0,0 +1 @@
-+# benchlib — small utility library used for agent benchmarking
