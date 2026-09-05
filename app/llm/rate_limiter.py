@@ -160,7 +160,13 @@ class RollingWindowRateLimiter:
             return blocked
         # Oldest timestamp leaves the window at ts + window_s.
         available_at = self._timestamps[0] + self.window_s
-        return max(blocked, available_at - now)
+        wait = available_at - now
+        # Clock-jump guard: a timestamp from a mixed/future clock can never
+        # legitimately require waiting more than one full window. Clamping
+        # keeps the limiter responsive even if clocks skew or jump.
+        if wait > self.window_s:
+            wait = self.window_s
+        return max(blocked, wait)
 
     def record(self, now: Optional[float] = None) -> None:
         """Record that a request was sent (called by acquire())."""

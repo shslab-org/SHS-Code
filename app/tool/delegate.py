@@ -54,7 +54,15 @@ class DelegateTool(BaseTool):
                 sub_id = ""
 
         async def _run() -> str:
-            agent = SHSCode(mode=AgentMode.BUILD)
+            # v3.1: inherit the PARENT's mode (was hardcoded BUILD — plan-mode
+            # parents got BUILD sub-agents that bypassed approval gating).
+            try:
+                from app.agent.context import get_run_mode
+                parent_mode = (AgentMode.PLAN
+                               if get_run_mode() == "plan" else AgentMode.BUILD)
+            except Exception:
+                parent_mode = AgentMode.BUILD
+            agent = SHSCode(mode=parent_mode)
             agent._max_steps = max_steps
             return await agent.run(task)
 

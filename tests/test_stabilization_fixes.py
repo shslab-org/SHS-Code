@@ -992,9 +992,7 @@ class TestGoalCompletionGate:
         from app.task_dag import TaskGraph
         g = await TaskGraph(j, tid).load()
         if not g.nodes():
-            from app.task_dag import TaskNode
-            g._nodes["n1"] = TaskNode(node_id="n1", title="pending step")
-            await g.save()
+            await g.add_node("pending step", node_id="n1")
         agent.state = type(agent.state).IDLE
         agent.llm = ScriptedLLM([
             # work starts first — the refined gate only applies mid-work
@@ -1033,9 +1031,7 @@ class TestGoalCompletionGate:
         from app.task_dag import TaskGraph
         g = await TaskGraph(Journal.get(), tid).load()
         if not g.nodes():
-            from app.task_dag import TaskNode
-            g._nodes["n1"] = TaskNode(node_id="n1", title="stuck step")
-            await g.save()
+            await g.add_node("stuck step", node_id="n1")
         agent.state = type(agent.state).IDLE
         agent.llm = ScriptedLLM([("text", "partial answer")])
         agent._max_steps = 4
@@ -1062,9 +1058,7 @@ class TestTerminateToolGate:
         from app.task_dag import TaskGraph
         g = await TaskGraph(Journal.get(), tid).load()
         if not g.nodes():
-            from app.task_dag import TaskNode
-            g._nodes["n1"] = TaskNode(node_id="n1", title="pending step")
-            await g.save()
+            await g.add_node("pending step", node_id="n1")
         agent.state = type(agent.state).IDLE
         # reset the nudge budget: the bootstrap run's MockLLM terminates
         # were themselves gated (desired behavior) and exhausted it

@@ -79,6 +79,7 @@ Rules:
 
     async def _think_act_publish(self, context: str) -> str:
         from app.agent.shscode import SHSCode
+        from app.permissions.gate import AgentMode
 
         # Pull design from bus if available; fall back to context
         msgs = await self.bus.drain(self.role_name)
@@ -89,7 +90,17 @@ Rules:
             f"({design[:80].strip()!r}…)."
         )
 
-        engineer_agent = SHSCode()
+        # v3.1: propagate the orchestrator's mode (was always BUILD);
+        # map plan->PLAN, anything else -> BUILD.
+        agent_mode = (AgentMode.PLAN
+                      if getattr(self, "mode", None) == "plan" else AgentMode.BUILD)
+        engineer_agent = SHSCode(mode=agent_mode)
+        # v3.1 REQUEST-BUDGET FIX: the design ALREADY contains the
+        # Architect's [TASK-N] plan — the sub-agent's own LLM planner call
+        # duplicated it at the cost of a full request slot (~30s under
+        # contention; the #1 multi-agent timeout driver). The instant
+        # heuristic planner is enough: the plan text is in the prompt.
+        engineer_agent._force_heuristic_plan = True
         try:
             # v3.0: format-agnostic instruction — the design may be a
             # [TASK-N] plan, a PRD, or free-form guidance; SHSCode extracts
@@ -117,7 +128,12 @@ Rules:
         decision, reason = self.decide(implementation_result)
         if decision == RoleDecision.RETRY:
             logger.warning(f"[{self.role_name}] First pass thin: {reason}. Retrying.")
-            engineer_agent2 = SHSCode()
+            # v3.1: the retry used a BRAND-NEW agent (fresh session/journal/
+            # DAG — the first agent's file edits were invisible, so it often
+            # redid work). Continue the SAME session instead.
+            retry_sid = getattr(engineer_agent, "_session_id", None)
+            engineer_agent2 = SHSCode(mode=agent_mode, session_id=retry_sid)
+            engineer_agent2._force_heuristic_plan = True
             try:
                 implementation_result = await engineer_agent2.run(
                     f"The previous implementation attempt was incomplete. {reason}.\n\n"

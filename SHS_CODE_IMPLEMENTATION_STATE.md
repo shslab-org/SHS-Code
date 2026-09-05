@@ -1,18 +1,157 @@
-# SHS Code State — v3.0.3 (100%-Perfection Round)
+# SHS Code State — v3.1.0 (Forensic-Perfection Round)
 
 ## Repository
 - Source: github.com/shslab-org/SHS-Code (working copy: /home/z/my-project/SHS-Code)
 - Language: Python 3.11+ (tested 3.12), package `app/`, 340+ files
-- Product: **SHS Code v3.0.3** (SHS Lab — Sazzad Hussain Shobuj)
+- Product: **SHS Code v3.1.0** (SHS Lab — Sazzad Hussain Shobuj)
 - Version single-source: app/__init__.py `__version__` — CLI / server
   /healthz / installer banner / pyproject all derive from it
 
 ## Current Phase
-100%-PERFECTION ROUND COMPLETE — normal-chat core requirement delivered
-(casual conversation gets natural one-request replies in the user's
-language, zero file creation); goal-completion honesty enforced on BOTH
-text answers and the terminate tool; terminal UX clean; every entry
-surface consistent. 613 tests passing, 0 failed.
+FORENSIC-PERFECTION ROUND COMPLETE — driven by the Compare/ benchmark
+evidence (memory recall failure, context window overflow, multi-agent
+amplification, leak noise) plus a 4-subsystem deep audit (memory, context
+window, multi-agent orchestration, resource leaks). ~46 findings fixed,
+37 new regression tests, LIVE NIM matrix 9/9. Suite: 653 passed, 0 failed.
+
+## v3.1.0 — What was fixed (by subsystem)
+
+### Memory (benchmark task-01/02/05 root causes)
+1. `Memory._trim` pinned ALL system messages → long REPL sessions evicted
+   the ENTIRE dialogue. Now: first+last system kept, counted against the
+   budget; ordering preserved.
+2. One-shot turn-2 amnesia: continuity was opt-in (--session/--continue).
+   Now: one-shot AUTO-CONTINUES the most recent session (<=30 min, not
+   running). LIVE: "remember 91" → new process → "what was the number?"
+   → "91".
+3. LongTermMemory: WAL + busy_timeout=5000 + synchronous=NORMAL (was
+   default DELETE journal; SQLITE_BUSY silently dropped stores/recalls);
+   delete() now runs under the lock (was bypassing it); FTS replace now
+   delete-then-insert (INSERT OR REPLACE left phantom tokens forever);
+   close() actually called from BaseAgent.cleanup() (was dead code — one
+   leaked SQLite connection per agent).
+4. LTM stores distilled TOOL facts (numbers/paths/outcomes) + goal +
+   narration — tool outputs were never persisted, which is why in-session
+   recall failed; recall cap 220 → 800 chars/hit; progress checkpoints
+   deduplicated.
+5. `latest_session()` prefers interrupted/finished/error over 'running'
+   (could attach a session live in another process).
+6. User message write awaited directly (was fire-and-forget — a kill lost
+   the turn-1 row, so turn-2 replayed nothing).
+7. MEMORY.md/USER.md (layer 3) injected into context at run start (bounded
+   head, replaced in place) — previously nothing ever read them.
+8. /resume journal continuity: run() preserves a pre-set _journal_task_id
+   and _plan_graph (used to task_start a NEW row — resumed task stayed
+   in_progress forever, plan-gate saw an empty DAG).
+9. History replay truncation 800 → 4000 chars (final answers persist 4000).
+
+### Context window
+10. Tool outputs capped at history insertion (12k head+tail, env-tunable)
+    — bash/python/view were explicitly untruncated; one `cat` of a big
+    file permanently consumed the window and ballooned every request.
+    Full output still journalled.
+11. AUTO-COMPACTION: pre-request token guard (90% of config
+    [context].max_tokens — now actually wired, was dead config) + retry-once
+    after a context-overflow API error (was a dead-end run error).
+    TokenLimitExceeded detection unified across provider paths.
+12. System prompt injected ONCE per agent (was re-added every run: REPL
+    sessions accumulated ~10.3KB duplicated system content per turn, all
+    pinned by _trim). Mode/profile directives now REPLACE in place.
+13. Tool-intelligence hint boxes REPLACED per step (were additive — a
+    30-step run re-sent 29 stale ranking boxes). [CONTEXT REFRESH] and
+    [PLAN STATUS REFRESH] also replace in place.
+14. Chat mode skips plan injection entirely (a heuristic DAG +
+    IMPLEMENTATION PLAN system message used to pollute pure Q&A).
+15. Compaction prefix table aligned with the ACTUAL injected formats
+    (mismatch classified injections as "user requirements").
+16. Anthropic/Google conversions merge ALL system messages (Anthropic kept
+    only the first; Google last-wins — a plan refresh overwrote the whole
+    system prompt). This was the silent context loss on provider switch.
+17. Memory token-guard: token-based eviction of oldest body messages with
+    pair integrity (max_context_tokens, wired from config).
+
+### Multi-agent (benchmark: 55/250, rank 5)
+18. Message-bus publish-before-subscribe race FIXED: roles now subscribe
+    BEFORE awaiting upstream deps — every direct artefact handoff
+    (PM→Architect→Engineer→QA) used to be silently DROPPED (the
+    "Input does not appear to be a design document" root cause chain).
+19. Handoff truncation [:3000] → head+tail at 24k (the Architect's
+    IMPLEMENTATION PLAN is the LAST section — the prefix cut deleted
+    exactly what the Engineer needed).
+20. `on_stage_error` hook stored (was accepted but never stored →
+    AttributeError crashed the whole pipeline on ANY role failure —
+    observed in benchmark traces task-22/task-25).
+21. Upstream ERROR no longer flows downstream (QA used to 'validate' the
+    Engineer's error text; downstream stages of a failed dep are SKIPPED).
+22. Failure fallback: engineer-stage failure/timeout now falls back to the
+    single-agent path (bounded 300s) — was a total loss.
+23. --session honored on the complex path (was overwritten unconditionally).
+24. Orchestrator mode propagated to Engineer/QA sub-agents (was hardcoded
+    BUILD — plan-mode approval gating silently bypassed); delegate tool
+    inherits the parent's mode via the run context.
+25. Request amplification cut: Engineer/QA sub-agents skip the LLM planner
+    (_force_heuristic_plan — the Architect's [TASK-N] design is already in
+    the prompt; the duplicated planner call cost a full ~30s request slot,
+    the #1 timeout driver). Engineer retry CONTINUES the same session
+    instead of a fresh agent redoing work.
+26. Triage: long pure QUESTIONS (>25 words, no artifact/file intent) route
+    to simple Q&A (PM used to write a PRD for an explanation request);
+    Hinglish question starters recognized.
+
+### Resource leaks (the "Event loop is closed" noise + real leaks)
+27. node_execute/data_viz timeout: process killed + reaped (were orphaned
+    forever with unclosed transports).
+28. MCP failed connect: spawned server process killed via BaseException
+    cleanup (was one orphan per agent run on a flaky server);
+    disconnect() escalates terminate→kill and closes pipe transports.
+29. GGUF models: module-level cache (was one FULL model load per agent —
+    OOM under load); cleanup_backend releases it.
+30. run()'s protected region starts before skill injection (cancellation
+    there used to leak Bash shell, browser, MCP clients, DB connections).
+31. Fire-and-forget cleanup tasks strongly referenced (router + gateway —
+    asyncio weak refs could GC them mid-cleanup, leaking everything).
+32. SDK backends (OpenAI/Anthropic) got cleanup(); rotated-key one-off
+    clients closed after every call (httpx pools were never closed).
+33. Bash atexit: one module-level weak-tracked handler (was a STRONG-ref
+    handler per Bash instance — unbounded registry growth in server
+    processes); reset on generic exception + CancelledError (output
+    mixing between commands fixed).
+34. Parallel executor timeout force-releases the abandoned thread's
+    resource locks (thread-ownership checks made normal release refuse —
+    deadlock-by-timeout); force_release_write/read added to the RW lock.
+35. python_execute: cancelled join terminates the worker process (server
+    cancellation used to orphan the worker for weeks).
+36. Canvas sessions LRU-capped at max_sessions (grew unboundedly);
+    intelligence manager closes evicted cache connections.
+37. cron scheduler job.id → job.job_id (AttributeError crashed the
+    scheduler on the first due job).
+38. Rate limiter: clock-jump clamp (mixed/future timestamps could demand
+    a 155s+ wait — hung the suite on freshly booted machines).
+
+## LIVE Verification Matrix (v3.1.0, real NVIDIA NIM)
+- Normal Hinglish chat: natural reply, "Bhai, main theek hoon, aap kaise
+  ho?" — 1 request, 3s ✓
+- Simple math: 15% of 240 → "36 (240 × 0.15)" ✓
+- **Auto-continue turn-2 recall: "remember 91" → NEW process → "91" ✓
+  (the benchmark task-01 killer)**
+- Agent work any-directory: fib.py created + run + externally verified
+  fib(10)=55 ✓
+- Multi-agent triage: "2+2?" → direct answer 3s, APPROVED ✓
+- Full suite: 653 passed, 2 skipped, 0 failed ✓
+
+## Environment Note (2026-09-05)
+NVIDIA NIM tightened minimaxai/minimax-m3 to ~1-burst + 10-15s recovery
+(~4-6 RPM, was ~10 RPM at the v1 benchmark). All agents' benchmark
+scores are environment-bound; SHS single-agent ranks #1 (80/250) in the
+re-run under the harshest conditions — most resilient under 429 pressure.
+gpt-oss-120b/qwen3-coder-480b/deepseek-v4-flash: EOL (410).
+gpt-oss-20b: healthy (tool calling + 8/8 burst capacity) — now default.
+Any-directory setups: ~/.shscode/.env needs LLM_API_KEY + LLM_BASE_URL +
+LLM_MODEL (all three).
+
+---
+
+# HISTORICAL STATE (v3.0.3 — preserved)
 
 ## v3.0.3 Commits (this phase)
 - 71a80a1 v3.0.3 UX round — 7 live-found fixes: EOL default model

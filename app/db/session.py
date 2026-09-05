@@ -448,17 +448,25 @@ class SessionDB:
     async def latest_session(self, include_interrupted: bool = True) -> Optional[dict]:
         """Most recently started session in this workspace (for --continue).
 
-        Sessions whose state is 'running' from a live process are excluded
-        only when they started AFTER this process booted (they may be live);
-        simpler and safe: pick the newest row regardless of state and let
-        the caller decide. Interrupted sessions are the primary target.
+        v3.1 FIX: previously picked the newest row REGARDLESS of state — a
+        session 'running' in another live process could be attached (interleaved
+        messages from two processes). Now prefers interrupted/finished/error
+        sessions and only falls back to a running row when nothing else exists.
         """
+        _PREFERRED = ("interrupted", "finished", "error")
+
         def _get():
-            return self._execute_query(lambda conn: conn.execute(
-                "SELECT id, goal, agent_name, mode, parent_session_id,"
-                " started_at, ended_at, state, step_count, error"
-                " FROM sessions ORDER BY started_at DESC LIMIT 1"
-            ).fetchone())
+            def _do(conn):
+                rows = conn.execute(
+                    "SELECT id, goal, agent_name, mode, parent_session_id,"
+                    " started_at, ended_at, state, step_count, error"
+                    " FROM sessions ORDER BY started_at DESC LIMIT 50"
+                ).fetchall()
+                for r in rows:
+                    if r[7] in _PREFERRED:
+                        return r
+                return rows[0] if rows else None
+            return self._execute_query(_do)
         try:
             row = await _with_retry(_get)
         except Exception:

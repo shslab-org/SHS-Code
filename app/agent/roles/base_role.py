@@ -108,8 +108,12 @@ class BaseRole(ABC):
     specialist_prompt: str = ""
     max_retries:       int = 2
 
-    def __init__(self, bus: RoleMessageBus) -> None:
+    def __init__(self, bus: RoleMessageBus, mode: Optional[str] = None) -> None:
         self.bus    = bus
+        # v3.1: orchestrator mode propagation — Engineer/QA sub-agents used
+        # to always run BUILD even when the user chose --mode plan (approval
+        # gating silently bypassed).
+        self.mode   = mode
         self._inbox = bus.subscribe(self.role_name)
         self._done  = False
 

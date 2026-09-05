@@ -90,6 +90,12 @@ class DataVisualization(BaseTool):
                 return ToolResult(error=f"Chart generation failed: {stderr.decode()}")
             return ToolResult(output=f"Chart saved to {out_path}")
         except asyncio.TimeoutError:
+            # v3.1 leak fix: kill + reap the orphaned matplotlib process
+            try:
+                proc.kill()
+                await proc.wait()
+            except (ProcessLookupError, UnboundLocalError):
+                pass
             return ToolResult(error="Chart generation timed out after 30 seconds.")
         except Exception as e:
             return ToolResult(error=str(e))

@@ -21,8 +21,16 @@ class ShortTermMemory(Memory):
     """
 
     def add_context_refresh(self, summary: str) -> None:
-        """Inject a task-history summary as a user message."""
-        self.add(Message.user(f"[CONTEXT REFRESH]\n{summary}\n[END CONTEXT REFRESH]"))
+        """Inject a task-history summary as a user message.
+
+        v3.1: REPLACES the previous refresh block in place — refreshes were
+        additive, so long runs carried one stale summary per 5 steps."""
+        new_msg = Message.user(f"[CONTEXT REFRESH]\n{summary}\n[END CONTEXT REFRESH]")
+        for i, m in enumerate(self.messages):
+            if m.role == Role.USER and (m.content or "").startswith("[CONTEXT REFRESH]"):
+                self.messages[i] = new_msg
+                return
+        self.add(new_msg)
 
     def snapshot(self) -> list[Message]:
         """Return a deep copy of current messages for Plan Mode dry-runs."""

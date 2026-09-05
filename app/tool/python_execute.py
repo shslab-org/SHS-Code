@@ -128,10 +128,23 @@ class PythonExecute(BaseTool):
         # asyncio loop: parallel tool batches serialized, the activity feed
         # froze and cancellation stopped responding. The join now runs in a
         # worker thread; the event loop keeps servicing everything else.
-        if timeout is None:
-            await asyncio.to_thread(proc.join)
-        else:
-            await asyncio.to_thread(proc.join, timeout)
+        # v3.1 FIX (orphan on cancel): a cancelled awaiting task returned
+        # immediately while the worker process kept running forever (a
+        # server lives for weeks). Terminate the worker on cancellation.
+        try:
+            if timeout is None:
+                await asyncio.to_thread(proc.join)
+            else:
+                await asyncio.to_thread(proc.join, timeout)
+        except asyncio.CancelledError:
+            try:
+                proc.terminate()
+                proc.join(timeout=5)
+                if proc.is_alive():
+                    proc.kill()
+            except Exception:
+                pass
+            raise
 
         if proc.is_alive():
             proc.terminate()

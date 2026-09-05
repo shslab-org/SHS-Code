@@ -30,7 +30,17 @@ class NodeExecute(BaseTool):
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+                try:
+                    stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+                except asyncio.TimeoutError:
+                    # v3.1 leak fix: kill + reap the orphan process; an unclosed
+                    # transport also caused "Event loop is closed" noise at exit.
+                    try:
+                        proc.kill()
+                        await proc.wait()
+                    except ProcessLookupError:
+                        pass
+                    return ToolResult(error=f"Timed out after {timeout}s")
                 out = stdout.decode()
                 err = stderr.decode()
                 if proc.returncode != 0:

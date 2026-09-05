@@ -34,14 +34,24 @@ def _safe_create_task(coro):
     asyncio.get_event_loop().create_task(). If no loop is running
     (e.g., called from a sync context during shutdown), logs a warning
     instead of crashing.
+
+    v3.1 FIX (GC'd cleanup tasks): discarded tasks can be garbage-collected
+    mid-cleanup (asyncio holds only weak refs) — track them strongly here.
     """
     try:
         loop = asyncio.get_running_loop()
-        return loop.create_task(coro)
+        task = loop.create_task(coro)
+        _BACKGROUND_CLEANUPS.add(task)
+        task.add_done_callback(_BACKGROUND_CLEANUPS.discard)
+        return task
     except RuntimeError:
         # No running loop — can't schedule; best-effort log
         logger.warning("No event loop for async cleanup — coroutine dropped")
         return None
+
+
+# v3.1: strong references for fire-and-forget cleanup tasks.
+_BACKGROUND_CLEANUPS: set = set()
 
 
 class MessagingGateway:

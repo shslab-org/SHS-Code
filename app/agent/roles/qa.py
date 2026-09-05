@@ -101,7 +101,14 @@ Your output MUST include:
 
         logger.info(f"[{self.role_name}] Delegating QA validation to SHSCode.")
 
-        qa_agent = SHSCode()
+        from app.permissions.gate import AgentMode
+        # v3.1: propagate orchestrator mode + skip the LLM planner (the
+        # validation instructions are fully specified in the prompt; a
+        # separate planner request only burns a rate-limit slot).
+        agent_mode = (AgentMode.PLAN
+                      if getattr(self, "mode", None) == "plan" else AgentMode.BUILD)
+        qa_agent = SHSCode(mode=agent_mode)
+        qa_agent._force_heuristic_plan = True
         try:
             qa_result = await qa_agent.run(
                 f"You are a QA engineer. Validate the following implementation:\n\n"

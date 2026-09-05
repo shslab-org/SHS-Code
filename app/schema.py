@@ -108,19 +108,41 @@ class Message(BaseModel):
 class Memory(BaseModel):
     messages:     list[Message] = Field(default_factory=list)
     max_messages: int           = 100
+    # v3.1: token-based context guard. 0 = disabled (count-only trim).
+    # Wired from config [context].max_tokens by the agent; when the estimated
+    # context exceeds this, oldest non-system messages are dropped from the
+    # head so a growing run never overflows the model window silently.
+    max_context_tokens: int     = 0
 
     def add(self, message: Message) -> None:
         self.messages.append(message)
         self._trim()
 
     def _trim(self) -> None:
-        if len(self.messages) <= self.max_messages:
+        # v3.1 FIX: pinning ALL system messages evicted the ENTIRE dialogue in
+        # long REPL sessions (every run re-added system prompts; once
+        # len(system) >= max_messages the whole user/assistant history was
+        # silently discarded). Now only the FIRST system message (identity
+        # anchor) and the LAST system message (latest directive, e.g. the
+        # chat-mode directive deliberately placed at the tail) are pinned —
+        # and they COUNT against the budget.
+        if len(self.messages) <= self.max_messages and not self._tokens_exceed():
             return
-        system = [m for m in self.messages if m.role == Role.SYSTEM]
+        first_system = next((m for m in self.messages if m.role == Role.SYSTEM), None)
+        last_system = None
+        for m in reversed(self.messages):
+            if m.role == Role.SYSTEM:
+                last_system = m
+                break
+        system_keep: list[Message] = []
+        if first_system is not None:
+            system_keep.append(first_system)
+            if last_system is not None and last_system is not first_system:
+                system_keep.append(last_system)
         rest = [m for m in self.messages if m.role != Role.SYSTEM]
-        keep = max(self.max_messages - len(system), 0)
-        if not keep:
-            self.messages = system
+        keep = max(self.max_messages - len(system_keep), 1)
+        if not rest:
+            self.messages = system_keep
             return
         trimmed = list(rest[-keep:])
         # FIX: Prevent orphaned TOOL messages at the start of the trimmed window.
@@ -134,7 +156,56 @@ class Memory(BaseModel):
                and trimmed[0].tool_calls
                and (len(trimmed) < 2 or trimmed[1].role != Role.TOOL)):
             trimmed.pop(0)
-        self.messages = system + trimmed
+        self.messages = system_keep + trimmed
+        self._token_trim_if_needed()
+
+    # ------------------------------------------------------------------
+    # v3.1: token-budget guard
+    # ------------------------------------------------------------------
+    def _tokens_exceed(self) -> bool:
+        return (self.max_context_tokens > 0
+                and self.token_estimate() > self.max_context_tokens)
+
+    def _token_trim_if_needed(self) -> None:
+        """Drop oldest non-system messages until under the token budget.
+
+        Keeps the first system message and the last system message (same
+        policy as the count-based trim). Pair-integrity is preserved so the
+        window stays API-valid."""
+        if not self._tokens_exceed():
+            return
+        first_idx = next((i for i, m in enumerate(self.messages)
+                          if m.role == Role.SYSTEM), None)
+        last_idx = None
+        for i in range(len(self.messages) - 1, -1, -1):
+            if self.messages[i].role == Role.SYSTEM:
+                last_idx = i
+                break
+        head: list[Message] = []
+        if first_idx is not None:
+            head.append(self.messages[first_idx])
+            if last_idx is not None and last_idx != first_idx:
+                head.append(self.messages[last_idx])
+        body = [m for m in self.messages if m.role != Role.SYSTEM]
+        guard = 0
+        while (body and self._est(head + body) > self.max_context_tokens
+               and guard < 10000):
+            body.pop(0)
+            # preserve tool-call pair integrity at the new head
+            while body and body[0].role == Role.TOOL:
+                body.pop(0)
+            while (body and body[0].role == Role.ASSISTANT
+                   and body[0].tool_calls
+                   and (len(body) < 2 or body[1].role != Role.TOOL)):
+                body.pop(0)
+            guard += 1
+        self.messages = head + body
+
+    @staticmethod
+    def _est(msgs: list[Message]) -> int:
+        total_chars = sum(len(m.content or "") for m in msgs)
+        total_words = sum(len((m.content or "").split()) for m in msgs)
+        return max(total_chars // 4, int(total_words * 1.3))
 
     def to_list(self) -> list[dict[str, Any]]:
         return [m.to_dict() for m in self.messages]

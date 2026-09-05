@@ -201,6 +201,14 @@ class BaseAgent(ABC):
         self.state = AgentState.IDLE
         from app.memory.short_term import ShortTermMemory
         self.memory = ShortTermMemory()
+        # v3.1: wire the (previously dead) config [context].max_tokens into
+        # the memory guard — token-based trimming now actually runs.
+        try:
+            ctx_max = int(cfg.context.max_tokens or 0)
+            if ctx_max > 0:
+                self.memory.max_context_tokens = ctx_max
+        except Exception:
+            pass
         self.gate = PermissionGate(mode=mode)
         self.db = SessionDB()
         self._injected_session_id: Optional[str] = session_id
@@ -285,8 +293,14 @@ class BaseAgent(ABC):
             task_id=self._task_history.task_id,
         )
 
-        sys_content = SHSCODE_IDENTITY + "\n\n" + (self.system_prompt or "") + CORE_DIRECTIVES
-        self.memory.add(Message.system(sys_content))
+        # v3.1 FIX (system-prompt amplification): the identity/system block was
+        # re-added on EVERY run() — REPL sessions accumulated ~10.3KB of
+        # duplicated system content per turn, all pinned by _trim. Inject once
+        # per agent lifetime; /new (CLI) resets the memory which re-arms this.
+        if not getattr(self, "_system_injected", False):
+            sys_content = SHSCODE_IDENTITY + "\n\n" + (self.system_prompt or "") + CORE_DIRECTIVES
+            self.memory.add(Message.system(sys_content))
+            self._system_injected = True
 
         # SHS Code Phase 2 (spec §36/§37): active mode + custom profile change
         # REAL execution behavior — prompt bias, step budget, verification level,
@@ -300,59 +314,65 @@ class BaseAgent(ABC):
         self._request_kind = classify_request(prompt)
         self._chat_mode = (self._request_kind == "chat")
 
-        # FIX: Inject relevant skills only once per agent lifetime, not on every run.
-        # Re-injecting on every run pollutes the context window with duplicate skill messages.
-        # v3.0.1: chat requests get a clean context — no skill cards.
-        if not self._skills_injected and not self._chat_mode:
-            await self._inject_relevant_skills(prompt)
-            self._skills_injected = True
-
-        # FIX: Identity guard — detect and neutralize jailbreak/injection attempts
-        # (imports moved to module level for performance)
-        is_manipulation, matched_pattern = detect_manipulation(prompt)
-        safe_prompt = sanitize_user_message(prompt)
-        if is_manipulation:
-            logger.warning(
-                f"[IdentityGuard] Manipulation attempt detected: '{matched_pattern}' "
-                f"in prompt: {safe_prompt[:100]}..."
-            )
-            # Inject identity reinforcement BEFORE the user's message
-            self.memory.add(Message.system(get_identity_reinforcement()))
-
-        self.memory.add(Message.user(safe_prompt))
-
-        # v3.0.3: publish lightweight run context (goal + request kind) for
-        # tools that need it (e.g. skill_manager one-off guard)
-        try:
-            from app.agent.context import set_run_context
-            set_run_context(goal=prompt, request_kind=self._request_kind)
-        except Exception:
-            pass
-
-        # v3.0.3: chat-mode directive as the LAST system message before the
-        # user's turn — mid-tier models reliably attend to the context tail,
-        # so this keeps casual chat natural (no random file creation).
-        if self._chat_mode:
-            self.memory.add(Message.system(_CHAT_MODE_DIRECTIVE))
-        mode_str = self.gate.mode.value
-
-        # v3.0 chat fast-path (classification itself now happens earlier,
-        # before skill injection): emit + log the chat decision.
-        if self._chat_mode:
-            from app.activity import emit
-            emit("chat_fast_path", prompt_words=len(prompt.split()))
-            logger.info("[FastPath] chat request — planner LLM call skipped")
-
-        # SHS Code FIX (protected-region regression): the try/finally used to
-        # start only around the step loop — a cancellation or crash during
-        # skill injection, memory recall, session creation, journal start or
-        # project-context injection (any of which can await LLM/DB calls)
-        # exited run() WITHOUT the finally, leaking the session row as
-        # 'running' forever. The protected region now starts BEFORE the first
-        # await that can be interrupted; the finally is None-safe
-        # (self._session_id unset => nothing to close).
+        # v3.1 FIX (protected-region regression, round 2): skill injection,
+        # identity guard, memory recall, session creation, journal start and
+        # project-context injection can ALL await LLM/DB calls, but the try
+        # used to start only around the step loop — a cancellation or crash
+        # in any of them exited run() WITHOUT the finally, leaking the Bash
+        # shell, browser, MCP clients, DB connections and leaving the session
+        # row 'running' forever. The protected region now starts here; the
+        # finally is None-safe (self._session_id unset => nothing to close).
         results: list[str] = []
         try:
+            # FIX: Inject relevant skills only once per agent lifetime, not on every run.
+            # Re-injecting on every run pollutes the context window with duplicate skill messages.
+            # v3.0.1: chat requests get a clean context — no skill cards.
+            if not self._skills_injected and not self._chat_mode:
+                await self._inject_relevant_skills(prompt)
+                self._skills_injected = True
+
+            # FIX: Identity guard — detect and neutralize jailbreak/injection attempts
+            # (imports moved to module level for performance)
+            is_manipulation, matched_pattern = detect_manipulation(prompt)
+            safe_prompt = sanitize_user_message(prompt)
+            if is_manipulation:
+                logger.warning(
+                    f"[IdentityGuard] Manipulation attempt detected: '{matched_pattern}' "
+                    f"in prompt: {safe_prompt[:100]}..."
+                )
+                # Inject identity reinforcement BEFORE the user's message
+                self.memory.add(Message.system(get_identity_reinforcement()))
+
+            self.memory.add(Message.user(safe_prompt))
+
+            # v3.0.3: publish lightweight run context (goal + request kind) for
+            # tools that need it (e.g. skill_manager one-off guard)
+            try:
+                from app.agent.context import set_run_context
+                set_run_context(goal=prompt, request_kind=self._request_kind)
+                # v3.1: publish mode for delegate-mode inheritance
+                try:
+                    from app.agent.context import set_run_mode
+                    set_run_mode(self.gate.mode.value)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+            # v3.0.3: chat-mode directive as the LAST system message before the
+            # user's turn — mid-tier models reliably attend to the context tail,
+            # so this keeps casual chat natural (no random file creation).
+            if self._chat_mode:
+                self.memory.add(Message.system(_CHAT_MODE_DIRECTIVE))
+            mode_str = self.gate.mode.value
+
+            # v3.0 chat fast-path (classification itself now happens earlier,
+            # before skill injection): emit + log the chat decision.
+            if self._chat_mode:
+                from app.activity import emit
+                emit("chat_fast_path", prompt_words=len(prompt.split()))
+                logger.info("[FastPath] chat request — planner LLM call skipped")
+
             # SHS Code (spec §3): recall relevant long-term memories into context —
             # memory is independent of the current model/provider, so a switch or
             # restart never loses it.
@@ -379,7 +399,14 @@ class BaseAgent(ABC):
             # SHS Code FIX (registry regression): persist the user message AFTER
             # the session id is resolved (injected or freshly created) so
             # /sessions/<id>/messages reflects the real conversation.
-            self._log_db_message("user", safe_prompt)
+            # v3.1: AWAITED directly (was fire-and-forget) — the user message
+            # is the single most important row for continuity after a kill;
+            # losing it meant turn-2 replayed NOTHING for its own question.
+            try:
+                if self._session_id and safe_prompt:
+                    await self.db.log_message(self._session_id, "user", safe_prompt)
+            except Exception:
+                pass
 
             # SHS Code (spec §7/§8): open a persistent journal entry for this task
             provider = model = ""
@@ -391,9 +418,22 @@ class BaseAgent(ABC):
                 pass
             if self.journal is not None:
                 try:
-                    self._journal_task_id = await self.journal.task_start(
-                        goal=prompt, session_id=self._session_id or "",
-                        cwd=os.getcwd(), provider=provider, model=model)
+                    # v3.1 RESUME CONTINUITY: /resume pre-sets _journal_task_id
+                    # (and _plan_graph) on the agent — run() used to blindly
+                    # task_start a NEW row, so the resumed task stayed
+                    # 'in_progress' forever, all record_action/file-change
+                    # calls landed on the new row, and the plan-gate inspected
+                    # an EMPTY DAG (the real plan's pending steps became
+                    # invisible). Preserve the pre-set task; only start a new
+                    # one when nothing was injected.
+                    if not getattr(self, "_journal_task_id", None):
+                        self._journal_task_id = await self.journal.task_start(
+                            goal=prompt, session_id=self._session_id or "",
+                            cwd=os.getcwd(), provider=provider, model=model)
+                    else:
+                        logger.info(
+                            f"[Journal] continuing resumed task "
+                            f"{self._journal_task_id} (no new task row)")
                 except Exception as e:
                     logger.debug(f"[Journal] task_start failed (non-fatal): {e}")
 
@@ -589,6 +629,15 @@ class BaseAgent(ABC):
     # Mode + profile (Phase 2, spec §36/§37)
     # ------------------------------------------------------------------
 
+    def _replace_tagged_system(self, tag: str, new_msg) -> None:
+        """v3.1: replace a tagged system message in place (by content prefix)
+        instead of appending a duplicate copy on every run."""
+        for i, m in enumerate(self.memory.messages):
+            if m.role == Role.SYSTEM and (m.content or "").startswith(tag):
+                self.memory.messages[i] = new_msg
+                return
+        self.memory.add(new_msg)
+
     def _apply_mode_and_profile(self) -> None:
         """Inject the active agent-mode directive + custom-profile instructions,
         and scale the step budget. Every mode/profile knob has a real effect."""
@@ -602,7 +651,10 @@ class BaseAgent(ABC):
                 self._max_steps = max(5, int(self._max_steps * cfg.get("max_steps_scale", 1.0)))
             prompt = cfg.get("prompt", "")
             if prompt:
-                self.memory.add(Message.system(prompt))
+                # v3.1 FIX: REPL sessions re-added the mode directive on every
+                # run (one system message per turn). REPLACE the previous
+                # mode directive in place instead of appending a new one.
+                self._replace_tagged_system("AGENT MODE:", Message.system("AGENT MODE: " + prompt))
         except Exception as e:
             logger.debug(f"[Modes] apply skipped: {e}")
             self._mode_cfg = {"plan": "llm", "verification_level": "standard"}
@@ -611,9 +663,10 @@ class BaseAgent(ABC):
             prof = effective_profile()
             self._profile = prof
             if prof.get("system_instructions"):
-                self.memory.add(Message.system(
-                    "AGENT PROFILE: " + prof["name"] + "\n" +
-                    prof["system_instructions"]))
+                self._replace_tagged_system(
+                    "AGENT PROFILE:",
+                    Message.system("AGENT PROFILE: " + prof["name"] + "\n" +
+                                   prof["system_instructions"]))
             # force-inject profile skills
             for sname in prof.get("skills") or []:
                 try:
@@ -672,39 +725,65 @@ class BaseAgent(ABC):
         # capacity — the LLM planner call costs a FULL request slot):
         # short single-scope prompts get the instant heuristic DAG.
         # Complex multi-part goals keep the LLM planner.
-        elif mode_plan == "llm" and len(prompt.split()) <= 30:
+        # v3.1: _force_heuristic_plan lets callers that ALREADY carry a plan
+        # (multi-agent Engineer/QA sub-agents receive the Architect's
+        # [TASK-N] design in the prompt) skip the duplicated planner request.
+        elif mode_plan == "llm" and (
+                len(prompt.split()) <= 30
+                or getattr(self, "_force_heuristic_plan", False)):
             mode_plan = "heuristic"
         if self.journal is not None and self._journal_task_id and mode_plan != "none":
+            # v3.1 CHAT FIX: chat turns got a heuristic DAG + an IMPLEMENTATION
+            # PLAN system message anyway — pure conversational Q&A polluted by
+            # plan scaffolding at the attention tail. Chat now skips the plan
+            # entirely.
+            if getattr(self, "_chat_mode", False):
+                from app.activity import emit
+                emit("plan_skipped", reason="chat")
+                return
             try:
                 from app.planner import generate_plan
-                use_llm = (mode_plan == "llm")
-                self._plan_graph = await generate_plan(
-                    self.journal, self._journal_task_id, prompt,
-                    llm=getattr(self, "llm", None) if use_llm else None,
-                    use_llm=use_llm)
-                await self.journal.set_phase(self._journal_task_id, "planning")
-                plan_prompt = self._plan_graph.to_prompt()
+                # v3.1 RESUME CONTINUITY: /resume pre-loads _plan_graph —
+                # regenerating an EMPTY plan hid the resumed task's real
+                # pending steps from the goal-completion gate.
+                if getattr(self, "_plan_graph", None) is not None:
+                    await self._plan_graph.load()
+                    plan_prompt = self._plan_graph.to_prompt()
+                else:
+                    use_llm = (mode_plan == "llm")
+                    self._plan_graph = await generate_plan(
+                        self.journal, self._journal_task_id, prompt,
+                        llm=getattr(self, "llm", None) if use_llm else None,
+                        use_llm=use_llm)
+                    await self.journal.set_phase(self._journal_task_id, "planning")
+                    plan_prompt = self._plan_graph.to_prompt()
                 if plan_prompt:
-                    self.memory.add(Message.system(
-                        "IMPLEMENTATION PLAN (dependency-aware, persisted — "
-                        "survives restarts and model switches). Complete steps "
-                        "in dependency order; never mark a step done before its "
-                        "dependencies or before verification.\n" + plan_prompt))
+                    self._replace_tagged_system(
+                        "IMPLEMENTATION PLAN",
+                        Message.system(
+                            "IMPLEMENTATION PLAN (dependency-aware, persisted — "
+                            "survives restarts and model switches). Complete steps "
+                            "in dependency order; never mark a step done before its "
+                            "dependencies or before verification.\n" + plan_prompt))
                 from app.activity import emit
                 emit("plan_created", nodes=len(self._plan_graph.nodes()))
             except Exception as e:
                 logger.debug(f"[Planner] plan generation skipped: {e}")
 
     async def _inject_plan_refresh(self) -> None:
-        """Periodic DAG refresh into context (spec §41: /plan-like awareness)."""
+        """Periodic DAG refresh into context (spec §41: /plan-like awareness).
+
+        v3.1: REPLACES the previous refresh block in place — refreshes used to
+        be additive, so a 30-step run carried 6+ stale plan snapshots."""
         if self._plan_graph is None or self.journal is None or not self._journal_task_id:
             return
         try:
             await self._plan_graph.load()
             plan_prompt = self._plan_graph.to_prompt()
             if plan_prompt:
-                self.memory.add(Message.system(
-                    "[PLAN STATUS REFRESH]\n" + plan_prompt))
+                self._replace_tagged_system(
+                    "[PLAN STATUS REFRESH]",
+                    Message.system("[PLAN STATUS REFRESH]\n" + plan_prompt))
         except Exception as e:
             logger.debug(f"[Planner] refresh skipped: {e}")
 
@@ -754,7 +833,9 @@ class BaseAgent(ABC):
                 if new_prompt and text == new_prompt and m["role"] == "user":
                     continue
                 role = (Role.USER if m["role"] == "user" else Role.ASSISTANT)
-                self.memory.add(Message(role=role, content=text[:800]))
+                # v3.1: 800 chars truncated recalled answers — final answers
+                # persist up to 4000 chars; replay must not cut them shorter.
+                self.memory.add(Message(role=role, content=text[:4000]))
                 replayed += 1
 
             # 3) re-add the new user message as the final turn
@@ -773,7 +854,12 @@ class BaseAgent(ABC):
     async def _recall_long_term_memory(self, prompt: str) -> None:
         """SHS Code (spec §3/§35): recall persistent memories relevant to the
         current prompt. Memory DB is SQLite on disk — fully independent of the
-        active model/provider, so it survives switches and restarts."""
+        active model/provider, so it survives switches and restarts.
+
+        v3.1: MEMORY.md / USER.md (layer 3) are now injected into context at
+        run start too (bounded head) — they existed on disk but NOTHING ever
+        read them programmatically, so the model only saw them if it happened
+        to call the memory tool. Writes stay with the tool."""
         if self.long_term_memory is None:
             return
         try:
@@ -781,8 +867,11 @@ class BaseAgent(ABC):
             if hits:
                 from app.activity import emit
                 emit("memory_recall", count=len(hits))
+                # v3.1 FIX: 220 chars cut off the recalled facts (numbers,
+                # paths, ports) — the exact data recall exists to preserve.
+                # 800 chars per hit, 4 hits — still compact for context.
                 block = "\n".join(
-                    f"- {h.get('content', '')[:220]}" for h in hits
+                    f"- {h.get('content', '')[:800]}" for h in hits
                     if h.get("content"))
                 if block:
                     self.memory.add(Message.system(
@@ -790,6 +879,30 @@ class BaseAgent(ABC):
                     ))
         except Exception as e:
             logger.debug(f"[Memory] recall failed (non-fatal): {e}")
+        # v3.1: markdown memory layer injection (bounded)
+        try:
+            md_parts: list[str] = []
+            try:
+                from app.tool.memory_tool import _memory_file, _user_file
+                for label, path in (("PROJECT MEMORY (MEMORY.md)", _memory_file()),
+                                    ("USER PREFERENCES (USER.md)", _user_file())):
+                    try:
+                        if path and path.exists():
+                            txt = path.read_text(errors="ignore").strip()
+                            if txt:
+                                md_parts.append(f"{label}:\n{txt[:1200]}")
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            if md_parts:
+                self._replace_tagged_system(
+                    "MARKDOWN MEMORY",
+                    Message.system(
+                        "MARKDOWN MEMORY (project + user, persisted on disk):\n"
+                        + "\n\n".join(md_parts)))
+        except Exception as e:
+            logger.debug(f"[Memory] markdown injection skipped: {e}")
 
     async def _checkpoint_long_term_memory(self, prompt: str) -> None:
         """v3.0.2: compact mid-run progress memory (survives SIGKILL).
@@ -797,7 +910,12 @@ class BaseAgent(ABC):
         The final store in run()'s finally never executes for hard-killed
         runs — a follow-up session (or model switch) then had nothing to
         recall. This checkpoint stores the goal + the freshest assistant
-        text every 2 steps so a kill loses at most 2 steps of recall."""
+        text + key tool-output facts every 2 steps so a kill loses at most
+        2 steps of recall.
+
+        v3.1: progress entries are deduplicated (skip when the last assistant
+        text is near-identical to the previous checkpoint) so a 30-step task
+        no longer writes ~15 junk PROGRESS rows."""
         if self.long_term_memory is None:
             return
         try:
@@ -808,13 +926,40 @@ class BaseAgent(ABC):
                     break
             if not last_asst:
                 return   # nothing new worth persisting yet
+            # v3.1 dedup: same last-assistant text as the previous checkpoint
+            # => nothing genuinely new to remember.
+            if getattr(self, "_last_checkpoint_text", None) == last_asst:
+                return
+            self._last_checkpoint_text = last_asst
+            # v3.1: include compact facts distilled from recent tool results
+            # (numbers/paths/outcomes live in TOOL outputs, which were never
+            # persisted — the root cause of the benchmark recall failure).
+            facts = self._distill_recent_facts()
+            fact_part = ("\nFACTS: " + facts[:400]) if facts else ""
             await self.long_term_memory.store(
-                f"TASK GOAL: {prompt[:500]}\nPROGRESS (step {self._step_count}): {last_asst}",
+                f"TASK GOAL: {prompt[:500]}\nPROGRESS (step {self._step_count}): {last_asst}{fact_part}",
                 meta={"agent": self.name, "session": self._session_id,
                       "steps": self._step_count, "checkpoint": True},
             )
         except Exception as e:
             logger.debug(f"[Memory] checkpoint failed (non-fatal): {e}")
+
+    def _distill_recent_facts(self, max_facts: int = 6) -> str:
+        """v3.1: extract compact, recall-worthy facts from the most recent tool
+        outputs (last 8 tool results): short successful outputs with numbers,
+        paths, URLs or key-value shapes. Bounded to ~50 chars/fact."""
+        facts: list[str] = []
+        tool_msgs = [m for m in self.memory.messages
+                     if m.role.value == "tool" and (m.content or "").strip()]
+        for m in tool_msgs[-8:]:
+            txt = m.content.strip()
+            if len(txt) > 200:
+                continue
+            if any(ch.isdigit() for ch in txt) or "/" in txt or "=" in txt:
+                facts.append(txt.replace("\n", " ")[:80])
+            if len(facts) >= max_facts:
+                break
+        return " | ".join(facts)
 
     async def _store_long_term_memory(self, prompt: str, results: list) -> None:
         """SHS Code (spec §3/§36): persist the goal + outcome so future tasks,
@@ -822,9 +967,13 @@ class BaseAgent(ABC):
         if self.long_term_memory is None:
             return
         try:
-            outcome = results[-1][:500] if results else "(no textual result)"
+            outcome = results[-1][:800] if results else "(no textual result)"
+            # v3.1: distill tool-output facts into the final entry too —
+            # narration alone loses the actual numbers/paths/results.
+            facts = self._distill_recent_facts()
+            fact_part = ("\nFACTS: " + facts[:400]) if facts else ""
             await self.long_term_memory.store(
-                f"TASK GOAL: {prompt[:500]}\nOUTCOME: {outcome}",
+                f"TASK GOAL: {prompt[:500]}\nOUTCOME: {outcome}{fact_part}",
                 meta={"agent": self.name, "session": self._session_id,
                       "steps": self._step_count,
                       "state": self.state.value if hasattr(self.state, "value") else str(self.state)},
@@ -1075,3 +1224,13 @@ class BaseAgent(ABC):
             await asyncio.gather(*self._pending_db_tasks, return_exceptions=True)
             self._pending_db_tasks.clear()
         self.db.close()
+        # v3.1 FIX (connection leak): agents created per request (server,
+        # cron, webhooks, delegate, ssh) each opened a LongTermMemory SQLite
+        # connection that was NEVER closed — close() existed but had zero
+        # call sites. Reference cycles delayed GC, so connections accumulated
+        # for the process lifetime.
+        if self.long_term_memory is not None:
+            try:
+                self.long_term_memory.close()
+            except Exception:
+                pass

@@ -145,8 +145,15 @@ def get_intelligence(root: Optional[Path] = None) -> Intelligence:
         if key not in _instances:
             if len(_instances) >= 8:
                 # LRU: drop oldest
+                # v3.1 FIX: close the evicted handle's SQLite cache connection
+                # (close() existed but was never called on eviction).
                 oldest = next(iter(_instances))
-                _instances.pop(oldest, None)
+                evicted = _instances.pop(oldest, None)
+                if evicted is not None:
+                    try:
+                        evicted.cache.close()
+                    except Exception:
+                        pass
             _instances[key] = Intelligence(root)
         return _instances[key]
 

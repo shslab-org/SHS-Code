@@ -70,6 +70,10 @@ def _triage(goal: str) -> str:
     'small'   — short single-scope task: Engineer agent executes directly
                 (it plans itself); no PM/Architect/QA overhead.
     'complex' — full 4-role pipeline (PM → Architect → Engineer → QA).
+
+    v3.1: long QUESTIONS (even > 25 words) used to fall into the 4-role
+    pipeline — PM wrote a PRD for an explanation request. A question with
+    no artifact/file/deliverable intent is Q&A regardless of length.
     """
     try:
         from app.agent.base import classify_request
@@ -79,6 +83,22 @@ def _triage(goal: str) -> str:
         pass
     text = (goal or "").strip()
     words = text.split()
+    # v3.1 question-intent detection: interrogative shape + no artifact verbs
+    # + no file/path references => Q&A, even when long.
+    lowered = text.lower()
+    looks_like_question = (
+        text.endswith("?")
+        or lowered.startswith(("what", "why", "how", "when", "who", "where",
+                               "explain", "describe", "tell me", "compare",
+                               "kya", "kaise", "kyun", "batao"))
+    )
+    artifact_intent = any(v in lowered for v in (
+        "create", "write", "build", "make", "implement", "add", "fix",
+        "generate", "refactor", "delete", "setup", "install", "push",
+        "commit", "deploy", "publish", "banaiye", "banao", "likho", "sahi karo"))
+    file_intent = any(ch in text for ch in (".py", ".js", ".md", ".ts", "/", ".json"))
+    if looks_like_question and not artifact_intent and not file_intent:
+        return "simple"
     # v3.0.2 (benchmark finding): 12 words routed 15-25 word single-scope
     # chains ("Read README.md, summarize ... into MODULES.txt"; "create a
     # repo, add README, create one issue") into the full 4-role pipeline —
@@ -88,6 +108,19 @@ def _triage(goal: str) -> str:
     if len(words) <= 25:
         return "small"
     return "complex"
+
+
+def _handoff_text(text: str, cap: int = 24000) -> str:
+    """v3.1: upstream artefacts were hard-truncated to their first 3000
+    chars — the Architect's actionable IMPLEMENTATION PLAN is the LAST
+    section, so the truncation deleted exactly what the Engineer needed
+    (the root cause of the recorded 'Input does not appear to be a design
+    document' format-mismatch failure). Head+tail keep at a 24k budget."""
+    if len(text) <= cap:
+        return text
+    head, tail = text[: cap // 2], text[-cap // 2:]
+    omitted = len(text) - cap
+    return f"{head}\n\n[… {omitted} chars omitted (middle) — full artefact in the bus/journal …]\n\n{tail}"
 
 
 class MultiAgentOrchestrator:
@@ -115,6 +148,7 @@ class MultiAgentOrchestrator:
         self.gate      = PermissionGate(mode=mode)
         self._on_stage_start    = on_stage_start
         self._on_stage_complete = on_stage_complete
+        self._on_stage_error    = on_stage_error  # v3.1: was accepted but never stored -> AttributeError on any role failure
         self._hook_tasks: list[asyncio.Task] = []  # Fix: store hook tasks to prevent GC
 
     async def run(self, goal: str, session_id: Optional[str] = None) -> str:
@@ -141,9 +175,13 @@ class MultiAgentOrchestrator:
             f"| mode={self.mode.value} | triage=complex | goal={goal[:80]}"
         )
 
-        session_id = await self.db.create_session(
-            goal, agent_name="orchestrator", mode=self.mode.value
-        )
+        # v3.1 FIX (--session was discarded on the complex path): only the
+        # simple/small fast paths honored an injected session id — complex
+        # goals could never continue a conversation.
+        if session_id is None:
+            session_id = await self.db.create_session(
+                goal, agent_name="orchestrator", mode=self.mode.value
+            )
 
         try:
             order = self._topological_sort()
@@ -166,15 +204,40 @@ class MultiAgentOrchestrator:
             events = {r: asyncio.Event() for r in self.pipeline}
 
             async def _run_role(role_name: str) -> None:
+                # v3.1 FIX (bus race — CRITICAL): the role used to be built
+                # (and subscribed to the message bus) only AFTER awaiting
+                # upstream deps; upstream roles publish their artefacts
+                # INSIDE run() BEFORE the dep event is set, so every direct
+                # handoff (PM→architect→engineer→qa) was silently DROPPED
+                # and roles only ever saw the truncated prompt text.
+                # Subscribe FIRST, then wait.
+                role = self._build_role(role_name)
                 deps = self.deps.get(role_name, [])
                 for dep in deps:
                     if dep in events:
                         await events[dep].wait()
 
+                # v3.1 FIX (error flow): an upstream ERROR must not flow
+                # downstream as if it were output (QA used to 'validate'
+                # the Engineer's error message, burning requests until the
+                # global timeout). Skip downstream stages of a failed dep.
+                failed_deps = [d for d in deps
+                               if d in results and str(results[d]).startswith("ERROR:")]
+                if failed_deps:
+                    skip_msg = (f"SKIPPED: upstream stage(s) {', '.join(failed_deps)} "
+                                f"failed; no valid input to process.")
+                    logger.warning(
+                        f"[Orchestrator:{pipeline_id}] {role_name} — {skip_msg}")
+                    results[role_name] = skip_msg
+                    pipeline_result.stages.append(PipelineStageResult(
+                        role_name=role_name, status="skipped",
+                        output=skip_msg, duration_s=0.0))
+                    await self.db.log_message(session_id, role_name, skip_msg[:2048])
+                    return
+
                 logger.info(f"[Orchestrator:{pipeline_id}] ── Role: {role_name} ──")
                 await self._fire_hook(self._on_stage_start, role_name)
 
-                role = self._build_role(role_name)
                 role_input = self._build_role_input(goal, role_name, results)
                 t0 = time.monotonic()
 
@@ -237,6 +300,43 @@ class MultiAgentOrchestrator:
                            else "finished")
             await self.db.close_session(session_id, state=final_state,
                                         step_count=len(order))
+
+        # v3.1 FIX (failure fallback): a complex task whose engineer stage
+        # errored/timed out used to be a TOTAL LOSS (verdict=error/timeout,
+        # no output). The single-agent path exists right here — try it as
+        # recovery with a bounded budget before giving up. Only pipelines
+        # that actually HAVE an engineer stage qualify (custom pipelines
+        # without one keep their own stage semantics).
+        engineer_stage = next((s for s in pipeline_result.stages
+                               if s.role_name == "engineer"), None)
+        engineer_ok = (engineer_stage is not None
+                       and engineer_stage.status == "completed")
+        if "engineer" in self.pipeline and not engineer_ok:
+            logger.warning(
+                f"[Orchestrator:{pipeline_id}] Engineer stage did not complete — "
+                "falling back to the single-agent path (bounded 300s).")
+            try:
+                fallback_budget = min(self.timeout, 300)
+                fb = await asyncio.wait_for(
+                    self._run_single_agent(
+                        pipeline_id, goal,
+                        note="fallback after pipeline failure",
+                        session_id=None),
+                    timeout=fallback_budget + 30)
+                if (fb.stages and fb.stages[-1].status == "completed"
+                        and fb.stages[-1].output):
+                    fb.pipeline_id = pipeline_id
+                    fb.stages[0].role_name = "engineer(fallback)"
+                    logger.info(
+                        f"[Orchestrator:{pipeline_id}] fallback SUCCEEDED — "
+                        "returning single-agent result.")
+                    return fb
+                logger.info(
+                    f"[Orchestrator:{pipeline_id}] fallback did not complete either; "
+                    "returning pipeline result.")
+            except Exception as e:
+                logger.warning(
+                    f"[Orchestrator:{pipeline_id}] fallback failed: {e}")
 
         # Fix: await any pending hook tasks before returning
         if self._hook_tasks:
@@ -362,7 +462,10 @@ class MultiAgentOrchestrator:
         cls = role_map.get(role_name)
         if cls is None:
             raise OrchestratorError(f"Unknown role: '{role_name}'", pipeline=self.pipeline)
-        return cls(self.bus)
+        # v3.1: propagate the orchestrator mode into the role (its sub-agents
+        # used to hardcode BUILD, bypassing --mode plan approval gating).
+        mode_val = getattr(self.mode, "value", None) or str(self.mode)
+        return cls(self.bus, mode=mode_val)
 
     def _build_role_input(self, goal: str, role_name: str, results: dict[str, str]) -> str:
         upstream = self.deps.get(role_name, [])
@@ -371,7 +474,11 @@ class MultiAgentOrchestrator:
         parts = [f"ORIGINAL GOAL:\n{goal}"]
         for up in upstream:
             if up in results:
-                parts.append(f"\n{up.upper().replace('_', ' ')} OUTPUT:\n{results[up][:3000]}")
+                # v3.1: full-fidelity handoff (head+tail at 24k) — the old
+                # [:3000] prefix cut cut off the Architect's IMPLEMENTATION
+                # PLAN section and caused the role-to-role format mismatch.
+                parts.append(
+                    f"\n{up.upper().replace('_', ' ')} OUTPUT:\n{_handoff_text(results[up])}")
         return "\n\n".join(parts)
 
     @staticmethod

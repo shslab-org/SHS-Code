@@ -332,7 +332,23 @@ class OpenAIClient:
             resp = await client.chat.completions.create(**kwargs)
         except Exception as e:
             raise _normalize_sdk_error(e) from e
+        finally:
+            # v3.1 FIX (fd/socket leak): a rotated-key one-off AsyncOpenAI owns
+            # an httpx pool that was never closed — close it after every use.
+            if client is not self._c:
+                try:
+                    await client.close()
+                except Exception:
+                    pass
         return resp.model_dump()
+
+    async def cleanup(self) -> None:
+        # v3.1 FIX: SDK backends had no cleanup — every per-request agent
+        # leaked one httpx pool (sockets/SSL contexts) until cyclic GC.
+        try:
+            await self._c.close()
+        except Exception:
+            pass
 
 
 class AnthropicClient:
@@ -429,7 +445,15 @@ class AnthropicClient:
         if api_key and api_key != self._c.api_key:
             # Different key — create a one-off client (rare, only on credential rotation)
             client = AsyncAnthropic(api_key=api_key)
-        system = next((m["content"] for m in messages if m["role"] == "system"), None)
+        # v3.1 FIX (context loss): only the FIRST system message survived this
+        # conversion — every mid-conversation system block (plan, PERSISTENT
+        # MEMORY, PROJECT INTELLIGENCE, mode, chat directive, plan refresh)
+        # was silently DROPPED for Anthropic. Merge ALL system messages into
+        # one canonical system prompt (Anthropic accepts one system string).
+        system = "\n\n".join(
+            m["content"] for m in messages
+            if m.get("role") == "system" and (m.get("content") or "").strip()
+        ) or None
         conv = [m for m in messages if m["role"] != "system"]
         # FIX: Convert OpenAI-format messages to Anthropic format
         anthropic_messages = self._to_anthropic_messages(conv)
@@ -456,6 +480,13 @@ class AnthropicClient:
             resp = await client.messages.create(**kwargs)
         except Exception as e:
             raise _normalize_sdk_error(e) from e
+        finally:
+            # v3.1 FIX (fd/socket leak): close the one-off rotated-key client.
+            if client is not self._c:
+                try:
+                    await client.close()
+                except Exception:
+                    pass
         content_parts: list[str] = []
         tool_calls: list[dict[str, Any]] = []
         for block in resp.content:
@@ -486,6 +517,13 @@ class AnthropicClient:
             "usage": usage,
         }
 
+    async def cleanup(self) -> None:
+        # v3.1 FIX (fd/socket leak): SDK backend httpx pool was never closed.
+        try:
+            await self._c.close()
+        except Exception:
+            pass
+
 
 class GoogleClient:
     def __init__(self, cfg: Any) -> None:
@@ -505,11 +543,16 @@ class GoogleClient:
         Now includes tool messages by merging them into user role parts."""
         system_txt = None
         history = []
+        system_parts: list[str] = []
         for msg in messages:
             role = msg.get("role", "")
             content = msg.get("content") or ""
             if role == "system":
-                system_txt = content
+                # v3.1 FIX (context loss): LAST system message used to REPLACE
+                # everything — a later injection (plan refresh) overwrote the
+                # main system prompt entirely. Concatenate ALL system blocks.
+                if content.strip():
+                    system_parts.append(content)
             elif role == "user":
                 history.append({"role": "user", "parts": [content]})
             elif role == "assistant":
@@ -522,6 +565,8 @@ class GoogleClient:
                     history[-1]["parts"].append(tool_content)
                 else:
                     history.append({"role": "user", "parts": [tool_content]})
+        # v3.1: merged system (all blocks, not last-wins)
+        system_txt = "\n\n".join(system_parts) if system_parts else None
         return system_txt, history
 
     async def chat(self, messages: list[dict[str, Any]], tools: Optional[list[dict[str, Any]]] = None,
@@ -672,10 +717,18 @@ class LLM:
     # ------------------------------------------------------------------
 
     async def cleanup_backend(self) -> None:
-        """Close the old backend's resources (aiohttp session leak fix)."""
+        """Close the old backend's resources (aiohttp session leak fix).
+
+        v3.1: also handles SDK backends (OpenAI/Anthropic httpx pools via
+        their new cleanup()) and GGUF routers (release() the shared model)."""
         try:
             if hasattr(self._backend, "cleanup"):
                 await self._backend.cleanup()
+        except Exception:
+            pass
+        try:
+            if hasattr(self._backend, "release"):
+                self._backend.release()
         except Exception:
             pass
 

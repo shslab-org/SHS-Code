@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -184,12 +185,14 @@ class Test429Recovery:
         # acquire() takes no state and mutates nothing outside the limiter)
         lim = RollingWindowRateLimiter("p", rpm=1, window_s=0.3)
         state = {"messages": [1, 2, 3], "task": "build"}
-        lim.record(now=1000.0)
+        # Record relative to the REAL clock (absolute fake timestamps break
+        # on freshly booted machines where monotonic() < 1000).
+        lim.record(now=time.monotonic())
         # fresh real clock: 1 in window, 1 rpm -> must wait for window expiry
         async def run():
             return await lim.acquire()
         waited = asyncio.run(run())
-        assert waited >= 0.0
+        assert 0.0 <= waited <= 1.0  # window is 0.3s; tiny bound for CI noise
         assert state == {"messages": [1, 2, 3], "task": "build"}
 
 

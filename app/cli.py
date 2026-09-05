@@ -2133,6 +2133,26 @@ def main() -> None:
                         _print_message("system",
                             f"Continuing session {session_id} "
                             f"(goal: {row.get('goal', '')[:60]})", skin)
+                else:
+                    # v3.1 AUTO-CONTINUE: benchmark task-01 root cause — a
+                    # one-shot turn 2 ("what was the number?") started a FRESH
+                    # context because continuity was opt-in only (--session /
+                    # --continue). Competitors defaulted to continuing. We now
+                    # auto-continue the most recent session when it is recent
+                    # (<= 30 min) and not live 'running' in another process.
+                    import time as _time
+                    from app.db.session import SessionDB
+                    row = await SessionDB().latest_session()
+                    if row is not None and row.get("state") != "running":
+                        try:
+                            age_s = max(0.0, _time.time() - float(row.get("started_at") or 0))
+                        except Exception:
+                            age_s = float("inf")
+                        if age_s <= 30 * 60:
+                            session_id = row["id"]
+                            _print_message("system",
+                                f"Continuing recent session {session_id} "
+                                f"(goal: {row.get('goal', '')[:60]})", skin)
             except Exception as e:
                 _print_message("system", f"Session lookup failed: {e}", skin)
 

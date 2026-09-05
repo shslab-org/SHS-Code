@@ -20,9 +20,11 @@ Blocked (hard deny — OS-destroying only):
 """
 
 import asyncio
+import atexit
 import re
 import shutil
 import sys
+import weakref
 from typing import Any, Optional
 
 from app.logger import logger
@@ -156,21 +158,36 @@ class Bash(BaseTool):
         "required": ["command"],
     }
 
+    # v3.1 FIX (atexit leak): every Bash instance registered a STRONG-ref
+    # atexit handler that is never unregistered — per-request agents pinned
+    # their Bash objects in the atexit registry forever (unbounded memory
+    # growth in server/cron processes, thousands of handlers at exit). One
+    # module-level handler now tracks instances WEAKLY.
+    _INSTANCES: "weakref.WeakSet[object]" = weakref.WeakSet()
+
     def __init__(self) -> None:
         self._process: Optional[asyncio.subprocess.Process] = None
         self._lock = asyncio.Lock()
-        # FIX: Register atexit handler to kill orphaned bash processes
-        # if the Python process crashes without calling cleanup().
-        import atexit
-        atexit.register(self._sync_kill)
+        Bash._INSTANCES.add(self)
 
-    def _sync_kill(self) -> None:
-        """Synchronous atexit handler — kills the bash subprocess on process exit."""
-        if self._process and self._process.returncode is None:
-            try:
-                self._process.kill()
-            except Exception:
-                pass
+    @staticmethod
+    def _sync_kill_all() -> None:
+        """Synchronous atexit handler — kill ALL orphaned bash subprocesses
+        (module-level, weakly referenced; registered exactly once)."""
+        for inst in list(Bash._INSTANCES):
+            proc = getattr(inst, "_process", None)
+            if proc is not None and proc.returncode is None:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+                # v3.1: reap to avoid a zombie at exit and close transports
+                try:
+                    transport = getattr(proc, "_transport", None)
+                    if transport is not None:
+                        transport.close()
+                except Exception:
+                    pass
 
     async def execute(
         self,
@@ -252,7 +269,17 @@ class Bash(BaseTool):
         except BrokenPipeError:
             await self._reset_process()
             return ToolResult(error="Shell session died. Restarted — retry.")
+        except asyncio.CancelledError:
+            # v3.1 FIX: a cancelled read left the command RUNNING in the
+            # persistent shell — its buffered output was then misattributed
+            # to the NEXT command (output mixing) and the shell stayed
+            # mid-command. Reset, then re-raise so cancellation propagates.
+            await self._reset_process()
+            raise
         except Exception as e:
+            # v3.1 FIX: no reset here left the session broken — the next
+            # call's sentinel never appeared (hang until timeout).
+            await self._reset_process()
             return ToolResult(error=f"Shell error: {e}")
 
     async def _ensure_process(self) -> asyncio.subprocess.Process:
@@ -291,3 +318,8 @@ class Bash(BaseTool):
 
     async def cleanup(self) -> None:
         await self._reset_process()
+
+
+# v3.1: single module-level atexit handler (weak instance tracking) —
+# registered exactly once when the module loads.
+atexit.register(Bash._sync_kill_all)

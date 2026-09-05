@@ -43,12 +43,24 @@ class MCPClient:
         self._rpc_lock = asyncio.Lock()
 
     async def connect(self) -> ToolCollection:
-        if self.transport == "stdio":
-            await self._connect_stdio()
-        elif self.transport == "sse":
-            await self._connect_sse()
-        else:
-            raise ValueError(f"Unknown transport: {self.transport}")
+        try:
+            if self.transport == "stdio":
+                await self._connect_stdio()
+            elif self.transport == "sse":
+                await self._connect_sse()
+            else:
+                raise ValueError(f"Unknown transport: {self.transport}")
+        except BaseException:
+            # v3.1 FIX (orphaned MCP server): the subprocess is spawned BEFORE
+            # the handshake — a failed/timed-out/cancelled handshake used to
+            # drop the client with the server process still running (one
+            # orphan per agent run on a flaky server). Kill it here.
+            # BaseException: asyncio.wait_for cancellation must clean up too.
+            try:
+                await self.disconnect()
+            except Exception:
+                pass
+            raise
         self._connected = True
         return self._tools
 
@@ -198,13 +210,40 @@ class MCPClient:
         return ToolResult(error="Not connected")
 
     async def disconnect(self) -> None:
+        # v3.1 FIX (kill escalation + transport close): terminate alone can
+        # leave the server running (orphan) when it ignores SIGTERM, and the
+        # pipe transports were never closed on ANY path — the source of the
+        # "Event loop is closed" __del__ noise. Escalate to SIGKILL and close
+        # transports deterministically.
         if self._stderr_task:
             self._stderr_task.cancel()
             self._stderr_task = None
-        if self._process and self._process.returncode is None:
+        if self._process is not None:
             try:
-                self._process.terminate()
-                await asyncio.wait_for(self._process.wait(), timeout=5)
+                if self._process.returncode is None:
+                    self._process.terminate()
+                    try:
+                        await asyncio.wait_for(self._process.wait(), timeout=5)
+                    except Exception:
+                        try:
+                            self._process.kill()
+                            await asyncio.wait_for(self._process.wait(), timeout=3)
+                        except Exception:
+                            pass
+                # close pipe transports (all paths, incl. already-exited)
+                for stream in (self._process.stdin, self._process.stdout,
+                                self._process.stderr):
+                    try:
+                        if stream is not None:
+                            stream.close()
+                    except Exception:
+                        pass
+                try:
+                    transport = getattr(self._process, "_transport", None)
+                    if transport is not None:
+                        transport.close()
+                except Exception:
+                    pass
             except Exception:
                 pass
         self._connected = False

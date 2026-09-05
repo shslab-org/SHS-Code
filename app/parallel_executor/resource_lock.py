@@ -146,6 +146,31 @@ class _ResourceRWLock:
             self._writer = None
             self._cond.notify_all()
 
+    def force_release_write(self) -> None:
+        """v3.1: clear the WRITE lock regardless of owning thread.
+
+        Used ONLY by the executor's timeout path: the tool thread was
+        abandoned while still holding this lock — normal release_write()
+        refuses (thread-ownership check) and the lock would stay held
+        forever, deadlocking every later call on the resource."""
+        with self._cond:
+            if self._writer is not None:
+                self._writer = None
+                self._cond.notify_all()
+
+    def force_release_read(self, tid: int) -> None:
+        """v3.1: drop one READ lock owned by an abandoned thread."""
+        with self._cond:
+            if self._readers > 0:
+                self._readers -= 1
+                count = self._reader_threads.get(tid, 0)
+                if count <= 1:
+                    self._reader_threads.pop(tid, None)
+                else:
+                    self._reader_threads[tid] = count - 1
+                if self._readers == 0:
+                    self._cond.notify_all()
+
     # ── introspection ────────────────────────────────────────────────────
 
     @property
@@ -374,6 +399,35 @@ class ResourceLockManager:
             return
         handle._released = True
         self._release_all(handle._acquired)
+
+    def force_release_resources(self, declarations: "DeclaredResources") -> None:
+        """v3.1: force-release locks for these resources regardless of which
+        (possibly abandoned) thread holds them.
+
+        Used by the executor timeout path: the tool thread was abandoned but
+        still holds the locks; normal release refuses due to thread-ownership
+        checks, which deadlocked every later call on the same resources.
+        Best-effort and safe to call speculatively (no-op for unlocked)."""
+        try:
+            for decl in sorted(declarations.declarations,
+                               key=lambda d: d.lock_key):
+                with self._registry_lock:
+                    rw_lock = self._locks.get(decl.lock_key)
+                if rw_lock is None:
+                    continue
+                if decl.mode is AccessMode.READ:
+                    # readers tracked by owner thread; drop any stale reader
+                    # count attributable to this declaration (best effort)
+                    if rw_lock.reader_count > 0:
+                        # drop one reader — the abandoned call held exactly one
+                        tids = list(rw_lock._reader_threads.keys())
+                        tid = tids[0] if tids else -1
+                        if tid != -1:
+                            rw_lock.force_release_read(tid)
+                else:
+                    rw_lock.force_release_write()
+        except Exception:
+            pass
 
     # ── conflict query ───────────────────────────────────────────────────
 

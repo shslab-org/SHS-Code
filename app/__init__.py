@@ -6,4 +6,4 @@ they can never drift apart again (they historically showed 4 different
 numbers: 5.1.1 / 3.0.3 / 2.1.0 / 2.0.0).
 """
 
-__version__ = "3.0.3"
+__version__ = "3.1.0"

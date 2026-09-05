@@ -29,12 +29,35 @@ def _load_gguf(model_path: str, n_ctx: int = 4096, n_gpu_layers: int = 0):
                  verbose=False)
 
 
+# v3.1 FIX (model leak): every agent instance loaded the FULL GGUF model
+# into RAM again (server/cron/delegate create agents per request → N copies
+# → OOM). Module-level cache keyed by (path, n_ctx, n_gpu_layers).
+_GGUF_CACHE: dict = {}
+
+
+def _load_gguf_cached(model_path: str, n_ctx: int, n_gpu_layers: int):
+    key = (str(model_path), int(n_ctx), int(n_gpu_layers))
+    if key in _GGUF_CACHE:
+        return _GGUF_CACHE[key]
+    llama = Llama(model_path=model_path, n_ctx=n_ctx,
+                  n_gpu_layers=n_gpu_layers, verbose=False)
+    _GGUF_CACHE[key] = llama
+    return llama
+
+
 class GGUFRouter:
     """Run a local .gguf file with zero internet dependency."""
 
     def __init__(self, model_path: str, n_ctx: int = 4096,
                  n_gpu_layers: int = 0):
-        self.llm = _load_gguf(model_path, n_ctx, n_gpu_layers)
+        self._cache_key = (str(model_path), int(n_ctx), int(n_gpu_layers))
+        self.llm = _load_gguf_cached(model_path, n_ctx, n_gpu_layers)
+
+    # v3.1: release the shared model only when the LAST user is gone.
+    def release(self) -> None:
+        if _GGUF_CACHE.get(self._cache_key) is self.llm:
+            _GGUF_CACHE.pop(self._cache_key, None)
+        self.llm = None
 
     def _parse_tool_calls_from_text(self, text: str) -> list:
         """Extract tool calls from text when native tool calling fails."""

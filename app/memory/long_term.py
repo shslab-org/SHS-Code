@@ -99,6 +99,12 @@ class LongTermMemory:
         with self._db_lock:
             if self._conn is None:
                 self._conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
+                # v3.1 FIX: WAL + busy_timeout — multiple processes (CLI +
+                # server + cron) and multiple agents write this DB; the default
+                # DELETE journal silently dropped stores/recalls on SQLITE_BUSY.
+                self._conn.execute("PRAGMA journal_mode=WAL")
+                self._conn.execute("PRAGMA busy_timeout=5000")
+                self._conn.execute("PRAGMA synchronous=NORMAL")
                 self._conn.executescript(_SCHEMA)
                 self._conn.execute(_TRIGGER_AI)
                 self._conn.execute(_TRIGGER_AD)
@@ -130,13 +136,18 @@ class LongTermMemory:
         embedding_blob = self._compute_placeholder_embedding(content)
 
         def _store():
-            self._execute_query(lambda conn: (
+            def _do_store(conn):
+                # v3.1 FIX: INSERT OR REPLACE does not fire the delete trigger
+                # (recursive_triggers off) — replaced rows left PHANTOM tokens
+                # in entries_fts forever. Explicit delete-then-insert keeps the
+                # FTS index exact.
+                conn.execute("DELETE FROM entries WHERE id=?", (entry_id,))
                 conn.execute(
-                    "INSERT OR REPLACE INTO entries (id, content, meta, ts, embedding) VALUES (?,?,?,?,?)",
+                    "INSERT INTO entries (id, content, meta, ts, embedding) VALUES (?,?,?,?,?)",
                     (entry_id, content, json.dumps(meta or {}), time.time(), embedding_blob),
-                ),
-                conn.commit(),
-            )[-1])
+                )
+                conn.commit()
+            self._execute_query(_do_store)
 
         await asyncio.to_thread(_store)
         return entry_id
@@ -147,9 +158,14 @@ class LongTermMemory:
     async def delete(self, entry_id: str) -> bool:
         """Delete one entry (and its FTS row via trigger). Returns True if deleted."""
         def _delete() -> bool:
-            cur = self._connect().execute("DELETE FROM entries WHERE id=?", (entry_id,))
-            self._connect().commit()
-            return cur.rowcount > 0
+            # v3.1 FIX: ran raw SQL outside _db_lock — could interleave with a
+            # locked store/search on the SAME connection. Route through the
+            # lock-protected executor like every other write.
+            def _do_delete(conn):
+                cur = conn.execute("DELETE FROM entries WHERE id=?", (entry_id,))
+                conn.commit()
+                return cur.rowcount > 0
+            return self._execute_query(_do_delete)
         return await asyncio.to_thread(_delete)
 
     # ------------------------------------------------------------------

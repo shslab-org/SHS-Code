@@ -38,9 +38,16 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 # Messages with these prefixes are system injections, not user requirements
+# v3.1: aligned with the ACTUAL injected formats (prefix mismatch classified
+# real injections as "user requirements" and polluted the compacted state):
+# [CONTEXT REFRESH] (short_term.py), CONVERSATION MODE (chat directive),
+# [COMPACTED CONTEXT (previous compaction), hint boxes, self-checks.
 _INJECTED_PREFIXES = (
     "[SELF-CHECK", "⚠ Tool", "TOKEN BUDGET", "PERSISTENT MEMORY",
-    "┌─ TOOL INTELLIGENCE", "[IDENTITY REINFORCEMENT", "[Context refresh",
+    "┌─ TOOL INTELLIGENCE", "[IDENTITY REINFORCEMENT",
+    "[CONTEXT REFRESH", "[Context refresh",
+    "CONVERSATION MODE:", "[COMPACTED CONTEXT",
+    "=== Task History", "[PLAN STATUS REFRESH",
     "You are repeating", "You have called the same failing",
     "BLOCKED:", "User rejected",
 )
@@ -64,6 +71,11 @@ def _is_user_requirement(m: dict) -> bool:
         return False
     content = (m.get("content") or "").strip()
     if not content:
+        return False
+    # v3.1: hint boxes are injected with a leading newline — strip() handles
+    # it; also match the marker ANYWHERE for "Using the tool intelligence…"
+    # guidance messages that follow the box.
+    if "Using the tool intelligence scores above as guidance" in content:
         return False
     return not any(content.startswith(p) for p in _INJECTED_PREFIXES)
 

@@ -127,12 +127,22 @@ class CanvasServer:
     # ------------------------------------------------------------------
 
     async def _connect(self, ws: WebSocket, session_id: str) -> None:
-        """Register a new WebSocket connection for a session."""
+        """Register a new WebSocket connection for a session.
+
+        v3.1: enforces the configured max_sessions cap — session state grew
+        unboundedly (one entry per distinct session_id ever seen, forever)."""
         async with self._lock:
             if session_id not in self._connections:
                 self._connections[session_id] = []
                 # Initialize session state
                 if session_id not in self._sessions:
+                    # v3.1: LRU eviction at the cap (state only; live
+                    # connections are untouched — they re-register on use).
+                    while len(self._sessions) >= self._max_sessions:
+                        oldest = next(iter(self._sessions))
+                        if oldest == session_id:
+                            break
+                        self._sessions.pop(oldest, None)
                     self._sessions[session_id] = {
                         "components": [],
                         "created_at": time.time(),

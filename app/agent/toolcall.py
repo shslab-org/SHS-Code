@@ -26,6 +26,56 @@ MAX_TOOL_RETRIES = int(env.getenv("MAX_TOOL_RETRIES", "3"))
 TOOL_RETRY_BASE  = 1.0
 TOOL_RETRY_MAX   = 20.0
 
+# ──────────────────────────────────────────────────────────────────────────────
+# v3.1 context-window guards
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Tool outputs entering the live context are capped (head + tail kept). The
+# FULL output is still journalled (spec §8) and stored in the session DB, so
+# nothing is lost from the record — only the re-sent-every-turn window is
+# bounded. Before this, one `cat` of a large file (bash/python_execute/view
+# were explicitly untruncated) permanently consumed the context window and
+# ballooned every subsequent request.
+_TOOL_OUTPUT_MAX_CHARS = int(env.getenv("SHSCODE_TOOL_OUTPUT_MAX_CHARS", "12000"))
+_TOOL_OUTPUT_HEAD = 8000
+_TOOL_OUTPUT_TAIL = 3000
+
+
+def _cap_tool_output(text: str,
+                     max_chars: int = _TOOL_OUTPUT_MAX_CHARS) -> str:
+    """Truncate a tool result for the live context window (head+tail keep).
+
+    The truncation marker tells the model how to re-fetch the full output
+    (view with line ranges) instead of assuming it saw everything."""
+    if not text or len(text) <= max_chars:
+        return text
+    head = text[:_TOOL_OUTPUT_HEAD]
+    tail = text[-_TOOL_OUTPUT_TAIL:]
+    omitted = len(text) - _TOOL_OUTPUT_HEAD - _TOOL_OUTPUT_TAIL
+    return (f"{head}\n\n… [SHS Code: {omitted} chars truncated — full output "
+            f"preserved in the journal; re-run the tool or view the file "
+            f"with an explicit line range to see the omitted middle] …\n\n{tail}")
+
+
+def _is_context_overflow(exc: Exception) -> bool:
+    """True when an exception represents a context-window/token-limit error
+    from any provider path (custom TokenLimitExceeded class, OpenAI/Anthropic
+    400s, or the classifier)."""
+    name = type(exc).__name__
+    if name in ("TokenLimitExceeded", "ContextWindowExceeded"):
+        return True
+    txt = str(exc).lower()
+    if any(k in txt for k in (
+            "context length", "context window", "maximum context",
+            "token limit", "too many tokens", "input too large",
+            "request too large", "max_tokens")):
+        return True
+    try:
+        from app.llm.retry import classify_error, ErrorCategory
+        return classify_error(str(exc)) == ErrorCategory.CONTEXT_WINDOW
+    except Exception:
+        return False
+
 _DONE_PATTERNS = [
     r"\btask\s+(?:is\s+)?complete\b",
     r"\ball\s+done\b",
@@ -270,6 +320,12 @@ tool or different arguments — DO NOT repeat the same failing call.
         """
         P/A — Inject tool scores for the current sub-goal, then ask the
         LLM which tool to call (function-calling mode).
+
+        v3.1 CONTEXT-WINDOW GUARD: (a) prior tool-intelligence hint boxes are
+        REPLACED, not stacked (a 30-step run used to re-send 29 stale ranking
+        boxes, ~1KB each); (b) oversized contexts are auto-compacted BEFORE
+        the request and re-compacted+retried once on a hard context-window
+        error — previously a TokenLimitExceeded was a dead-end run error.
         """
         goal = self._extract_current_goal()
 
@@ -282,6 +338,7 @@ tool or different arguments — DO NOT repeat the same failing call.
         # mid-tier models then answer the ranking box instead of the user
         # ("I don't have any context about..."). Chat gets a clean context.
         if not getattr(self, "_chat_mode", False):
+            self._strip_prior_hint()
             hint = selection.to_prompt_hint()
             self.memory.add(Message.user(
                 f"\n{hint}\n\n"
@@ -290,14 +347,65 @@ tool or different arguments — DO NOT repeat the same failing call.
                 "use your judgement — but if you deviate, explain why in your reasoning."
             ))
 
+        # v3.1: proactive compaction — stay under the configured context
+        # budget BEFORE the request instead of dying on a 400.
+        self._auto_compact_if_needed()
+
         schemas = self.tools.to_openai_schemas()
-        response = await self.llm.ask_tool(self.memory.messages, tools=schemas)
+        try:
+            response = await self.llm.ask_tool(self.memory.messages, tools=schemas)
+        except Exception as exc:
+            if _is_context_overflow(exc) and self._auto_compact_if_needed(force=True):
+                # one retry on the compacted context
+                response = await self.llm.ask_tool(self.memory.messages, tools=schemas)
+            else:
+                raise
         self.memory.add(response)
         # SHS Code FIX (registry regression): persist the assistant response
         # so /sessions/<id>/messages shows the real conversation.
         if response.content:
             self._log_db_message("assistant", response.content)
         return response.content or ""
+
+    def _strip_prior_hint(self) -> None:
+        """v3.1: remove previous tool-intelligence hint user-messages so only
+        the LATEST ranking box is in context (they were additive before)."""
+        marker = "Using the tool intelligence scores above as guidance"
+        self.memory.messages = [
+            m for m in self.memory.messages
+            if not (m.role == Role.USER and marker in (m.content or ""))
+        ]
+
+    def _auto_compact_if_needed(self, force: bool = False) -> bool:
+        """v3.1: compact the memory when the estimated context exceeds the
+        configured [context].max_tokens budget (or force=True after a
+        context-overflow API error). Uses the structured compactor — full
+        outputs remain in the journal/session DB; only the live window is
+        compacted. Returns True when compaction happened."""
+        try:
+            limit = int(getattr(self.memory, "max_context_tokens", 0) or 0)
+            if limit <= 0:
+                return False
+            if not force and self.memory.token_estimate() <= int(limit * 0.9):
+                return False
+            from app.compaction import compact_messages
+            new_dicts, report = compact_messages(self.memory.to_list(), keep_last=8)
+            if not report.get("compacted"):
+                return False
+            # rebuild Memory from dicts — Message.from_dict is lossless for
+            # role/content/tool_calls fields we use
+            from app.schema import Message as _Msg
+            self.memory.messages = [_Msg.from_dict(d) for d in new_dicts]
+            from app.activity import emit
+            emit("context_compacted", **{k: v for k, v in report.items()
+                                          if isinstance(v, (int, float, str, bool))})
+            logger.info(
+                f"[Context] auto-compacted: {report.get('removed_messages', '?')} "
+                f"messages -> {report.get('after_chars', '?')} chars")
+            return True
+        except Exception as e:
+            logger.debug(f"[Context] auto-compaction skipped: {e}")
+            return False
 
     async def act(self, thought: str) -> Optional[str]:
         """Execute all tool calls from the last LLM response.
@@ -524,7 +632,7 @@ tool or different arguments — DO NOT repeat the same failing call.
                 await self._journal_tool_execution(name, args, result)
 
                 self.memory.add(Message.tool(
-                    content=str(result),
+                    content=_cap_tool_output(str(result)),
                     tool_call_id=tool_call_id,
                     name=name,
                 ))
@@ -605,7 +713,7 @@ tool or different arguments — DO NOT repeat the same failing call.
 
         logger.error(f"'{name}' failed after {MAX_TOOL_RETRIES} attempts.")
         self.memory.add(Message.tool(
-            content=str(last_result),
+            content=_cap_tool_output(str(last_result)),
             tool_call_id=tool_call_id,
             name=name,
         ))

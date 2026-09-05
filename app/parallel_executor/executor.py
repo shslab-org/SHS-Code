@@ -478,18 +478,44 @@ class ParallelToolExecutor:
         with self._lock_manager.acquire_resources(call.declared_resources):
             return call.fn(**call.kwargs)
 
+    def _run_locked_with_handle(self, call: ToolCall,
+                                handle: "ResourceLockHandle") -> Any:
+        """v3.1: acquire explicitly, invoke, and ALWAYS release via the handle
+        (even when the caller abandons the thread on timeout — the abandoned
+        thread previously held these locks forever, deadlocking every later
+        call on the same resources)."""
+        try:
+            self._lock_manager.acquire_resources_explicit(call.declared_resources)
+            return call.fn(**call.kwargs)
+        finally:
+            try:
+                self._lock_manager.release_resources(handle)
+            except Exception:
+                pass
+
     def _run_with_timeout(self, call: ToolCall, timeout: float) -> Any:
         """Run the tool with a wall-clock timeout.
 
         Uses a separate thread for the actual call so we can enforce
         the timeout without relying on the callable being cancellation-aware.
+
+        v3.1 FIX (deadlock-by-timeout): the abandoned thread KEPT the
+        declared-resource locks forever — every later tool declaring the
+        same resource blocked for the rest of the process lifetime. The
+        lock manager now force-releases the call's resources when the
+        thread is abandoned (the zombie thread may still run, but it can
+        no longer deadlock the executor).
         """
         result_holder: list[Any] = []
         error_holder: list[BaseException] = []
 
+        # v3.1: the handle is created in the MAIN thread so the timeout path
+        # can force-release the locks the abandoned thread still holds.
+        handle = ResourceLockHandle()
+
         def _target() -> None:
             try:
-                result_holder.append(self._run_with_locks(call))
+                result_holder.append(self._run_locked_with_handle(call, handle))
             except BaseException as exc:
                 error_holder.append(exc)
 
@@ -499,7 +525,14 @@ class ParallelToolExecutor:
 
         if worker.is_alive():
             # Thread is still running — it's a daemon so it won't prevent
-            # exit, but we can't actually kill it.  Mark as timed out.
+            # exit, but we can't actually kill it. Mark as timed out.
+            # v3.1: force-release the abandoned thread's resource locks so
+            # it cannot deadlock every future call on those resources.
+            # (Normal release refuses: thread-ownership checks.)
+            try:
+                self._lock_manager.force_release_resources(call.declared_resources)
+            except Exception:
+                pass
             raise TimeoutError(
                 f"Tool '{call.tool_name}' exceeded {timeout}s timeout"
             )

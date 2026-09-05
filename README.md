@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Version-3.0.3-ff69b4?style=for-the-badge&logo=github&logoColor=white" alt="Version">
+<img src="https://img.shields.io/badge/Version-3.1.0-ff69b4?style=for-the-badge&logo=github&logoColor=white" alt="Version">
 <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
 <img src="https://img.shields.io/badge/License-MIT-FFD700?style=for-the-badge&logo=opensourceinitiative&logoColor=black" alt="License">
 <img src="https://img.shields.io/badge/Status-Persistent%20%7C%20Autonomous-00C853?style=for-the-badge&logo=bugsnag&logoColor=white" alt="Status">
@@ -39,7 +39,15 @@ SHS Code initialized.
 | 🩺 **`/doctor`** | Full diagnostics with actionable hints |
 | 🖥️ **Stable terminal** | Live activity feed (thinking / tools / rate-limit waits), no input flicker |
 
-> ### 🆕 v3.0.3 — Natural conversation, clean terminal, honest completion
+> ### 🆕 v3.1.0 — Forensic-perfection round: memory, context, multi-agent, leaks
+> - **Conversations remember across processes**: one-shot runs now AUTO-CONTINUE the recent session — "remember 91" → new process → "what was the number?" → "91" (the benchmark task-01 killer, fixed).
+> - **Context window that protects itself**: tool outputs capped (head+tail, full output still journalled), AUTO-COMPACTION before overflow + retry-once on context errors, system prompts injected once instead of duplicated every turn, ranking/refresh boxes replaced instead of stacked.
+> - **Multi-agent that actually passes context**: role artefacts are delivered (bus race fixed), full-fidelity handoffs (24k head+tail instead of a 3k prefix cut), upstream errors skip downstream roles, engineer failure falls back to the single-agent path, sub-agents skip the duplicated planner call, `--session` works on the complex path.
+> - **Zero known leaks**: subprocesses killed+reaped on every exit path (node/mcp/bash/python), SQLite long-term memory WAL + closed on cleanup, GGUF models cached once, SDK httpx pools closed, abandoned executor threads force-release their locks, the "Event loop is closed" noise is gone.
+> - **Provider-faithful context**: Anthropic/Google now receive ALL system blocks merged (plan/memory/intel directives were silently dropped mid-conversation).
+> - **Smarter routing**: long pure questions stay Q&A (no PRD for "explain relativity"), Hinglish questions included.
+
+> ### v3.0.3 — Natural conversation, clean terminal, honest completion
 > - **Chat stays chat**: casual conversation (any language) gets a natural one-request reply — no planner, no skill cards, no random file creation. Real tasks still get the full PLAN→ACT→VERIFY pipeline.
 > - **Clean terminal**: internal diagnostics (tool scoring, retry internals) go to the log file, not your screen. `console_level` config if you want them back.
 > - **Honest completion**: the `terminate` tool is now gated by the same goal-completion check as text answers — "all done" claims with unfinished plan steps are rejected and the agent keeps working.
@@ -57,7 +65,7 @@ SHS Code initialized.
   &nbsp;•&nbsp;
   <img src="https://img.shields.io/badge/Tools-17-00C853?style=flat-square" alt="Tools">
   &nbsp;•&nbsp;
-  <img src="https://img.shields.io/badge/Tests-613%20passed-brightgreen?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-653%20passed-brightgreen?style=flat-square" alt="Tests">
 </p>
 
 </div>
@@ -536,7 +544,7 @@ Detailed docs live in `docs/` (ARCHITECTURE, CONFIG, FEATURES, LOGGER, PROVIDERS
 ## Testing
 
 ```bash
-python -m pytest tests/ -q        # 613 passed, 2 skipped
+python -m pytest tests/ -q        # 653 passed, 2 skipped
 ```
 
 The suite covers: the agent loop, rate limiting (rolling window, 429 recovery, precedence), model/provider switching with state preservation, interruption and crash recovery, journal/checkpoint behavior, all four memory layers, session registry accuracy, webhooks, channels, SSH, sandbox, skills, tools, intelligence indexing, planner/DAG, verification, and end-to-end multi-step workloads.
