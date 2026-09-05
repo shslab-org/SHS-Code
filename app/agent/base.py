@@ -137,6 +137,21 @@ _ACTION_VERBS = (
     "compare", "count", "calculate", "compute", "check", "review", "print",
 )
 
+# v3.0.3: injected as a system message right before the user's message when
+# the local classifier marks the request as conversation. Mid-tier models
+# buried the CONVERSATION RULES section of the long system prompt and turned
+# casual chat ("Bhai kaise ho? Aaj ka mausam batao.") into skill_manager file
+# creation. A short, LAST-message directive is attended to far more reliably.
+_CHAT_MODE_DIRECTIVE = (
+    "CONVERSATION MODE: The user is chatting or asking a simple question. "
+    "Reply naturally and concisely, matching the user's language and tone. "
+    "Do NOT create files, do NOT write code, do NOT use skill_manager, "
+    "do NOT save anything to the workspace, and do NOT write a plan. "
+    "Answer directly in one response. Only use a tool if the question truly "
+    "requires live data (e.g. current weather → web_search); otherwise answer "
+    "from your own knowledge immediately."
+)
+
 
 def classify_request(prompt: str) -> str:
     """Classify a user prompt as 'chat' or 'task' using local heuristics.
@@ -301,6 +316,12 @@ class BaseAgent(ABC):
             self.memory.add(Message.system(get_identity_reinforcement()))
 
         self.memory.add(Message.user(safe_prompt))
+
+        # v3.0.3: chat-mode directive as the LAST system message before the
+        # user's turn — mid-tier models reliably attend to the context tail,
+        # so this keeps casual chat natural (no random file creation).
+        if self._chat_mode:
+            self.memory.add(Message.system(_CHAT_MODE_DIRECTIVE))
         mode_str = self.gate.mode.value
 
         # v3.0 chat fast-path (classification itself now happens earlier,

@@ -40,7 +40,7 @@ from app import env
 # Version / branding
 # ──────────────────────────────────────────────────────────────────────────────
 
-VERSION = "2.2.0"           # SHS Code — identity-complete, product docs
+VERSION = "3.0.3"           # SHS Code — chat-mode directive, clean console, any-dir env
 
 SHS_BANNER = r"""
 ███████╗██╗  ██╗███████╗  ██████╗ ██████╗ ██████╗ ██████╗
@@ -376,7 +376,7 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             "    /model [name]      — show/switch model (context preserved!)\n"
             "    /models            — available models\n"
             "    /providers         — configured providers (built-in + custom)\n"
-            "    /provider <n> [m]  — switch provider [model]\n"
+            "    /provider <n> [model] — switch provider (optionally set model)\n"
             "    /provider add|remove|set-key ... — manage custom providers\n"
             "  Memory\n"
             "    /memory            — persistent long-term memory entries\n"

@@ -131,8 +131,14 @@ _LOG_DIR.mkdir(exist_ok=True)
 _LOG_FILE = _LOG_DIR / f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 
 _log_level: str = "DEBUG"
+_console_level: str = "WARNING"
 try:
     _log_level = Config.get().logging.level.upper().strip() or "DEBUG"
+except Exception:
+    pass
+try:
+    # v3.0.3: console level independent of file level — clean terminal UX.
+    _console_level = Config.get().logging.console_level.upper().strip() or "INFO"
 except Exception:
     pass
 
@@ -144,6 +150,10 @@ _logger.trace = lambda msg, *args, **kwargs: _logger.log(logging.TRACE, msg, *ar
 _logger.addFilter(ContextFilter())
 
 _console_handler = logging.StreamHandler(sys.stderr)
+# v3.0.3: console shows WARNING+ by default (clean terminal); the file handler
+# below keeps the full DEBUG/TRACE detail. Progress UX comes from the
+# spinner/activity feed; full diagnostics live in logs/*.log and /log.
+_console_handler.setLevel(getattr(logging, _console_level, logging.WARNING))
 _console_handler.setFormatter(ColorfulFormatter())
 _logger.addHandler(_console_handler)
 

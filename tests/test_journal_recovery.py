@@ -100,8 +100,11 @@ class TestInterruptionRecovery:
     def test_full_interrupt_resume_cycle(self, journal):
         async def phase1():
             # Phase 1: task in progress, checkpoint saved, then "crash"
+            # (cwd = the process cwd so the v3.0.3 workspace-scoped
+            # last_interrupted() lookup can find it — see fix note in
+            # app/state.py)
             tid = await journal.task_start(goal="Build e-commerce website",
-                                           session_id="s-1", cwd="/proj")
+                                           session_id="s-1", cwd=os.getcwd())
             await journal.record_progress(tid,
                                           completed=["Project initialization",
                                                      "Database schema",
@@ -129,7 +132,10 @@ class TestInterruptionRecovery:
             return tid
         tid = asyncio.run(phase1())
 
-        # Phase 2: "restart" — in_progress tasks become interrupted
+        # Phase 2: "restart" — in_progress tasks become interrupted.
+        # v3.0.3: last_interrupted() is workspace-scoped (cwd match or NULL
+        # legacy cwd) — a task started in ANOTHER directory must NOT surface
+        # in this workspace, which is exactly the stale-task-leak fix.
         n = asyncio.run(journal.mark_interrupted_running_tasks())
         assert n == 1
         t = asyncio.run(journal.last_interrupted())
@@ -163,6 +169,42 @@ class TestInterruptionRecovery:
         cp = asyncio.run(journal.load_checkpoint(tid))
         assert cp["step_count"] == 24
         assert cp["memory"][0]["content"] == "m24"
+
+    def test_last_interrupted_is_workspace_scoped(self, journal):
+        """v3.0.3: a fresh project directory must NOT see 'Previous task
+        detected' for tasks started in OTHER directories — the global
+        journal previously leaked unrelated old goals into every banner."""
+        async def run():
+            other = await journal.task_start(goal="old project task",
+                                             session_id="s-old",
+                                             cwd="/some/other/project")
+            await journal.record_step(other, 3, 5, "working")
+            mine = await journal.task_start(goal="my project task",
+                                            session_id="s-mine",
+                                            cwd=os.getcwd())
+            await journal.record_step(mine, 2, 4, "working")
+            return mine
+        mine = asyncio.run(run())
+
+        asyncio.run(journal.mark_interrupted_running_tasks())
+        t = asyncio.run(journal.last_interrupted())
+        # Only THIS workspace's task surfaces — not the /some/other/project one
+        assert t is not None
+        assert t["goal"] == "my project task"
+        assert t["task_id"] == mine
+
+    def test_last_interrupted_surfaces_null_cwd_legacy(self, journal):
+        """Legacy rows with NULL cwd (pre-v3.0.3) stay resumable everywhere."""
+        async def run():
+            tid = await journal.task_start(goal="legacy task", session_id="s-legacy")
+            await journal.record_step(tid, 1, 2, "working")
+            return tid
+        tid = asyncio.run(run())
+
+        asyncio.run(journal.mark_interrupted_running_tasks())
+        t = asyncio.run(journal.last_interrupted())
+        assert t is not None
+        assert t["task_id"] == tid
 
 
 class TestStateStore:

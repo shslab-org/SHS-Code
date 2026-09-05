@@ -5,7 +5,7 @@
 # provider options: "mock" (no API key needed), "openai", "anthropic", "ollama", "openrouter",
 # "universal" (any OpenAI-compatible endpoint: NVIDIA NIM, vLLM, Together, Groq, ...), "gguf", "huggingface"
 provider = "universal"
-model    = "openai/gpt-oss-120b"
+model    = "openai/gpt-oss-20b"
 base_url = "https://integrate.api.nvidia.com/v1"   # NVIDIA NIM (OpenAI-compatible)
 # api_key  = ""  # prefer env var: LLM_API_KEY (or OPENAI_API_KEY, ANTHROPIC_API_KEY, ...)
 max_tokens   = 8192
@@ -53,6 +53,10 @@ timeout      = 30
 [runflow]
 enable_data_analysis = false
 timeout = 7200
+
+[logging]
+# level         = "DEBUG"     # file log detail (full diagnostics)
+console_level  = "WARNING"    # terminal verbosity — INFO/DEBUG to see more
 
 # ── Top-level agent defaults ────────────────────────────────────────────────
 workspace_dir = "workspace"

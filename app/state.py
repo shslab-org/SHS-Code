@@ -508,8 +508,15 @@ class Journal:
         return rows
 
     async def last_interrupted(self) -> Optional[Dict[str, Any]]:
+        # v3.0.3: workspace-scoped — only surface interrupted tasks that were
+        # started in THIS directory. A global journal previously leaked stale
+        # tasks from other projects into every fresh REPL/banner ("Previous
+        # task detected: <unrelated old goal>"). NULL-cwd legacy rows are
+        # still considered so pre-upgrade state remains resumable.
         rows = await self._aquery(
-            "SELECT * FROM tasks WHERE status='interrupted' ORDER BY updated_at DESC LIMIT 1")
+            "SELECT * FROM tasks WHERE status='interrupted'"
+            " AND (cwd IS NULL OR cwd=?) ORDER BY updated_at DESC LIMIT 1",
+            (os.getcwd(),))
         if not rows:
             return None
         t = rows[0]

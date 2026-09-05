@@ -144,6 +144,13 @@ class RunFlowConfig(BaseModel):
 
 class LoggingConfig(BaseModel):
     level:          str  = "DEBUG"
+    # v3.0.3: console gets its own level so internal DEBUG/TRACE diagnostics
+    # (tool-selector scoring bars, retry internals) never spam the terminal.
+    # File log keeps the full `level`. Default WARNING: the terminal shows only
+    # things that need attention; progress UX comes from the spinner/activity
+    # feed, and full detail lives in the file log (/log, logs/*.log).
+    # Set console_level = "DEBUG" to see everything.
+    console_level:  str  = "WARNING"
     json_format:    bool = False
     include_trace:  bool = True
     redact_secrets: bool = False
@@ -415,10 +422,32 @@ class Config:
             if detected:
                 cfg.llm.provider = detected
 
-        # Model override from CLI
-        model_override = os.getenv("LLM_MODEL_OVERRIDE", "")
+        # Model override: CLI flag wins; standard LLM_MODEL env var also
+        # honored so env-var-only setups (NIM/vLLM/Together via ~/.shscode/.env)
+        # never fall back to the gpt-4o default against a non-OpenAI endpoint.
+        model_override = os.getenv("LLM_MODEL_OVERRIDE", "") or os.getenv("LLM_MODEL", "")
         if model_override:
             cfg.llm.model = model_override
+
+        # v3.0.3: env-var-only universal setups had NO model set -> default
+        # 'gpt-4o' 404s on NVIDIA NIM / vLLM etc. If the model is still the
+        # OpenAI default while a non-OpenAI universal endpoint is configured,
+        # fail LOUDLY with instructions instead of a cryptic 404.
+        if (
+            cfg.llm.provider in ("universal", "openai-compat")
+            and cfg.llm.model == "gpt-4o"
+            and cfg.llm.base_url
+            and "api.openai.com" not in (cfg.llm.base_url or "")
+            and os.getenv("LLM_BASE_URL")
+        ):
+            import warnings
+            warnings.warn(
+                "LLM_BASE_URL is set to a non-OpenAI endpoint but no model is "
+                "configured — the default 'gpt-4o' will 404. Set model in "
+                "config.toml [llm] or export LLM_MODEL (e.g. "
+                "LLM_MODEL=openai/gpt-oss-20b for NVIDIA NIM).",
+                stacklevel=3,
+            )
 
         # Test environment overrides
         if app_env == AppEnv.TEST:

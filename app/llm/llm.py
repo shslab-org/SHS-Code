@@ -17,7 +17,7 @@ import time
 from typing import Any, Optional
 
 from app.config import Config
-from app.exceptions import RateLimitError, TokenLimitExceeded, LLMAuthError
+from app.exceptions import RateLimitError, TokenLimitExceeded, LLMAuthError, SHSCodeError
 from app.logger import logger
 from app.schema import Message, Role, ToolCall, Function
 from app.llm.token_tracker import TokenBudget, TokenUsage
@@ -1058,7 +1058,27 @@ class LLM:
                 ))
                 if not is_transient and generic_attempts >= 1:
                     # Non-transient error (bad request, auth, etc.) — fail fast
-                    logger.error(f"[LLM] Non-transient error: {e}. Not retrying.")
+                    # v3.0.3: attach an actionable hint for the common setup
+                    # failures so the surfaced message tells the user WHAT to
+                    # fix, not just the raw HTTP status. 404/auth wrap into
+                    # SHSCodeError (setup errors where the hint IS the answer);
+                    # other errors keep their original type for callers.
+                    hint = ""
+                    wrap = False
+                    err_txt = str(e)
+                    if "404" in err_txt or "Not Found" in err_txt:
+                        hint = (f" — model '{self._model}' not found on this "
+                                f"endpoint. Fix model in config.toml [llm] or "
+                                f"export LLM_MODEL.")
+                        wrap = True
+                    elif "401" in err_txt or "403" in err_txt or "Unauthorized" in err_txt:
+                        hint = " — check LLM_API_KEY / provider credentials."
+                        wrap = True
+                    elif "400" in err_txt:
+                        hint = " — request rejected; check model params/context length."
+                    logger.error(f"[LLM] Non-transient error: {e}{hint}. Not retrying.")
+                    if wrap:
+                        raise SHSCodeError(f"{e}{hint}") from e
                     raise
                 generic_attempts += 1
                 if generic_attempts >= self._max_retries:
