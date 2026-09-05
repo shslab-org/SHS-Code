@@ -137,14 +137,31 @@ class TaskGraph:
         node = self._nodes.get(node_id)
         if not node:
             return False, f"node {node_id} not found"
+        # v3.0.3: dependencies that are ACTIVE (work demonstrably started —
+        # files written, commands run) auto-complete when their successor is
+        # completed: the model proves completion through real work, and the
+        # old hard block leaked "ERROR: cannot complete … dependencies not
+        # completed" noise into final answers. PENDING/READY dependencies
+        # (work never started) still hard-block — skipping them would lie
+        # about the plan state.
         unmet = [d for d in node.depends_on
-                 if self._nodes.get(d) and self._nodes[d].status != "completed"]
+                 if self._nodes.get(d) and self._nodes[d].status in ("pending", "ready")]
+        auto = [d for d in node.depends_on
+                if self._nodes.get(d) and self._nodes[d].status in ("active", "retryable")]
+        for d in auto:
+            dep = self._nodes[d]
+            dep.status = "completed"
+            await self._persist(dep)
         if unmet:
             return False, (f"cannot complete '{node.title}': dependencies not"
-                           f" completed: {', '.join(unmet)}")
+                           f" started yet: {', '.join(unmet)}")
         node.status = "completed"
         self._recompute_statuses()
         await self._persist(node)
+        if auto:
+            await self.sync_to_task()
+            return True, (f"completed: {node.title} "
+                          f"(auto-completed active deps: {', '.join(auto)})")
         return True, f"completed: {node.title}"
 
     async def start_node(self, node_id: str) -> Tuple[bool, str]:

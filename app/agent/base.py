@@ -207,6 +207,10 @@ class BaseAgent(ABC):
         self._session_id: Optional[str] = None
         self._step_count = 0
         self._max_steps: int = cfg.max_steps
+        # v3.0.3: remember the config default so mode scaling never
+        # overrides an EXPLICITLY assigned _max_steps (callers/tests that
+        # set agent._max_steps = 2 expect that cap to hold).
+        self._default_max_steps: int = cfg.max_steps
         self._duplicate_threshold = 3
         self._task_history: Optional[TaskHistory] = None
         self._pending_db_tasks: list[asyncio.Task] = []
@@ -584,7 +588,10 @@ class BaseAgent(ABC):
             from app.modes import get_mode_config
             cfg = get_mode_config()
             self._mode_cfg = cfg
-            self._max_steps = max(5, int(self._max_steps * cfg.get("max_steps_scale", 1.0)))
+            # v3.0.3: only scale when _max_steps is still the config default
+            # — an explicitly assigned value (agent._max_steps = N) wins.
+            if getattr(self, "_max_steps", 0) == getattr(self, "_default_max_steps", -1):
+                self._max_steps = max(5, int(self._max_steps * cfg.get("max_steps_scale", 1.0)))
             prompt = cfg.get("prompt", "")
             if prompt:
                 self.memory.add(Message.system(prompt))

@@ -439,7 +439,18 @@ tool or different arguments — DO NOT repeat the same failing call.
                 self._selector.record_success(name) if not result.error \
                     else self._selector.record_failure(name)
                 if result.system == "terminate":
-                    self.state = AgentState.FINISHED
+                    # v3.0.3: terminate-tool bypass of the goal-completion
+                    # gate — the model could claim "All sub-goals completed"
+                    # via terminate while the journaled DAG still had
+                    # ready/pending nodes. Same gate conditions as text
+                    # answers now apply.
+                    if await self._terminate_blocked_by_plan_gate():
+                        self._plan_gate_nudges += 1
+                        outputs[-1] = ("TERMINATE REJECTED: the persisted plan "
+                                       "still has unfinished steps. Continue "
+                                       "executing them, or mark them skipped.")
+                    else:
+                        self.state = AgentState.FINISHED
             return "\n".join(outputs) if outputs else None
 
         # ── Sequential path (mutating / dependent operations) ──
@@ -454,7 +465,14 @@ tool or different arguments — DO NOT repeat the same failing call.
                 self._selector.record_failure(name)
 
             if result.system == "terminate":
-                self.state = AgentState.FINISHED
+                # v3.0.3: same plan-gate check as the parallel path
+                if await self._terminate_blocked_by_plan_gate():
+                    self._plan_gate_nudges += 1
+                    outputs[-1] = ("TERMINATE REJECTED: the persisted plan "
+                                   "still has unfinished steps. Continue "
+                                   "executing them, or mark them skipped.")
+                else:
+                    self.state = AgentState.FINISHED
 
         return "\n".join(outputs) if outputs else None
 
@@ -632,6 +650,21 @@ tool or different arguments — DO NOT repeat the same failing call.
         "⚠ Tool",           # retry hint messages
         "[IDENTITY REINFORCEMENT",  # identity guard injections
     )
+
+    async def _terminate_blocked_by_plan_gate(self) -> bool:
+        """v3.0.3: True when a terminate tool call must be REJECTED because
+        the persisted plan still has unfinished steps. Mirrors the text-answer
+        gate conditions (real work started, nudge budget left) so the model
+        cannot bypass goal-completion verification by choosing the terminate
+        tool instead of a text answer."""
+        try:
+            return (
+                self._plan_gate_nudges < _MAX_PLAN_GATE_NUDGES
+                and self._tool_call_count > 0
+                and await self._plan_has_unfinished_work()
+            )
+        except Exception:
+            return False
 
     async def _plan_has_unfinished_work(self) -> bool:
         """Goal-completion gate helper (spec §34). Reload the persisted

@@ -1043,3 +1043,60 @@ class TestGoalCompletionGate:
         await agent.run("do it")
         assert agent._plan_gate_nudges == 3   # no 4th nudge
         assert agent.state.name == "FINISHED"  # answer stands after budget
+
+
+class TestTerminateToolGate:
+    """v3.0.3: the terminate TOOL bypassed the goal-completion gate — a model
+    could call terminate claiming 'All sub-goals completed' while the
+    journaled DAG still had ready/pending nodes. The same gate conditions as
+    text answers now apply to terminate tool calls."""
+
+    @pytest.mark.asyncio
+    async def test_terminate_with_pending_plan_rejected(self, tmp_path):
+        from app.agent.shscode import SHSCode
+        from tests.test_integration_e2e import ScriptedLLM
+        agent = SHSCode()
+        await agent.run("noop bootstrap")   # registers journal task & plan
+        tid = agent._journal_task_id
+        from app.state import Journal
+        from app.task_dag import TaskGraph
+        g = await TaskGraph(Journal.get(), tid).load()
+        if not g.nodes():
+            from app.task_dag import TaskNode
+            g._nodes["n1"] = TaskNode(node_id="n1", title="pending step")
+            await g.save()
+        agent.state = type(agent.state).IDLE
+        # reset the nudge budget: the bootstrap run's MockLLM terminates
+        # were themselves gated (desired behavior) and exhausted it
+        agent._plan_gate_nudges = 0
+        agent.llm = ScriptedLLM([
+            # work starts first (gate applies only mid-work)
+            ("tool", ("bash", {"command": "echo gate_work_started"})),
+            # terminate claim WHILE the plan has pending steps
+            ("tool", ("terminate", {"reason": "All sub-goals completed"})),
+        ])
+        agent._max_steps = 10
+        await agent.run("finish the task")
+        # the terminate was rejected: the nudge budget was consumed by the
+        # terminate gate (text answers never appeared in the script)
+        assert agent._plan_gate_nudges >= 1, \
+            "terminate with unfinished plan steps must be gated"
+        # the run did NOT end at the terminate step — it kept going
+        assert agent._step_count >= 3, \
+            "rejected terminate must not finish the run instantly"
+        # and the run still ends properly
+        assert agent.state.name == "FINISHED"
+
+    @pytest.mark.asyncio
+    async def test_terminate_with_complete_plan_accepted(self):
+        from app.agent.shscode import SHSCode
+        from tests.test_integration_e2e import ScriptedLLM
+        agent = SHSCode()
+        agent.journal = None   # no plan => terminate stands
+        agent.llm = ScriptedLLM([
+            ("tool", ("bash", {"command": "echo work"})),
+            ("tool", ("terminate", {"reason": "done"})),
+        ])
+        agent._max_steps = 8
+        result = await agent.run("do it")
+        assert agent.state.name == "FINISHED"

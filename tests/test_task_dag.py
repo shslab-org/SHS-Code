@@ -29,13 +29,34 @@ class TestDependencyRules:
             b = await g.add_node("implement api", depends_on=[a.node_id])
             ok, msg = await g.complete_node(b.node_id)
             assert ok is False
-            assert "dependencies not completed" in msg
+            # v3.0.3: READY (never-started) deps still block completion
+            assert "dependencies not started yet" in msg
             assert b.status != "completed"
             # now complete dep, then dependent succeeds
             ok, _ = await g.complete_node(a.node_id)
             assert ok
             ok, msg = await g.complete_node(b.node_id)
             assert ok and "completed" in msg
+        asyncio.run(run())
+
+    def test_active_dep_auto_completes_with_successor(self, journal):
+        """v3.0.3: an ACTIVE dependency (work started) auto-completes when
+        its successor completes — the model was mid-step and moved on; the
+        old hard block leaked 'ERROR: cannot complete …' noise into final
+        answers even though the real work was done."""
+        async def run():
+            tid = await journal.task_start("build api")
+            g = await TaskGraph(journal, tid).load()
+            a = await g.add_node("design schema")
+            b = await g.add_node("implement api", depends_on=[a.node_id])
+            # a's work started (active) but never explicitly completed
+            ok, _ = await g.start_node(a.node_id)
+            assert a.status == "active"
+            ok, msg = await g.complete_node(b.node_id)
+            assert ok, msg
+            assert "auto-completed active deps" in msg
+            assert a.status == "completed"
+            assert b.status == "completed"
         asyncio.run(run())
 
     def test_ready_and_blocked_states(self, journal):
