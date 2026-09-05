@@ -37,7 +37,8 @@ def main() -> None:
     print(f"  ██║╚██╔╝██║██╔══██║██║╚██╗██║██║   ██║╚════██║")
     print(f"  ██║ ╚═╝ ██║██║  ██║██║ ╚████║╚██████╔╝███████║")
     print(f"  ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝")
-    print(f"  SHS Code v5.1.1 — Agent Server  by The-JDdev (SHS Shobuj)")  # Fix: sync version
+    from app import __version__
+    print(f"  SHS Code v{__version__} — Agent Server  by SHS Lab (Sazzad Hussain Shobuj)")
     print(f"\n  Listening: http://{args.host}:{args.port}")
     print(f"  REST:      http://{args.host}:{args.port}/run")
     print(f"  WebSocket: ws://{args.host}:{args.port}/ws/<session_id>")  # Fix: ws:// not wss:// (no TLS)

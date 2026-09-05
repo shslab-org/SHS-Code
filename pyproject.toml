@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shscode"
-version = "2.1.0"
+version = "3.0.3"
 description = "SHS Code: persistent autonomous AI coding agent by SHS Lab (Sazzad Hussain Shobuj)."
 readme = "README.md"
 requires-python = ">=3.11"

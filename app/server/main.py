@@ -92,7 +92,7 @@ _BOOT_TIME = time.time()
 app = FastAPI(
     title="SHS Code Agent Server",
     description="Persistent autonomous coding agent engine by SHS Lab (Sazzad Hussain Shobuj)",
-    version="2.0.0",
+    version=__import__("app").__version__,
     lifespan=_lifespan,
 )
 
@@ -283,7 +283,7 @@ class RunResponse(BaseModel):
 
 @app.get("/healthz")
 async def healthz():
-    return {"status": "ok", "version": "2.0.0", "agent": "SHS Code"}
+    return {"status": "ok", "version": __import__("app").__version__, "agent": "SHS Code"}
 
 
 @app.get("/")

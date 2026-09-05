@@ -9,7 +9,7 @@ set -e
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 
-REPO="https://github.com/The-JDdev/SHS Code.git"
+REPO="https://github.com/shslab-org/SHS-Code.git"
 INSTALL_DIR="$HOME/SHS Code"
 BIN_LINK="/usr/local/bin/shscode"
 
@@ -20,7 +20,7 @@ echo "  ██╔████╔██║███████║██╔██
 echo "  ██║╚██╔╝██║██╔══██║██║╚██╗██║██║   ██║╚════██║"
 echo "  ██║ ╚═╝ ██║██║  ██║██║ ╚████║╚██████╔╝███████║"
 echo "  ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝"
-echo -e "  SHS Code Installer — by The-JDdev (SHS Shobuj)${NC}"
+echo -e "  SHS Code Installer — by SHS Lab (Sazzad Hussain Shobuj)${NC}"
 echo ""
 
 # ── Python check ─────────────────────────────────────────────────────────────
@@ -127,5 +127,5 @@ echo -e "  ${BOLD}Start server:${NC}"
 echo -e "    cd $INSTALL_DIR && source .venv/bin/activate"
 echo -e "    python run_server.py"
 echo ""
-echo -e "  ${BOLD}Support:${NC} https://github.com/The-JDdev/SHS Code"
+echo -e "  ${BOLD}Support:${NC} https://github.com/shslab-org/SHS-Code"
 echo ""

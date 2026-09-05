@@ -9,12 +9,12 @@ set -e
 CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 RED='\033[0;31m'; BOLD='\033[1m'; NC='\033[0m'
 
-REPO="https://github.com/The-JDdev/SHS Code.git"
+REPO="https://github.com/shslab-org/SHS-Code.git"
 INSTALL_DIR="$HOME/SHS Code"
 
 echo -e "${CYAN}${BOLD}"
 echo "  ███╗   ███╗ █████╗ ███╗   ██╗██╗   ██╗███████╗"
-echo "  SHS Code — Termux Setup — by The-JDdev"
+echo "  SHS Code — Termux Setup — by SHS Lab"
 echo -e "${NC}"
 
 # ── Update packages ──────────────────────────────────────────────────────────

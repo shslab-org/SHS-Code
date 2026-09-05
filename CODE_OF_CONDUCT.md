@@ -30,7 +30,7 @@ SHS Code is built by people who eat logic for breakfast and ship production code
 ## Scope
 
 This Code of Conduct applies to all SHS Code community spaces:
-- GitHub repositories (`ManusAgents/manusclaw`, `The-JDdev/manusclaw-setup`)
+- GitHub repositories (`shslab-org/SHS-Code`)
 - GitHub Issues, Pull Requests, Discussions, and Actions
 - Telegram community chat ([@singularityos](https://t.me/singularityos))
 - Email communications with maintainers
@@ -58,7 +58,7 @@ Violations will be addressed based on severity:
 | **Moderate** | Temporary suspension from community spaces (7-30 days) |
 | **Severe** (harassment, malicious code, repeated violations) | Permanent ban from all SHS Code community spaces |
 
-All decisions are final and made at the discretion of the maintainers (The-JDdev / SHS Lab).
+All decisions are final and made at the discretion of the maintainers (SHS Lab).
 
 ---
 
@@ -68,4 +68,4 @@ This Code of Conduct is adapted from the [Contributor Covenant](https://www.cont
 
 ---
 
-*SHS Code — where logic meets autonomy. Built by The-JDdev (SHS Lab).*
+*SHS Code — where logic meets autonomy. Built by SHS Lab (Sazzad Hussain Shobuj).*

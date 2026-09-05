@@ -6,7 +6,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 $ErrorActionPreference = "Stop"
-$REPO       = "https://github.com/The-JDdev/SHS Code.git"
+$REPO       = "https://github.com/shslab-org/SHS-Code.git"
 $InstallDir = "$env:USERPROFILE\SHS Code"
 
 function Write-Banner {
@@ -17,7 +17,7 @@ function Write-Banner {
     Write-Host "  ██║╚██╔╝██║██╔══██║██║╚██╗██║██║   ██║╚════██║" -ForegroundColor Cyan
     Write-Host "  ██║ ╚═╝ ██║██║  ██║██║ ╚████║╚██████╔╝███████║" -ForegroundColor Cyan
     Write-Host "  ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝" -ForegroundColor Cyan
-    Write-Host "  SHS Code Installer — by The-JDdev (SHS Shobuj)" -ForegroundColor White
+    Write-Host "  SHS Code Installer — by SHS Lab (Sazzad Hussain Shobuj)" -ForegroundColor White
     Write-Host ""
 }
 
@@ -120,7 +120,7 @@ Write-Host "    .venv\Scripts\activate" -ForegroundColor Cyan
 Write-Host "    python main.py `"your task`"" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Edit config: $InstallDir\config.toml" -ForegroundColor White
-Write-Host "  Support:     https://github.com/The-JDdev/SHS Code" -ForegroundColor White
+Write-Host "  Support:     https://github.com/shslab-org/SHS-Code" -ForegroundColor White
 Write-Host ""
 
 Read-Host "Press Enter to close"

@@ -40,7 +40,7 @@ from app import env
 # Version / branding
 # ──────────────────────────────────────────────────────────────────────────────
 
-VERSION = "3.0.3"           # SHS Code — chat-mode directive, clean console, any-dir env
+VERSION = __import__("app").__version__   # single source of truth (app/__init__.py)
 
 SHS_BANNER = r"""
 ███████╗██╗  ██╗███████╗  ██████╗ ██████╗ ██████╗ ██████╗

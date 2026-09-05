@@ -64,4 +64,4 @@ SHS Code includes several built-in security mechanisms:
 
 ---
 
-*This security policy is maintained by The-JDdev (SHS Lab). For questions, contact [thejddev.official@gmail.com](mailto:thejddev.official@gmail.com).*
+*This security policy is maintained by SHS Lab. For questions, contact SHS Lab via the repository issues page.*

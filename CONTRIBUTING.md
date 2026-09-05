@@ -194,4 +194,4 @@ See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for our community standards.
 
 ---
 
-*SHS Code is built by The-JDdev (SHS Lab). Contributing to SHS Code means you're building the future of autonomous AI agents.*
+*SHS Code is built by SHS Lab (Sazzad Hussain Shobuj). Contributing to SHS Code means you're building the future of autonomous AI agents.*
