@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Version-2.2.0-ff69b4?style=for-the-badge&logo=github&logoColor=white" alt="Version">
+<img src="https://img.shields.io/badge/Version-3.0.3-ff69b4?style=for-the-badge&logo=github&logoColor=white" alt="Version">
 <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
 <img src="https://img.shields.io/badge/License-MIT-FFD700?style=for-the-badge&logo=opensourceinitiative&logoColor=black" alt="License">
 <img src="https://img.shields.io/badge/Status-Persistent%20%7C%20Autonomous-00C853?style=for-the-badge&logo=bugsnag&logoColor=white" alt="Status">
@@ -39,6 +39,13 @@ SHS Code initialized.
 | 🩺 **`/doctor`** | Full diagnostics with actionable hints |
 | 🖥️ **Stable terminal** | Live activity feed (thinking / tools / rate-limit waits), no input flicker |
 
+> ### 🆕 v3.0.3 — Natural conversation, clean terminal, honest completion
+> - **Chat stays chat**: casual conversation (any language) gets a natural one-request reply — no planner, no skill cards, no random file creation. Real tasks still get the full PLAN→ACT→VERIFY pipeline.
+> - **Clean terminal**: internal diagnostics (tool scoring, retry internals) go to the log file, not your screen. `console_level` config if you want them back.
+> - **Honest completion**: the `terminate` tool is now gated by the same goal-completion check as text answers — "all done" claims with unfinished plan steps are rejected and the agent keeps working.
+> - **Works from any directory**: `~/.shscode/.env` (LLM_API_KEY / LLM_BASE_URL / LLM_MODEL) powers the CLI everywhere; 404s and auth failures tell you exactly what to fix.
+> - **One version number**: CLI, server `/healthz`, installer banner and `pyproject.toml` all read a single source of truth.
+
 <p>
   <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows%20%7C%20Docker-informational?style=flat-square" alt="Platforms">
   &nbsp;•&nbsp;
@@ -50,7 +57,7 @@ SHS Code initialized.
   &nbsp;•&nbsp;
   <img src="https://img.shields.io/badge/Tools-17-00C853?style=flat-square" alt="Tools">
   &nbsp;•&nbsp;
-  <img src="https://img.shields.io/badge/Tests-527%20passed-brightgreen?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-613%20passed-brightgreen?style=flat-square" alt="Tests">
 </p>
 
 </div>
@@ -485,7 +492,7 @@ shscode "write a Python script that dedupes CSV rows and explain it"
 
 > What did you do in the last task?
 > [reads work notebook] Inspected app/auth.py, changed 2 files, ran
-  pytest (527 passed), decided rolling-window over fixed sleep...
+  pytest (613 passed), decided rolling-window over fixed sleep...
 ```
 
 Long-running and multi-file tasks checkpoint after every step; interrupt any time (`Ctrl+C`) and `/resume` later — no work is redone (the agent re-reads its journal and re-verifies the real state).
@@ -529,7 +536,7 @@ Detailed docs live in `docs/` (ARCHITECTURE, CONFIG, FEATURES, LOGGER, PROVIDERS
 ## Testing
 
 ```bash
-python -m pytest tests/ -q        # 527 passed, 2 skipped
+python -m pytest tests/ -q        # 613 passed, 2 skipped
 ```
 
 The suite covers: the agent loop, rate limiting (rolling window, 429 recovery, precedence), model/provider switching with state preservation, interruption and crash recovery, journal/checkpoint behavior, all four memory layers, session registry accuracy, webhooks, channels, SSH, sandbox, skills, tools, intelligence indexing, planner/DAG, verification, and end-to-end multi-step workloads.
