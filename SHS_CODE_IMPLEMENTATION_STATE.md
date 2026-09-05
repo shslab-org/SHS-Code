@@ -1,72 +1,61 @@
-# SHS Code State — v2.2.0 (Identity-Complete, Product-Documented, Deep-Audited)
+# SHS Code State — v3.0.3 (100%-Perfection Round)
 
 ## Repository
 - Source: github.com/shslab-org/SHS-Code (working copy: /home/z/my-project/SHS-Code)
 - Language: Python 3.11+ (tested 3.12), package `app/`, 340+ files
-- Product: **SHS Code v2.2.0** (SHS Lab — Sazzad Hussain Shobuj)
-- All prior phases fully preserved — nothing rewritten, only extended,
-  stabilized, and identity-migrated
+- Product: **SHS Code v3.0.3** (SHS Lab — Sazzad Hussain Shobuj)
+- Version single-source: app/__init__.py `__version__` — CLI / server
+  /healthz / installer banner / pyproject all derive from it
 
 ## Current Phase
-IDENTITY + RATE-LIMIT + MEMORY + DEEP-AUDIT COMPLETE — full ManusClaw→SHS Code
-codebase identity migration; rate-limit architecture made provider-independent
-with per-provider custom limits; all four memory layers verified against
-model switching; every major subsystem deep-tested on real execution paths;
-README rewritten as product documentation. 564 tests passing.
+100%-PERFECTION ROUND COMPLETE — normal-chat core requirement delivered
+(casual conversation gets natural one-request replies in the user's
+language, zero file creation); goal-completion honesty enforced on BOTH
+text answers and the terminate tool; terminal UX clean; every entry
+surface consistent. 613 tests passing, 0 failed.
 
-## v2.2.0 Commits (this phase)
-- 90efb56 v2.2.0-identity — complete ManusClaw→SHS Code codebase identity
-  migration (195 files): class Manus→SHSCode, app/agent/manus.py→shscode.py,
-  ManusClawError→SHSCodeError, MANUSCLAW_*→SHSCODE_* env vars via central
-  app/env.py compat layer (legacy env vars + ~/.manusclaw home + manusclaw.db
-  auto-detected — pre-rename state survives), console scripts manusclaw*→
-  shscode*, logger namespaces, Slack commands, webhook headers, user-agent,
-  docs/installers/Docker/index.html. 487 tests green post-migration.
-- 854b32a v2.2.0-ratelimit+memory — resolve_rpm() precedence (per-provider
-  custom > global custom > provider default NIM 40 > no limiter); provider
-  registry entries now apply their own rpm via provider_overlay with global
-  baseline restore; config.toml default rpm 40→0 (auto: provider defaults,
-  no artificial throttling below the limit); 24 rate-limit tests + 16
-  four-layer memory tests (session DB, long-term DB, MEMORY.md/USER.md,
-  journal work notebook) all surviving model switches + compaction.
-- 9177c67 v2.2.0-readme — README rewritten as product documentation from the
-  real implementation (no changelog-style content); 4-layer memory, rate-limit
-  resolution order, checkpoints/recovery, all subsystems documented.
-- ea2c7d2 v2.2.0-deepaudit — 35 deep functional subsystem tests (real
-  execution paths: tools/bash timeout+failure surfacing, multi-file workflow
-  observe-failure→fix→verify, Git real repo ops, REAL MCP stdio JSON-RPC
-  server fixture, skills runtime path, sandbox, webhooks+HMAC, FastAPI
-  in-process, CLI). Fixed 3 real bugs: OpenShellSandbox.stop() hung forever
-  (PID-1-in-namespace ignores SIGTERM → start_new_session + group SIGKILL +
-  bounded reap); /config UnboundLocalError (env variable shadowing); live
-  NIM tool-name collision (see below).
-- (this commit) v2.2.0-live — ToolCollection.execute dispatcher parameter
-  renamed name→tool_name: any tool exposing its own `name` argument
-  (skill_manager) collided with it and failed every call — found LIVE on
-  real NVIDIA NIM. LICENSE/SECURITY/CONTRIBUTING cleaned; LICENSE
-  attribution now SHS Lab.
+## v3.0.3 Commits (this phase)
+- 71a80a1 v3.0.3 UX round — 7 live-found fixes: EOL default model
+  (gpt-oss-120b 410 → gpt-oss-20b), console_level WARNING (DEBUG spam
+  gone from terminal), LLM_MODEL env var + loud 404 warning, actionable
+  404/401 LLM errors, cwd-scoped last_interrupted() (stale-task leak),
+  chat-mode directive (last-position system msg — natural chat in any
+  language), /help corrupted line fixed
+- 711bc38 v3.0.3+ identity — single version source of truth; banner
+  /healthz/index.html/installers/CODE_OF_CONDUCT/SECURITY swept clean
+  of the old 5.1.1/The-JDdev identity
+- 18d1964 v3.0.3+ gate integrity — terminate-tool goal-completion bypass
+  CLOSED (same gate as text answers); task_dag active-deps auto-complete
+  (no more "ERROR: cannot complete" noise in final answers); explicit
+  _max_steps no longer overridden by mode scaling
+- 95c9ae1 docs — README What's New v3.0.3 + badges
 
-## LIVE Verification Matrix (v2.2.0)
-- GitHub integration (real token, read-only): 7/7 — auth+repo metadata,
-  issue/PR retrieval, missing-repo 404, bad-token rejection, provider
-  factory, authenticated user (shslab-org)
-- Model switch + interrupt + resume (real NIM): 8/8 — journal registration,
-  partial work before interrupt, checkpoint with memory, live switch
-  gpt-oss-20b→deepseek-v4-flash, DOUBLE switch back, resume completes all
-  5 files, journal updated
-- NIM live model: openai/gpt-oss-20b (762ms, tool calling verified).
-  NOTE: openai/gpt-oss-120b reached NVIDIA end-of-life 2026-09-03 —
-  deepseek-v4-flash works but is ~60s/req; kimi-k3/coder models 404 for
-  this account
-- CLI command sweep: 50/50 commands (post-identity-migration)
-- Full suite: 564 passed, 2 skipped
+## LIVE Verification Matrix (v3.0.3, real NVIDIA NIM)
+- Normal chat EN: "Hi! How are you?" → natural reply, 1 request, clean ✓
+- Normal chat Hinglish: "Bhai kaise ho? mausam batao" → Hinglish reply,
+  follow-up question, ZERO files created ✓
+- Conversation continuity: "Raj/7" stored → new process --session recalls ✓
+- Simple math: 15% of 240 → "36" with math shown, 1 request ✓
+- Agent work any-directory: fib.py created+run+verified (55) ✓
+- Complex agent work: calculator project (calc.py + 13 pytest tests
+  all passing) with clean verified final summary ✓
+- Multi-agent triage: "2+2?" → simple → direct answer 4.3s ✓
+- Model switch: --model minimaxai/minimax-m3 → "42" ✓
+- Server: /healthz 3.0.3, /run/sync "four", async /run "Paris",
+  sessions/messages reflect real state ✓
+- Interrupt/resume: 12-module task → 12/12 functionally verified ✓
+- Rate limit resilience: 6/6 minimax-m3 requests absorbed through
+  adaptive limiter (429s paced, state preserved) ✓
+- CLI command sweep: 50/50 ✓
+- Full suite: 613 passed, 2 skipped, 0 failed ✓
 
-## Remaining legacy references (INTENTIONAL, documented)
-- app/env.py — the single compat point (MANUSCLAW_* env fallback)
-- app/db/session.py + app/migrations/env.py — legacy manusclaw.db fallback
-- app/agent/router.py — "manus" agent-name legacy alias
-- README upgrade note; test canaries; history ledgers (CHANGELOG.md,
-  IMPLEMENTATION_NOTES.md, this file's historical sections)
+## Environment Note (2026-09-05)
+NVIDIA NIM tightened minimaxai/minimax-m3 to ~1-burst + 10-15s recovery
+(~4-6 RPM, was ~10 RPM at the v1 benchmark). All agents' benchmark
+scores are environment-bound; SHS single-agent ranks #1 (80/250) in the
+re-run under the harshest conditions — most resilient under 429 pressure.
+gpt-oss-120b/qwen3-coder-480b/deepseek-v4-flash: EOL (410).
+gpt-oss-20b: healthy (tool calling + 8/8 burst capacity) — now default.
 
 ---
 
