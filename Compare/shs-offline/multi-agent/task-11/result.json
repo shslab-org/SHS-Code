@@ -1,0 +1,39 @@
+{
+ "task": "task-11",
+ "agent": "shs-offline-multi",
+ "title": "O1 feature implementation (hidden-test email validator)",
+ "category": "output",
+ "turns": {
+  "t1": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 330.2
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 1,
+  "responses": 0,
+  "ok": 0,
+  "429": 0,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 0,
+  "chat_calls": 1,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 12,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "error": "[Errno 2] No such file or directory: '/home/z/my-project/benchmark/runs/task-11/shs-offline-multi/repo/validators.py'",
+  "all_pass": false
+ }
+}

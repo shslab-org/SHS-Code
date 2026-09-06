@@ -1,0 +1,42 @@
+{
+ "task": "task-05",
+ "agent": "hermes",
+ "title": "M5 interruption + resume (kill at 70s, then continue)",
+ "category": "memory",
+ "turns": {
+  "t1": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 70.0
+  },
+  "t2": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 150.1
+  }
+ },
+ "proxy": {
+  "requests": 66,
+  "responses": 64,
+  "ok": 3,
+  "429": 5,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 1,
+  "chat_calls": 8,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 8,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "ch_exists": false,
+  "items_total": 0,
+  "items_checked": 0,
+  "done_marker": false,
+  "all_done": false
+ }
+}

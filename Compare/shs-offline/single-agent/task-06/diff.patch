@@ -1,0 +1,76 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/logs/20260906_042340.log b/logs/20260906_042340.log
+new file mode 100644
+index 0000000..6dd4ff1
+--- /dev/null
++++ b/logs/20260906_042340.log
+@@ -0,0 +1,11 @@
++2026-09-06 04:23:41,747 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=local-qwen3-1b timeout=600s (long_thinking=False)
++2026-09-06 04:23:41,934 | INFO     | agent=SHSCode step=0 trace=c1bb8914-21b7-47cf-aef3-e0df33c70fab task=e8e39e80 | shscode:run:374 — [FastPath] chat request — planner LLM call skipped
++2026-09-06 04:23:41,949 | INFO     | agent=SHSCode step=0 trace=c1bb8914-21b7-47cf-aef3-e0df33c70fab task=e8e39e80 | shscode:refresh:193 — [Intel] refresh repo: {'files': 6, 'symbols': 26, 'changed': 0, 'removed': 0, 'skipped': 6, 'ms': 0}
++2026-09-06 04:23:41,978 | INFO     | agent=SHSCode step=0 trace=c1bb8914-21b7-47cf-aef3-e0df33c70fab task=e8e39e80 | shscode:run:443 — Starting run task=e8e39e80 session=02e5177d-7d2 mode=build max_steps=30
++2026-09-06 04:23:41,978 | INFO     | agent=SHSCode step=1 trace=c1bb8914-21b7-47cf-aef3-e0df33c70fab task=e8e39e80 | shscode:run:467 — Step 1/30
++2026-09-06 04:23:41,988 | DEBUG    | agent=SHSCode step=1 trace=c1bb8914-21b7-47cf-aef3-e0df33c70fab task=e8e39e80 | shscode:score:268 — [ToolSelector] Goal: What is 2+2? Reply with just the number.
++  [████████████░░░░░░░░]  60%  web_search              ← web_search is a good fit for this step (conf=0.60, signals: what is(+0.50))  (signals: what is(+0.50))
++  [██░░░░░░░░░░░░░░░░░░]  10%  python_execute          ← python_execute is a low relevance for this step (conf=0.10, signals: no strong s  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  node_execute            ← node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  str_replace_editor      ← str_replace_editor is a low relevance for this step (conf=0.10, signals: no stro  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  browser_use             ← browser_use is a low relevance for this step (conf=0.10, signals: no strong sign  (signals: general capability)
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+diff --git a/workspace/.memory/long_term.db b/workspace/.memory/long_term.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.memory/long_term.db differ
+diff --git a/workspace/.memory/long_term.db-shm b/workspace/.memory/long_term.db-shm
+new file mode 100644
+index 0000000..81c0a2f
+Binary files /dev/null and b/workspace/.memory/long_term.db-shm differ
+diff --git a/workspace/.memory/long_term.db-wal b/workspace/.memory/long_term.db-wal
+new file mode 100644
+index 0000000..b5f8ae7
+Binary files /dev/null and b/workspace/.memory/long_term.db-wal differ
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..bc56dc8
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..7839963
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..9f82652
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ
+diff --git a/workspace/.task_queue/tasks.db b/workspace/.task_queue/tasks.db
+new file mode 100644
+index 0000000..e77faef
+Binary files /dev/null and b/workspace/.task_queue/tasks.db differ
+diff --git a/workspace/.task_queue/tasks.db-shm b/workspace/.task_queue/tasks.db-shm
+new file mode 100644
+index 0000000..fe9ac28
+Binary files /dev/null and b/workspace/.task_queue/tasks.db-shm differ
+diff --git a/workspace/.task_queue/tasks.db-wal b/workspace/.task_queue/tasks.db-wal
+new file mode 100644
+index 0000000..e69de29

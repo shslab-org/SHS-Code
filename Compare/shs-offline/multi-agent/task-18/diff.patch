@@ -1,0 +1,58 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/config.toml b/config.toml
+new file mode 100644
+index 0000000..34abbc7
+--- /dev/null
++++ b/config.toml
+@@ -0,0 +1,5 @@
++[[mcp_servers]]
++name = "bench"
++transport = "stdio"
++command = "/home/z/.venv/bin/python3"
++args = ["/home/z/my-project/benchmark/bench_mcp.py"]
+diff --git a/logs/20260906_050409.log b/logs/20260906_050409.log
+new file mode 100644
+index 0000000..ced0d41
+--- /dev/null
++++ b/logs/20260906_050409.log
+@@ -0,0 +1,5 @@
++2026-09-06 05:04:09,855 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:173 — [Orchestrator:b62c9b1d] ▶ Multi-agent run | mode=build | triage=complex | goal=Use the MCP tool get_time provided by the configured MCP server 'bench' to obtai
++2026-09-06 05:04:09,859 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:195 — [Orchestrator:b62c9b1d] Execution order: product_manager → architect → engineer → qa
++2026-09-06 05:04:09,859 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:238 — [Orchestrator:b62c9b1d] ── Role: product_manager ──
++2026-09-06 05:04:10,692 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=local-qwen3-1b timeout=600s (long_thinking=False)
++2026-09-06 05:04:10,692 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:81 — [product_manager] Generating PRD for goal: Use the MCP tool get_time provided by the configured MCP server 'bench' to obtai
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..92cffd3
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..c5d16b5
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ

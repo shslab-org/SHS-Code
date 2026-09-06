@@ -1,0 +1,52 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/logs/20260906_014637.log b/logs/20260906_014637.log
+new file mode 100644
+index 0000000..dee44d2
+--- /dev/null
++++ b/logs/20260906_014637.log
+@@ -0,0 +1,10 @@
++2026-09-06 01:46:37,724 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:173 — [Orchestrator:e4abfb32] ▶ Multi-agent run | mode=build | triage=complex | goal=Create validators.py with a function validate_email(s) implementing this spec ex
++2026-09-06 01:46:37,727 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:195 — [Orchestrator:e4abfb32] Execution order: product_manager → architect → engineer → qa
++2026-09-06 01:46:37,728 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:238 — [Orchestrator:e4abfb32] ── Role: product_manager ──
++2026-09-06 01:46:38,563 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=minimaxai/minimax-m3 timeout=600s (long_thinking=False)
++2026-09-06 01:46:38,563 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:81 — [product_manager] Generating PRD for goal: Create validators.py with a function validate_email(s) implementing this spec ex
++2026-09-06 01:47:47,076 | WARNING  | agent=system step=0 trace=———— task= | shscode:mark_exhausted:37 — [CredentialPool] Key ...VC-6Jk exhausted, cooling 60s
++2026-09-06 01:47:47,078 | WARNING  | agent=system step=0 trace=———— task= | shscode:_call_with_retry:1067 — [LLM] Rate limited (attempt 1/40). Retry-After=None. Waiting 2.0s — state preserved.
++2026-09-06 01:49:29,098 | WARNING  | agent=system step=0 trace=———— task= | shscode:_call_with_retry:1067 — [LLM] Rate limited (attempt 2/40). Retry-After=None. Waiting 3.2s — state preserved.
++2026-09-06 01:51:11,152 | WARNING  | agent=system step=0 trace=———— task= | shscode:mark_exhausted:37 — [CredentialPool] Key ...VC-6Jk exhausted, cooling 60s
++2026-09-06 01:51:11,152 | WARNING  | agent=system step=0 trace=———— task= | shscode:_call_with_retry:1067 — [LLM] Rate limited (attempt 3/40). Retry-After=None. Waiting 5.8s — state preserved.
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..d494d28
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..69edd08
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ

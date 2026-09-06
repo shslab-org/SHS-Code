@@ -1,0 +1,258 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/logs/20260906_015239.log b/logs/20260906_015239.log
+new file mode 100644
+index 0000000..e278ede
+--- /dev/null
++++ b/logs/20260906_015239.log
+@@ -0,0 +1,102 @@
++2026-09-06 01:52:40,288 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=minimaxai/minimax-m3 timeout=600s (long_thinking=False)
++2026-09-06 01:52:40,402 | DEBUG    | agent=SHSCode step=0 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_load_builtin:216 — [SkillEngine] Loaded 29 built-in skills
++2026-09-06 01:52:40,402 | DEBUG    | agent=SHSCode step=0 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_inject_relevant_skills:991 — [BaseAgent] Injected skill: deep_research
++2026-09-06 01:52:40,403 | DEBUG    | agent=SHSCode step=0 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_inject_relevant_skills:991 — [BaseAgent] Injected skill: mlops_training
++2026-09-06 01:52:40,417 | INFO     | agent=SHSCode step=0 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:refresh:193 — [Intel] refresh repo: {'files': 6, 'symbols': 26, 'changed': 6, 'removed': 0, 'skipped': 0, 'ms': 2}
++2026-09-06 01:53:31,653 | INFO     | agent=SHSCode step=0 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:run:443 — Starting run task=e49608e4 session=3a0d312a-e8b mode=build max_steps=30
++2026-09-06 01:53:31,653 | INFO     | agent=SHSCode step=1 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:run:467 — Step 1/30
++2026-09-06 01:53:31,658 | DEBUG    | agent=SHSCode step=1 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:score:268 — [ToolSelector] Goal: The word_count function in textproc.py is broken: it splits 
++  [███████████░░░░░░░░░]  55%  python_execute          ← python_execute is a good fit for this step (conf=0.55, signals: function(+0.45))  (signals: function(+0.45))
++  [██░░░░░░░░░░░░░░░░░░]  10%  node_execute            ← node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  str_replace_editor      ← str_replace_editor is a low relevance for this step (conf=0.10, signals: no stro  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  browser_use             ← browser_use is a low relevance for this step (conf=0.10, signals: no strong sign  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  bash                    ← bash is a low relevance for this step (conf=0.10, signals: no strong signals)  (signals: general capability)
++2026-09-06 01:53:39,202 | INFO     | agent=SHSCode step=1 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_execute_with_retry:603 — Tool call (1/3): bash({"command": "find . -name \"textproc.py\" -o -name \"test_textproc.py\" 2>/dev/null | head -20"})
++2026-09-06 01:53:39,208 | INFO     | agent=SHSCode step=1 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_execute_with_retry:621 — Tool result: ./textproc.py
++./test_textproc.py
++2026-09-06 01:53:39,210 | INFO     | agent=SHSCode step=2 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:run:467 — Step 2/30
++2026-09-06 01:53:39,211 | DEBUG    | agent=SHSCode step=2 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:score:268 — [ToolSelector] Goal: I'll fix the `word_count` function and add regression tests.
++  [███████████░░░░░░░░░]  55%  python_execute          ← python_execute is a good fit for this step (conf=0.55, signals: function(+0.45))  (signals: function(+0.45))
++  [████░░░░░░░░░░░░░░░░]  20%  bash                    ← bash is a low relevance for this step (conf=0.20, signals: start(+0.20), recency  (signals: start(+0.20), recency-penalty(-0.10))
++  [██░░░░░░░░░░░░░░░░░░]  10%  node_execute            ← node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  str_replace_editor      ← str_replace_editor is a low relevance for this step (conf=0.10, signals: no stro  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  browser_use             ← browser_use is a low relevance for this step (conf=0.10, signals: no strong sign  (signals: general capability)
++2026-09-06 01:54:18,869 | INFO     | agent=SHSCode step=2 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_execute_with_retry:603 — Tool call (1/3): str_replace_editor({"command": "view", "path": "./textproc.py"})
++2026-09-06 01:54:18,869 | INFO     | agent=SHSCode step=2 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_execute_with_retry:621 — Tool result: File: ./textproc.py
++---
++   1 | # benchlib text processing utilities
++   2 | 
++   3 | import re
++   4 | 
++   5 | 
++   6 | def word_count(text: str) -> int:
++   7 |     """Return the number of words in text.
++   8 | 
++   9 |     KNOWN BUG: splits only on single spaces, so punctuation attached to
++  10 |     wo
++2026-09-06 01:54:18,869 | INFO     | agent=SHSCode step=2 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_execute_with_retry:603 — Tool call (1/3): str_replace_editor({"command": "view", "path": "./test_textproc.py"})
++2026-09-06 01:54:18,870 | INFO     | agent=SHSCode step=2 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_execute_with_retry:621 — Tool result: File: ./test_textproc.py
++---
++   1 | from textproc import word_count, reverse_words, capitalize_words
++   2 | 
++   3 | import pytest
++   4 | 
++   5 | 
++   6 | def test_word_count_basic():
++   7 |     assert word_count("hello world") == 2
++   8 | 
++   9 | 
++  10 | def test_word_count_single():
++  11 |     asser
++2026-09-06 01:54:18,873 | INFO     | agent=SHSCode step=3 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:run:467 — Step 3/30
++2026-09-06 01:54:18,875 | DEBUG    | agent=SHSCode step=3 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:score:268 — [ToolSelector] Goal: Let me first inspect the existing files to understand the cu
++  [████████████░░░░░░░░]  60%  web_search              ← web_search is a good fit for this step (conf=0.60, signals: current(+0.50))  (signals: current(+0.50))
++  [███░░░░░░░░░░░░░░░░░]  15%  str_replace_editor      ← str_replace_editor is a low relevance for this step (conf=0.15, signals: inspect  (signals: inspect(+0.15), recency-penalty(-0.10))
++  [██░░░░░░░░░░░░░░░░░░]  10%  python_execute          ← python_execute is a low relevance for this step (conf=0.10, signals: no strong s  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  node_execute            ← node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  browser_use             ← browser_use is a low relevance for this step (conf=0.10, signals: no strong sign  (signals: general capability)
++2026-09-06 01:55:39,305 | INFO     | agent=SHSCode step=3 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_call_with_retry:991 — [LLM] Long response received after 80s (model=minimaxai/minimax-m3). This is normal for deep-thinking models.
++2026-09-06 01:55:39,309 | INFO     | agent=SHSCode step=3 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_execute_with_retry:603 — Tool call (1/3): str_replace_editor({"command": "str_replace", "path": "./textproc.py", "old_str": "def word_count(text: str) -> int:\n    \"\"\"Return the ...)
++2026-09-06 01:55:39,309 | INFO     | agent=SHSCode step=3 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_execute_with_retry:621 — Tool result: Replaced in ./textproc.py.
++2026-09-06 01:55:39,313 | INFO     | agent=SHSCode step=4 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:run:467 — Step 4/30
++2026-09-06 01:55:39,315 | DEBUG    | agent=SHSCode step=4 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:score:268 — [ToolSelector] Goal: === Task History (recent steps) ===
++Step 1 ✗: step 1 → [bash
++  [████████████░░░░░░░░]  60%  bash                    ← bash is a good fit for this step (conf=0.60, signals: bash(+0.50))  (signals: bash(+0.50))
++  [███████████░░░░░░░░░]  55%  python_execute          ← python_execute is a good fit for this step (conf=0.55, signals: import(+0.45))  (signals: import(+0.45))
++  [████████░░░░░░░░░░░░]  40%  str_replace_editor      ← str_replace_editor is a possible option for this step (conf=0.40, signals: file(  (signals: file(+0.40), recency-penalty(-0.10))
++  [██░░░░░░░░░░░░░░░░░░]  10%  node_execute            ← node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  crawl                   ← crawl is a low relevance for this step (conf=0.10, signals: no strong signals)  (signals: general capability)
++2026-09-06 01:56:57,577 | INFO     | agent=SHSCode step=4 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_call_with_retry:991 — [LLM] Long response received after 78s (model=minimaxai/minimax-m3). This is normal for deep-thinking models.
++2026-09-06 01:56:57,581 | INFO     | agent=SHSCode step=4 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_execute_with_retry:603 — Tool call (1/3): str_replace_editor({"command": "str_replace", "path": "./test_textproc.py", "old_str": "def test_word_count_punctuation():  # FAILS \u2014 ...)
++2026-09-06 01:56:57,581 | INFO     | agent=SHSCode step=4 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_execute_with_retry:621 — Tool result: Replaced in ./test_textproc.py.
++2026-09-06 01:56:57,588 | INFO     | agent=SHSCode step=4 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_maybe_suggest_skill:1008 — [BaseAgent] Skill suggestion at 5 tool calls
++2026-09-06 01:56:57,588 | INFO     | agent=SHSCode step=5 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:run:467 — Step 5/30
++2026-09-06 01:56:57,590 | DEBUG    | agent=SHSCode step=5 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:score:268 — [ToolSelector] Goal: [CONTEXT REFRESH]
++=== Task History (recent steps) ===
++Step 1
++  [████████████░░░░░░░░]  60%  bash                    ← bash is a good fit for this step (conf=0.60, signals: bash(+0.50))  (signals: bash(+0.50))
++  [███████████░░░░░░░░░]  55%  python_execute          ← python_execute is a good fit for this step (conf=0.55, signals: import(+0.45))  (signals: import(+0.45))
++  [████████░░░░░░░░░░░░]  40%  str_replace_editor      ← str_replace_editor is a possible option for this step (conf=0.40, signals: file(  (signals: file(+0.40), recency-penalty(-0.10))
++  [██░░░░░░░░░░░░░░░░░░]  10%  node_execute            ← node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  crawl                   ← crawl is a low relevance for this step (conf=0.10, signals: no strong signals)  (signals: general capability)
++2026-09-06 01:57:34,846 | INFO     | agent=SHSCode step=5 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_execute_with_retry:603 — Tool call (1/3): python_execute({"code": "\n# Quick sanity check against the spec examples before running pytest\nfrom textproc import word_count\n\ncas...)
++2026-09-06 01:57:34,870 | INFO     | agent=SHSCode step=5 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:_execute_with_retry:621 — Tool result: ERROR: Python error:
++Traceback (most recent call last):
++  File "/home/z/my-project/SHS-Code/app/tool/python_execute.py", line 63, in _worker
++    exec(compile(code, "<shscode>", "exec"), {"__name__": "__main__"})
++  File "<shscode>", line 3, in <module>
++ModuleNotFoundError: No module named 'textproc'
++
++2026-09-06 01:57:34,873 | DEBUG    | agent=SHSCode step=5 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:score:268 — [ToolSelector] Goal: I'll ignore the skill suggestion — this is a one-off bug fix
++  [█████████████░░░░░░░]  65%  skill_manager           ← skill_manager is a good fit for this step (conf=0.65, signals: skill(+0.55))  (signals: skill(+0.55))
++  [████████████░░░░░░░░]  60%  bash                    ← bash is a good fit for this step (conf=0.60, signals: bash(+0.50))  (signals: bash(+0.50))
++  [██░░░░░░░░░░░░░░░░░░]  10%  node_execute            ← node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  str_replace_editor      ← str_replace_editor is a low relevance for this step (conf=0.10, signals: no stro  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  web_search              ← web_search is a low relevance for this step (conf=0.10, signals: no strong signa  (signals: general capability)
++2026-09-06 01:57:34,874 | INFO     | agent=SHSCode step=6 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:run:467 — Step 6/30
++2026-09-06 01:57:34,878 | DEBUG    | agent=SHSCode step=6 trace=e7b00316-7574-4bc0-a3ba-d83933dd220c task=e49608e4 | shscode:score:268 — [ToolSelector] Goal: I'll ignore the skill suggestion — this is a one-off bug fix
++  [█████████████░░░░░░░]  65%  skill_manager           ← skill_manager is a good fit for this step (conf=0.65, signals: skill(+0.55))  (signals: skill(+0.55))
++  [████████████░░░░░░░░]  60%  bash                    ← bash is a good fit for this step (conf=0.60, signals: bash(+0.50))  (signals: bash(+0.50))
++  [██░░░░░░░░░░░░░░░░░░]  10%  node_execute            ← node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  str_replace_editor      ← str_replace_editor is a low relevance for this step (conf=0.10, signals: no stro  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  web_search              ← web_search is a low relevance for this step (conf=0.10, signals: no strong signa  (signals: general capability)
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+index 630ae89..e110120
+--- a/test_textproc.py
++++ b/test_textproc.py
+@@ -19,6 +19,69 @@ def test_word_count_empty():  # FAILS — known bug
+     assert word_count("") == 0
+ 
+ 
++# --- Regression tests for word_count fix ---
++
++
++def test_word_count_punctuation_with_double_space():
++    """Punctuation attached to words and consecutive spaces must not inflate count."""
++    assert word_count("Hello,  world!!") == 2
++
++
++def test_word_count_dots_between_letters():
++    """Internal punctuation splits a token into separate words."""
++    assert word_count("a...b") == 2
++
++
++def test_word_count_empty_string():
++    """Empty string yields zero words."""
++    assert word_count("") == 0
++
++
++def test_word_count_only_punctuation():
++    """A string of only punctuation yields zero words."""
++    assert word_count("!@#$%") == 0
++
++
++def test_word_count_multiple_spaces():
++    """Consecutive whitespace must not produce empty tokens."""
++    assert word_count("foo   bar    baz") == 3
++
++
++def test_word_count_tabs_and_newlines():
++    """Tabs and newlines are whitespace and must not produce empty tokens."""
++    assert word_count("foo\tbar\nbaz") == 3
++
++
++def test_word_count_leading_trailing_whitespace():
++    """Leading/trailing whitespace must not produce empty tokens."""
++    assert word_count("   hello world   ") == 2
++
++
++def test_word_count_leading_trailing_punctuation():
++    """Punctuation surrounding a word is stripped."""
++    assert word_count("...hello!!!") == 1
++
++
++def test_word_count_mixed_punctuation():
++    """Mixed punctuation around and between words."""
++    assert word_count("  --'Hello,'  she said.  ") == 3
++
++
++def test_word_count_unicode_letters():
++    """Unicode word characters are counted as words."""
++    assert word_count("café résumé") == 2
++
++
++def test_word_count_numbers():
++    """Numeric tokens count as words."""
++    assert word_count("I have 42 apples") == 4
++
++
++def test_word_count_only_whitespace():
++    """Whitespace-only string yields zero words."""
++    assert word_count("   \t\n  ") == 0
++
++
+ def test_reverse_words():
+     assert reverse_words("hello world") == "world hello"
+ 
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+index cec35a2..24c71f9
+--- a/textproc.py
++++ b/textproc.py
+@@ -6,10 +6,11 @@ import re
+ def word_count(text: str) -> int:
+     """Return the number of words in text.
+ 
+-    KNOWN BUG: splits only on single spaces, so punctuation attached to
+-    words inflates counts and consecutive spaces create empty tokens.
++    A word is a sequence of non-whitespace characters with surrounding
++    punctuation stripped. Tokens that contain no alphanumeric characters
++    after stripping (e.g. '!@#$%') are not counted as words.
+     """
+-    return len(text.split(" "))
++    return sum(1 for token in re.findall(r"\S+", text) if re.search(r"\w", token))
+ 
+ 
+ def reverse_words(text: str) -> str:
+diff --git a/workspace/.memory/long_term.db b/workspace/.memory/long_term.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.memory/long_term.db differ
+diff --git a/workspace/.memory/long_term.db-shm b/workspace/.memory/long_term.db-shm
+new file mode 100644
+index 0000000..3773300
+Binary files /dev/null and b/workspace/.memory/long_term.db-shm differ
+diff --git a/workspace/.memory/long_term.db-wal b/workspace/.memory/long_term.db-wal
+new file mode 100644
+index 0000000..34ef11a
+Binary files /dev/null and b/workspace/.memory/long_term.db-wal differ
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..bc56dc8
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..bc702eb
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..4f55fc5
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ
+diff --git a/workspace/.task_queue/tasks.db b/workspace/.task_queue/tasks.db
+new file mode 100644
+index 0000000..e77faef
+Binary files /dev/null and b/workspace/.task_queue/tasks.db differ
+diff --git a/workspace/.task_queue/tasks.db-shm b/workspace/.task_queue/tasks.db-shm
+new file mode 100644
+index 0000000..fe9ac28
+Binary files /dev/null and b/workspace/.task_queue/tasks.db-shm differ
+diff --git a/workspace/.task_queue/tasks.db-wal b/workspace/.task_queue/tasks.db-wal
+new file mode 100644
+index 0000000..e69de29

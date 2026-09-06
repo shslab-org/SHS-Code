@@ -1,0 +1,40 @@
+{
+ "task": "task-18",
+ "agent": "shs-single",
+ "title": "T3 MCP tool usage (get_time)",
+ "category": "tools",
+ "turns": {
+  "t1": {
+   "exit": 0,
+   "killed": false,
+   "wall_s": 316.1
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 8,
+  "responses": 8,
+  "ok": 8,
+  "429": 0,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 0,
+  "chat_calls": 8,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 14,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "time_file": "BENCH-MCP-SERVER-TIME: 2026-09-06T02:29:13.631554+00:00",
+  "nonempty": true,
+  "plausible": true
+ }
+}

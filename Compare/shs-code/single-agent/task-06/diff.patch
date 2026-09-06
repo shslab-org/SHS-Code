@@ -1,0 +1,55 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/logs/20260906_012256.log b/logs/20260906_012256.log
+new file mode 100644
+index 0000000..c6d9a5d
+--- /dev/null
++++ b/logs/20260906_012256.log
+@@ -0,0 +1,13 @@
++2026-09-06 01:22:56,923 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=minimaxai/minimax-m3 timeout=600s (long_thinking=False)
++2026-09-06 01:22:57,031 | INFO     | agent=SHSCode step=0 trace=7810913a-7346-4f09-a172-dbe76bec2d3c task=7a82ec49 | shscode:run:374 — [FastPath] chat request — planner LLM call skipped
++2026-09-06 01:22:57,045 | INFO     | agent=SHSCode step=0 trace=7810913a-7346-4f09-a172-dbe76bec2d3c task=7a82ec49 | shscode:refresh:193 — [Intel] refresh repo: {'files': 6, 'symbols': 26, 'changed': 6, 'removed': 0, 'skipped': 0, 'ms': 2}
++2026-09-06 01:22:57,054 | INFO     | agent=SHSCode step=0 trace=7810913a-7346-4f09-a172-dbe76bec2d3c task=7a82ec49 | shscode:run:443 — Starting run task=7a82ec49 session=f0323a17-3ed mode=build max_steps=30
++2026-09-06 01:22:57,054 | INFO     | agent=SHSCode step=1 trace=7810913a-7346-4f09-a172-dbe76bec2d3c task=7a82ec49 | shscode:run:467 — Step 1/30
++2026-09-06 01:22:57,059 | DEBUG    | agent=SHSCode step=1 trace=7810913a-7346-4f09-a172-dbe76bec2d3c task=7a82ec49 | shscode:score:268 — [ToolSelector] Goal: What is 2+2? Reply with just the number.
++  [████████████░░░░░░░░]  60%  web_search              ← web_search is a good fit for this step (conf=0.60, signals: what is(+0.50))  (signals: what is(+0.50))
++  [██░░░░░░░░░░░░░░░░░░]  10%  python_execute          ← python_execute is a low relevance for this step (conf=0.10, signals: no strong s  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  node_execute            ← node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  str_replace_editor      ← str_replace_editor is a low relevance for this step (conf=0.10, signals: no stro  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  browser_use             ← browser_use is a low relevance for this step (conf=0.10, signals: no strong sign  (signals: general capability)
++2026-09-06 01:22:58,599 | INFO     | agent=system step=0 trace=———— task= | shscode:run:622 — Finished. state=AgentState.FINISHED steps=1 tokens=in=5679 out=2 | total=5681
++2026-09-06 01:22:58,695 | INFO     | agent=system step=0 trace=———— task= | shscode:stop_workers:423 — [TaskQueue] Workers stopped, running tasks paused for resume
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+diff --git a/workspace/.memory/long_term.db b/workspace/.memory/long_term.db
+new file mode 100644
+index 0000000..18530c2
+Binary files /dev/null and b/workspace/.memory/long_term.db differ
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..f37ed29
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.task_queue/tasks.db b/workspace/.task_queue/tasks.db
+new file mode 100644
+index 0000000..e77faef
+Binary files /dev/null and b/workspace/.task_queue/tasks.db differ

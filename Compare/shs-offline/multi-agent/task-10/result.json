@@ -1,0 +1,40 @@
+{
+ "task": "task-10",
+ "agent": "shs-offline-multi",
+ "title": "P5 implement + self-verify until green",
+ "category": "planning",
+ "turns": {
+  "t1": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 330.1
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 1,
+  "responses": 0,
+  "ok": 0,
+  "429": 0,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 0,
+  "chat_calls": 1,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 12,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "fizzbuzz_exists": false,
+  "test_exists": false,
+  "suite": "10p/2f"
+ }
+}

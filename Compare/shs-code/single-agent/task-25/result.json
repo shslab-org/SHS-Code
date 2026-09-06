@@ -1,0 +1,39 @@
+{
+ "task": "task-25",
+ "agent": "shs-single",
+ "title": "R5 model switch mid-conversation (2 turns)",
+ "category": "reliability",
+ "turns": {
+  "t1": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 300.1
+  },
+  "t2": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 150.1
+  }
+ },
+ "proxy": {
+  "requests": 5,
+  "responses": 3,
+  "ok": 0,
+  "429": 3,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 1,
+  "chat_calls": 5,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 19,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "answer": "",
+  "correct": false
+ }
+}

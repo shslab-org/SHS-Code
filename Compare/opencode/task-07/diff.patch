@@ -1,0 +1,47 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/opencode.json b/opencode.json
+new file mode 100644
+index 0000000..1a855b7
+--- /dev/null
++++ b/opencode.json
+@@ -0,0 +1,2 @@
++{
++  "$schema": "https://opencode.ai/config.json","provider": {"nim": {"options": {"baseURL": "http://127.0.0.1:8391"}}}}
+\ No newline at end of file
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+index cec35a2..a509891
+--- a/textproc.py
++++ b/textproc.py
+@@ -26,3 +26,10 @@ def capitalize_words(text: str) -> str:
+     'hello world' -> 'Hello World'
+     """
+     return " ".join(w.capitalize() for w in text.split(" "))
++
++
++def slugify(text: str) -> str:
++    """Return a URL-friendly slug for text."""
++    text = text.lower()
++    text = re.sub(r"[^a-z0-9]+", "-", text)
++    return text.strip("-")

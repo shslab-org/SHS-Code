@@ -1,0 +1,4 @@
+{"event": "turn_start", "agent": "shs-offline-single", "prompt": "Write the name of the current git branch to BRANCH.txt, then reply with the branch name.", "turn2": false, "model_switch": false, "timeout": 330, "ts": 0.0}
+{"event": "spawn", "cmd": "/home/z/.venv/bin/shscode --no-color Write the name of the current git branch to BRANCH.txt, then reply with the branch name.", "cwd": "/home/z/my-project/benchmark/runs/task-22/shs-offline-single/repo", "ts": 0.0}
+{"event": "timeout_kill", "at_s": 330.1, "ts": 330.12}
+{"event": "turn_end", "exit_code": -9, "killed": true, "wall_s": 330.1, "ts": 330.13}

@@ -1,0 +1,67 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/logs/20260906_052346.log b/logs/20260906_052346.log
+new file mode 100644
+index 0000000..c5fbdc0
+--- /dev/null
++++ b/logs/20260906_052346.log
+@@ -0,0 +1,13 @@
++2026-09-06 05:23:48,367 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=local-qwen3-1b timeout=600s (long_thinking=False)
++2026-09-06 05:23:48,379 | DEBUG    | agent=SHSCode step=0 trace=2ef1b725-8dc1-4ec9-be3d-48a2d4a20edf task=5e5b5d4f | shscode:_load_builtin:216 — [SkillEngine] Loaded 29 built-in skills
++2026-09-06 05:23:48,380 | DEBUG    | agent=SHSCode step=0 trace=2ef1b725-8dc1-4ec9-be3d-48a2d4a20edf task=5e5b5d4f | shscode:_inject_relevant_skills:991 — [BaseAgent] Injected skill: deep_research
++2026-09-06 05:23:48,380 | DEBUG    | agent=SHSCode step=0 trace=2ef1b725-8dc1-4ec9-be3d-48a2d4a20edf task=5e5b5d4f | shscode:_inject_relevant_skills:991 — [BaseAgent] Injected skill: mlops_training
++2026-09-06 05:23:48,442 | INFO     | agent=SHSCode step=0 trace=2ef1b725-8dc1-4ec9-be3d-48a2d4a20edf task=5e5b5d4f | shscode:refresh:193 — [Intel] refresh repo: {'files': 6, 'symbols': 26, 'changed': 6, 'removed': 0, 'skipped': 0, 'ms': 4}
++2026-09-06 05:23:48,529 | INFO     | agent=SHSCode step=0 trace=2ef1b725-8dc1-4ec9-be3d-48a2d4a20edf task=5e5b5d4f | shscode:run:443 — Starting run task=5e5b5d4f session=91dadde1-d78 mode=build max_steps=30
++2026-09-06 05:23:48,530 | INFO     | agent=SHSCode step=1 trace=2ef1b725-8dc1-4ec9-be3d-48a2d4a20edf task=5e5b5d4f | shscode:run:467 — Step 1/30
++2026-09-06 05:23:48,542 | DEBUG    | agent=SHSCode step=1 trace=2ef1b725-8dc1-4ec9-be3d-48a2d4a20edf task=5e5b5d4f | shscode:score:268 — [ToolSelector] Goal: Read README.md and write its first heading (the line startin
++  [██████████░░░░░░░░░░]  50%  str_replace_editor      ← str_replace_editor is a good fit for this step (conf=0.50, signals: read(+0.40))  (signals: read(+0.40))
++  [██░░░░░░░░░░░░░░░░░░]  10%  python_execute          ← python_execute is a low relevance for this step (conf=0.10, signals: no strong s  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  node_execute            ← node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  browser_use             ← browser_use is a low relevance for this step (conf=0.10, signals: no strong sign  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  bash                    ← bash is a low relevance for this step (conf=0.10, signals: no strong signals)  (signals: general capability)
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+diff --git a/workspace/.memory/long_term.db b/workspace/.memory/long_term.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.memory/long_term.db differ
+diff --git a/workspace/.memory/long_term.db-shm b/workspace/.memory/long_term.db-shm
+new file mode 100644
+index 0000000..ff4bcbd
+Binary files /dev/null and b/workspace/.memory/long_term.db-shm differ
+diff --git a/workspace/.memory/long_term.db-wal b/workspace/.memory/long_term.db-wal
+new file mode 100644
+index 0000000..aaa47a4
+Binary files /dev/null and b/workspace/.memory/long_term.db-wal differ
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..55fe304
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..8517929
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ

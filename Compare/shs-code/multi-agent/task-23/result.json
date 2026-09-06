@@ -1,0 +1,39 @@
+{
+ "task": "task-23",
+ "agent": "shs-multi",
+ "title": "R3 rate-limit injection (429 + Retry-After)",
+ "category": "reliability",
+ "turns": {
+  "t1": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 390.1
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 78,
+  "responses": 74,
+  "ok": 6,
+  "429": 68,
+  "502": 0,
+  "injected_429": 3,
+  "injected_502": 0,
+  "errors": 0,
+  "chat_calls": 78,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 16,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "modules": "./calc.py\n./textproc.py",
+  "correct": true
+ }
+}

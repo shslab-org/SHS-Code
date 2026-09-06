@@ -1,0 +1,83 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/config.toml b/config.toml
+new file mode 100644
+index 0000000..34abbc7
+--- /dev/null
++++ b/config.toml
+@@ -0,0 +1,5 @@
++[[mcp_servers]]
++name = "bench"
++transport = "stdio"
++command = "/home/z/.venv/bin/python3"
++args = ["/home/z/my-project/benchmark/bench_mcp.py"]
+diff --git a/logs/20260906_050430.log b/logs/20260906_050430.log
+new file mode 100644
+index 0000000..1115c10
+--- /dev/null
++++ b/logs/20260906_050430.log
+@@ -0,0 +1,7 @@
++2026-09-06 05:04:31,538 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=local-qwen3-1b timeout=600s (long_thinking=False)
++2026-09-06 05:04:31,730 | INFO     | agent=system step=0 trace=———— task= | shscode:_connect_stdio:85 — [MCP:bench] Connected via stdio, 1 tools.
++2026-09-06 05:04:31,731 | INFO     | agent=system step=0 trace=———— task= | shscode:_load_mcp_tools:260 — [MCP] bench: 1 tools live in main agent
++2026-09-06 05:04:31,741 | DEBUG    | agent=SHSCode step=0 trace=281ccb33-726b-4e0b-bda1-6fc426e6cd10 task=f624a4cf | shscode:_load_builtin:216 — [SkillEngine] Loaded 29 built-in skills
++2026-09-06 05:04:31,741 | DEBUG    | agent=SHSCode step=0 trace=281ccb33-726b-4e0b-bda1-6fc426e6cd10 task=f624a4cf | shscode:_inject_relevant_skills:991 — [BaseAgent] Injected skill: mlops_training
++2026-09-06 05:04:31,741 | DEBUG    | agent=SHSCode step=0 trace=281ccb33-726b-4e0b-bda1-6fc426e6cd10 task=f624a4cf | shscode:_inject_relevant_skills:991 — [BaseAgent] Injected skill: deep_research
++2026-09-06 05:04:31,756 | INFO     | agent=SHSCode step=0 trace=281ccb33-726b-4e0b-bda1-6fc426e6cd10 task=f624a4cf | shscode:refresh:193 — [Intel] refresh repo: {'files': 6, 'symbols': 26, 'changed': 6, 'removed': 0, 'skipped': 0, 'ms': 2}
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+diff --git a/workspace/.memory/long_term.db b/workspace/.memory/long_term.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.memory/long_term.db differ
+diff --git a/workspace/.memory/long_term.db-shm b/workspace/.memory/long_term.db-shm
+new file mode 100644
+index 0000000..11d7bab
+Binary files /dev/null and b/workspace/.memory/long_term.db-shm differ
+diff --git a/workspace/.memory/long_term.db-wal b/workspace/.memory/long_term.db-wal
+new file mode 100644
+index 0000000..454289f
+Binary files /dev/null and b/workspace/.memory/long_term.db-wal differ
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..bc56dc8
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..ba8d7dd
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..174a5b8
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ
+diff --git a/workspace/.task_queue/tasks.db b/workspace/.task_queue/tasks.db
+new file mode 100644
+index 0000000..e77faef
+Binary files /dev/null and b/workspace/.task_queue/tasks.db differ
+diff --git a/workspace/.task_queue/tasks.db-shm b/workspace/.task_queue/tasks.db-shm
+new file mode 100644
+index 0000000..fe9ac28
+Binary files /dev/null and b/workspace/.task_queue/tasks.db-shm differ
+diff --git a/workspace/.task_queue/tasks.db-wal b/workspace/.task_queue/tasks.db-wal
+new file mode 100644
+index 0000000..e69de29

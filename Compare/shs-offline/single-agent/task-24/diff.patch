@@ -1,0 +1,88 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/logs/20260906_054303.log b/logs/20260906_054303.log
+new file mode 100644
+index 0000000..8c28d13
+--- /dev/null
++++ b/logs/20260906_054303.log
+@@ -0,0 +1,5 @@
++2026-09-06 05:43:04,980 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=local-qwen3-1b timeout=600s (long_thinking=False)
++2026-09-06 05:43:05,156 | DEBUG    | agent=SHSCode step=0 trace=b0ef96b1-e833-4c9a-9df5-68f5b2fcf093 task=356881da | shscode:_load_builtin:216 — [SkillEngine] Loaded 29 built-in skills
++2026-09-06 05:43:05,157 | DEBUG    | agent=SHSCode step=0 trace=b0ef96b1-e833-4c9a-9df5-68f5b2fcf093 task=356881da | shscode:_inject_relevant_skills:991 — [BaseAgent] Injected skill: deep_research
++2026-09-06 05:43:05,157 | DEBUG    | agent=SHSCode step=0 trace=b0ef96b1-e833-4c9a-9df5-68f5b2fcf093 task=356881da | shscode:_inject_relevant_skills:991 — [BaseAgent] Injected skill: mlops_training
++2026-09-06 05:43:05,185 | INFO     | agent=SHSCode step=0 trace=b0ef96b1-e833-4c9a-9df5-68f5b2fcf093 task=356881da | shscode:refresh:193 — [Intel] refresh repo: {'files': 6, 'symbols': 26, 'changed': 6, 'removed': 0, 'skipped': 0, 'ms': 2}
+diff --git a/logs/20260906_054416.log b/logs/20260906_054416.log
+new file mode 100644
+index 0000000..3b95ade
+--- /dev/null
++++ b/logs/20260906_054416.log
+@@ -0,0 +1,12 @@
++2026-09-06 05:44:18,480 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=local-qwen3-1b timeout=600s (long_thinking=False)
++2026-09-06 05:44:18,523 | INFO     | agent=SHSCode step=0 trace=c30ed0d3-67ef-4481-bf40-9873f55a4be7 task=b2e77298 | shscode:run:374 — [FastPath] chat request — planner LLM call skipped
++2026-09-06 05:44:18,526 | INFO     | agent=SHSCode step=0 trace=c30ed0d3-67ef-4481-bf40-9873f55a4be7 task=b2e77298 | shscode:_inject_conversation_history:848 — [Continuity] replayed 1 dialogue messages from session 394c0295-d2f
++2026-09-06 05:44:18,536 | INFO     | agent=SHSCode step=0 trace=c30ed0d3-67ef-4481-bf40-9873f55a4be7 task=b2e77298 | shscode:refresh:193 — [Intel] refresh repo: {'files': 6, 'symbols': 26, 'changed': 0, 'removed': 0, 'skipped': 6, 'ms': 0}
++2026-09-06 05:44:18,536 | INFO     | agent=SHSCode step=0 trace=c30ed0d3-67ef-4481-bf40-9873f55a4be7 task=b2e77298 | shscode:run:443 — Starting run task=b2e77298 session=394c0295-d2f mode=build max_steps=30
++2026-09-06 05:44:18,536 | INFO     | agent=SHSCode step=1 trace=c30ed0d3-67ef-4481-bf40-9873f55a4be7 task=b2e77298 | shscode:run:467 — Step 1/30
++2026-09-06 05:44:18,541 | DEBUG    | agent=SHSCode step=1 trace=c30ed0d3-67ef-4481-bf40-9873f55a4be7 task=b2e77298 | shscode:score:268 — [ToolSelector] Goal: Continue your interrupted cipher task from where you left of
++  [██░░░░░░░░░░░░░░░░░░]  10%  python_execute          ← python_execute is a low relevance for this step (conf=0.10, signals: no strong s  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  node_execute            ← node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  str_replace_editor      ← str_replace_editor is a low relevance for this step (conf=0.10, signals: no stro  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  browser_use             ← browser_use is a low relevance for this step (conf=0.10, signals: no strong sign  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  bash                    ← bash is a low relevance for this step (conf=0.10, signals: no strong signals)  (signals: general capability)
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+diff --git a/workspace/.memory/long_term.db b/workspace/.memory/long_term.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.memory/long_term.db differ
+diff --git a/workspace/.memory/long_term.db-shm b/workspace/.memory/long_term.db-shm
+new file mode 100644
+index 0000000..7640b22
+Binary files /dev/null and b/workspace/.memory/long_term.db-shm differ
+diff --git a/workspace/.memory/long_term.db-wal b/workspace/.memory/long_term.db-wal
+new file mode 100644
+index 0000000..15a007c
+Binary files /dev/null and b/workspace/.memory/long_term.db-wal differ
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..88ff012
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..2a88072
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..8cd36f6
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ
+diff --git a/workspace/.task_queue/tasks.db b/workspace/.task_queue/tasks.db
+new file mode 100644
+index 0000000..e77faef
+Binary files /dev/null and b/workspace/.task_queue/tasks.db differ
+diff --git a/workspace/.task_queue/tasks.db-shm b/workspace/.task_queue/tasks.db-shm
+new file mode 100644
+index 0000000..fe9ac28
+Binary files /dev/null and b/workspace/.task_queue/tasks.db-shm differ
+diff --git a/workspace/.task_queue/tasks.db-wal b/workspace/.task_queue/tasks.db-wal
+new file mode 100644
+index 0000000..e69de29

@@ -1,0 +1,47 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/logs/20260906_040935.log b/logs/20260906_040935.log
+new file mode 100644
+index 0000000..e18e2d7
+--- /dev/null
++++ b/logs/20260906_040935.log
+@@ -0,0 +1,5 @@
++2026-09-06 04:09:35,660 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:173 — [Orchestrator:c4a3ddd9] ▶ Multi-agent run | mode=build | triage=complex | goal=Implement fizzbuzz(n) in a new file fizzbuzz.py: return 'fizzbuzz' if n is divis
++2026-09-06 04:09:35,664 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:195 — [Orchestrator:c4a3ddd9] Execution order: product_manager → architect → engineer → qa
++2026-09-06 04:09:35,664 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:238 — [Orchestrator:c4a3ddd9] ── Role: product_manager ──
++2026-09-06 04:09:36,542 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=local-qwen3-1b timeout=600s (long_thinking=False)
++2026-09-06 04:09:36,543 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:81 — [product_manager] Generating PRD for goal: Implement fizzbuzz(n) in a new file fizzbuzz.py: return 'fizzbuzz' if n is divis
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..119e739
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..c78b6e9
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ

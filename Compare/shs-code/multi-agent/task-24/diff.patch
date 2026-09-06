@@ -1,0 +1,80 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/logs/20260906_030325.log b/logs/20260906_030325.log
+new file mode 100644
+index 0000000..b1a6d16
+--- /dev/null
++++ b/logs/20260906_030325.log
+@@ -0,0 +1,7 @@
++2026-09-06 03:03:25,094 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:173 — [Orchestrator:0d440b34] ▶ Multi-agent run | mode=build | triage=complex | goal=Implement a Caesar cipher: create cipher.py with encrypt(text, shift) and decryp
++2026-09-06 03:03:25,098 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:195 — [Orchestrator:0d440b34] Execution order: product_manager → architect → engineer → qa
++2026-09-06 03:03:25,098 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:238 — [Orchestrator:0d440b34] ── Role: product_manager ──
++2026-09-06 03:03:25,968 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=minimaxai/minimax-m3 timeout=600s (long_thinking=False)
++2026-09-06 03:03:25,968 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:81 — [product_manager] Generating PRD for goal: Implement a Caesar cipher: create cipher.py with encrypt(text, shift) and decryp
++2026-09-06 03:04:34,468 | WARNING  | agent=system step=0 trace=———— task= | shscode:mark_exhausted:37 — [CredentialPool] Key ...VC-6Jk exhausted, cooling 60s
++2026-09-06 03:04:34,469 | WARNING  | agent=system step=0 trace=———— task= | shscode:_call_with_retry:1067 — [LLM] Rate limited (attempt 1/40). Retry-After=None. Waiting 2.0s — state preserved.
+diff --git a/logs/20260906_030438.log b/logs/20260906_030438.log
+new file mode 100644
+index 0000000..464c088
+--- /dev/null
++++ b/logs/20260906_030438.log
+@@ -0,0 +1,13 @@
++2026-09-06 03:04:39,048 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=minimaxai/minimax-m3 timeout=600s (long_thinking=False)
++2026-09-06 03:04:39,053 | INFO     | agent=SHSCode step=0 trace=eb00c985-2340-46ad-bb97-a0fc92cb6554 task=0cc9ad36 | shscode:run:374 — [FastPath] chat request — planner LLM call skipped
++2026-09-06 03:04:39,069 | INFO     | agent=SHSCode step=0 trace=eb00c985-2340-46ad-bb97-a0fc92cb6554 task=0cc9ad36 | shscode:refresh:193 — [Intel] refresh repo: {'files': 6, 'symbols': 26, 'changed': 6, 'removed': 0, 'skipped': 0, 'ms': 4}
++2026-09-06 03:04:39,078 | INFO     | agent=SHSCode step=0 trace=eb00c985-2340-46ad-bb97-a0fc92cb6554 task=0cc9ad36 | shscode:run:443 — Starting run task=0cc9ad36 session=e322547b-aae mode=build max_steps=30
++2026-09-06 03:04:39,078 | INFO     | agent=SHSCode step=1 trace=eb00c985-2340-46ad-bb97-a0fc92cb6554 task=0cc9ad36 | shscode:run:467 — Step 1/30
++2026-09-06 03:04:39,083 | DEBUG    | agent=SHSCode step=1 trace=eb00c985-2340-46ad-bb97-a0fc92cb6554 task=0cc9ad36 | shscode:score:268 — [ToolSelector] Goal: Continue your interrupted cipher task from where you left of
++  [██░░░░░░░░░░░░░░░░░░]  10%  python_execute          ← python_execute is a low relevance for this step (conf=0.10, signals: no strong s  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  node_execute            ← node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  str_replace_editor      ← str_replace_editor is a low relevance for this step (conf=0.10, signals: no stro  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  browser_use             ← browser_use is a low relevance for this step (conf=0.10, signals: no strong sign  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  bash                    ← bash is a low relevance for this step (conf=0.10, signals: no strong signals)  (signals: general capability)
++2026-09-06 03:06:16,564 | WARNING  | agent=SHSCode step=1 trace=eb00c985-2340-46ad-bb97-a0fc92cb6554 task=0cc9ad36 | shscode:mark_exhausted:37 — [CredentialPool] Key ...VC-6Jk exhausted, cooling 60s
++2026-09-06 03:06:16,565 | WARNING  | agent=SHSCode step=1 trace=eb00c985-2340-46ad-bb97-a0fc92cb6554 task=0cc9ad36 | shscode:_call_with_retry:1067 — [LLM] Rate limited (attempt 1/40). Retry-After=None. Waiting 2.0s — state preserved.
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+diff --git a/workspace/.memory/long_term.db b/workspace/.memory/long_term.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.memory/long_term.db differ
+diff --git a/workspace/.memory/long_term.db-shm b/workspace/.memory/long_term.db-shm
+new file mode 100644
+index 0000000..f0e4b60
+Binary files /dev/null and b/workspace/.memory/long_term.db-shm differ
+diff --git a/workspace/.memory/long_term.db-wal b/workspace/.memory/long_term.db-wal
+new file mode 100644
+index 0000000..d0fca0a
+Binary files /dev/null and b/workspace/.memory/long_term.db-wal differ
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..9c686a0
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..fe5786c
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ

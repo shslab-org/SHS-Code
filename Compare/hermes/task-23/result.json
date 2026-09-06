@@ -1,0 +1,39 @@
+{
+ "task": "task-23",
+ "agent": "hermes",
+ "title": "R3 rate-limit injection (429 + Retry-After)",
+ "category": "reliability",
+ "turns": {
+  "t1": {
+   "exit": 0,
+   "killed": false,
+   "wall_s": 13.5
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 32,
+  "responses": 29,
+  "ok": 1,
+  "429": 3,
+  "502": 0,
+  "injected_429": 3,
+  "injected_502": 0,
+  "errors": 0,
+  "chat_calls": 3,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 8,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "modules": "",
+  "correct": false
+ }
+}

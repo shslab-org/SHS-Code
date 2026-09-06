@@ -1,0 +1,57 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/logs/20260906_023359.log b/logs/20260906_023359.log
+new file mode 100644
+index 0000000..5eb7fa2
+--- /dev/null
++++ b/logs/20260906_023359.log
+@@ -0,0 +1,15 @@
++2026-09-06 02:33:59,681 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:173 — [Orchestrator:fc4776fd] ▶ Multi-agent run | mode=build | triage=complex | goal=Do these steps in order: (1) find every TODO comment in the repository and write
++2026-09-06 02:33:59,685 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:195 — [Orchestrator:fc4776fd] Execution order: product_manager → architect → engineer → qa
++2026-09-06 02:33:59,685 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:238 — [Orchestrator:fc4776fd] ── Role: product_manager ──
++2026-09-06 02:34:00,546 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=minimaxai/minimax-m3 timeout=600s (long_thinking=False)
++2026-09-06 02:34:00,547 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:81 — [product_manager] Generating PRD for goal: Do these steps in order: (1) find every TODO comment in the repository and write
++2026-09-06 02:35:23,971 | INFO     | agent=system step=0 trace=———— task= | shscode:_call_with_retry:991 — [LLM] Long response received after 83s (model=minimaxai/minimax-m3). This is normal for deep-thinking models.
++2026-09-06 02:35:23,971 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:117 — [product_manager] PRD complete (3903 chars). Publishing to Architect.
++2026-09-06 02:35:23,971 | INFO     | agent=system step=0 trace=———— task= | shscode:run:164 — [product_manager] ■ Done in 83.4s
++2026-09-06 02:35:23,972 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:249 — [Orchestrator:fc4776fd] product_manager ✓ (3903 chars, 84.3s)
++2026-09-06 02:35:23,972 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:238 — [Orchestrator:fc4776fd] ── Role: architect ──
++2026-09-06 02:35:23,973 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=minimaxai/minimax-m3 timeout=600s (long_thinking=False)
++2026-09-06 02:35:23,974 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:89 — [architect] Generating system design from PRD (3903 chars).
++2026-09-06 02:36:32,178 | WARNING  | agent=system step=0 trace=———— task= | shscode:mark_exhausted:37 — [CredentialPool] Key ...VC-6Jk exhausted, cooling 60s
++2026-09-06 02:36:32,180 | WARNING  | agent=system step=0 trace=———— task= | shscode:_call_with_retry:1067 — [LLM] Rate limited (attempt 1/40). Retry-After=None. Waiting 2.0s — state preserved.
++2026-09-06 02:38:14,234 | WARNING  | agent=system step=0 trace=———— task= | shscode:_call_with_retry:1067 — [LLM] Rate limited (attempt 2/40). Retry-After=None. Waiting 3.1s — state preserved.
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..975d69d
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..d495137
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ

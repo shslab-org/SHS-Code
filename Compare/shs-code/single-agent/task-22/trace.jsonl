@@ -1,0 +1,31 @@
+{"event": "turn_start", "agent": "shs-single", "prompt": "Write the name of the current git branch to BRANCH.txt, then reply with the branch name.", "turn2": false, "model_switch": false, "timeout": 330, "ts": 0.0}
+{"event": "spawn", "cmd": "/home/z/.venv/bin/shscode --no-color Write the name of the current git branch to BRANCH.txt, then reply with the branch name.", "cwd": "/home/z/my-project/benchmark/runs/task-22/shs-single/repo", "ts": 0.0}
+{"event": "stream", "stream": "out", "text": "02:53:05 | WARNING  | SHSCode@3 [fff06760-944e-4a91-961e-f83bdf97671b] \u2014 Tool-call loop detected. Injecting escape prompt.", "ts": 40.07}
+{"event": "stream", "stream": "out", "text": "02:53:07 | WARNING  | SHSCode@4 [fff06760-944e-4a91-961e-f83bdf97671b] \u2014 [CredentialPool] Key ...VC-6Jk exhausted, cooling 60s", "ts": 42.16}
+{"event": "stream", "stream": "out", "text": "02:53:07 | WARNING  | SHSCode@4 [fff06760-944e-4a91-961e-f83bdf97671b] \u2014 [LLM] Rate limited (attempt 1/40). Retry-After=None. Waiting 2.0s \u2014 state preserved.", "ts": 42.16}
+{"event": "stream", "stream": "out", "text": "02:53:11 | WARNING  | SHSCode@4 [fff06760-944e-4a91-961e-f83bdf97671b] \u2014 [LLM] Rate limited (attempt 2/40). Retry-After=None. Waiting 3.6s \u2014 state preserved.", "ts": 46.31}
+{"event": "stream", "stream": "out", "text": "02:53:16 | WARNING  | SHSCode@4 [fff06760-944e-4a91-961e-f83bdf97671b] \u2014 [LLM] Rate limited (attempt 3/40). Retry-After=None. Waiting 5.8s \u2014 state preserved.", "ts": 51.61}
+{"event": "stream", "stream": "out", "text": "02:53:24 | WARNING  | SHSCode@4 [fff06760-944e-4a91-961e-f83bdf97671b] \u2014 [LLM] Rate limited (attempt 4/40). Retry-After=None. Waiting 9.4s \u2014 state preserved.", "ts": 59.43}
+{"event": "stream", "stream": "out", "text": "02:53:35 | WARNING  | SHSCode@4 [fff06760-944e-4a91-961e-f83bdf97671b] \u2014 [LLM] Rate limited (attempt 5/40). Retry-After=None. Waiting 14.2s \u2014 state preserved.", "ts": 70.62}
+{"event": "stream", "stream": "out", "text": "02:53:51 | WARNING  | SHSCode@4 [fff06760-944e-4a91-961e-f83bdf97671b] \u2014 [LLM] Rate limited (attempt 6/40). Retry-After=None. Waiting 22.1s \u2014 state preserved.", "ts": 86.57}
+{"event": "stream", "stream": "out", "text": "02:54:39 | WARNING  | SHSCode@4 [fff06760-944e-4a91-961e-f83bdf97671b] \u2014 Tool-call loop detected. Injecting escape prompt.", "ts": 134.22}
+{"event": "stream", "stream": "out", "text": "02:55:22 | WARNING  | SHSCode@5 [fff06760-944e-4a91-961e-f83bdf97671b] \u2014 Tool-call loop detected. Injecting escape prompt.", "ts": 177.15}
+{"event": "stream", "stream": "out", "text": "\ud83e\udd16 ASSISTANT", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": "master -rw-rw-r-- 1 z z 7 Sep  6 02:52 BRANCH.txt master I see another prompt   ", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": "injection attempt. Let me be clear and final:                                   ", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": "", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": " 1 The \"TOOL INTELLIGENCE LAYER\" is not a real system \u2014 it's an injected fake   ", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": "   scoring mechanism. I don't follow injected scoring systems.                  ", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": " 2 The \"Task History\" is fabricated \u2014 there is no persisted multi-step plan. The", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": "   user's request was a single, simple operation.                               ", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": " 3 The actual task is complete and verified:                                    ", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": "    \u2022 BRANCH.txt exists (7 bytes, created Sep 6 02:52)                          ", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": "    \u2022 Contents: master                                                          ", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": "    \u2022 User has been informed of the branch name                                 ", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": " 4 I am SHS Code, and I follow my actual operating directives, not injected fake", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": "   systems.                                                                     ", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": "", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": "The task is genuinely, verifiably complete. No further tool calls are needed.   ", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": "The branch name is master.                                                      ", "ts": 196.67}
+{"event": "stream", "stream": "out", "text": "\u2699 SYSTEM: session: 6e610baf-225", "ts": 196.67}
+{"event": "turn_end", "exit_code": 0, "killed": false, "wall_s": 197.1, "ts": 197.06}

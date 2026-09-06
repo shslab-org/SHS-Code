@@ -1,0 +1,38 @@
+{
+ "task": "task-06",
+ "agent": "shs-offline-multi",
+ "title": "P1 trivial Q&A sanity (no unnecessary planning)",
+ "category": "planning",
+ "turns": {
+  "t1": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 240.1
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 1,
+  "responses": 0,
+  "ok": 0,
+  "429": 0,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 0,
+  "chat_calls": 1,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 15,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "note": "scored from trace: correctness(4), speed, tool-spam, planning overhead"
+ }
+}

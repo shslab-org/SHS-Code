@@ -1,0 +1,80 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/logs/20260906_032650.log b/logs/20260906_032650.log
+new file mode 100644
+index 0000000..69e1d07
+--- /dev/null
++++ b/logs/20260906_032650.log
+@@ -0,0 +1,5 @@
++2026-09-06 03:26:52,082 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=local-qwen3-1b timeout=600s (long_thinking=False)
++2026-09-06 03:26:52,284 | DEBUG    | agent=SHSCode step=0 trace=34d4ea45-3eb8-4ff8-94e6-9679c474c3f6 task=17de5fe8 | shscode:_load_builtin:216 — [SkillEngine] Loaded 29 built-in skills
++2026-09-06 03:26:52,285 | DEBUG    | agent=SHSCode step=0 trace=34d4ea45-3eb8-4ff8-94e6-9679c474c3f6 task=17de5fe8 | shscode:_inject_relevant_skills:991 — [BaseAgent] Injected skill: testing
++2026-09-06 03:26:52,285 | DEBUG    | agent=SHSCode step=0 trace=34d4ea45-3eb8-4ff8-94e6-9679c474c3f6 task=17de5fe8 | shscode:_inject_relevant_skills:991 — [BaseAgent] Injected skill: mlops_training
++2026-09-06 03:26:52,329 | INFO     | agent=SHSCode step=0 trace=34d4ea45-3eb8-4ff8-94e6-9679c474c3f6 task=17de5fe8 | shscode:refresh:193 — [Intel] refresh repo: {'files': 6, 'symbols': 26, 'changed': 6, 'removed': 0, 'skipped': 0, 'ms': 5}
+diff --git a/logs/20260906_033050.log b/logs/20260906_033050.log
+new file mode 100644
+index 0000000..5fda475
+--- /dev/null
++++ b/logs/20260906_033050.log
+@@ -0,0 +1,4 @@
++2026-09-06 03:30:51,390 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=local-qwen3-1b timeout=600s (long_thinking=False)
++2026-09-06 03:30:51,507 | DEBUG    | agent=SHSCode step=0 trace=621961f8-eeb7-4ce1-b2e1-eea2a97023a6 task=3eff8885 | shscode:_load_builtin:216 — [SkillEngine] Loaded 29 built-in skills
++2026-09-06 03:30:51,508 | DEBUG    | agent=SHSCode step=0 trace=621961f8-eeb7-4ce1-b2e1-eea2a97023a6 task=3eff8885 | shscode:_inject_relevant_skills:991 — [BaseAgent] Injected skill: web-development
++2026-09-06 03:30:51,519 | INFO     | agent=SHSCode step=0 trace=621961f8-eeb7-4ce1-b2e1-eea2a97023a6 task=3eff8885 | shscode:refresh:193 — [Intel] refresh repo: {'files': 6, 'symbols': 26, 'changed': 0, 'removed': 0, 'skipped': 6, 'ms': 0}
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+diff --git a/workspace/.memory/long_term.db b/workspace/.memory/long_term.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.memory/long_term.db differ
+diff --git a/workspace/.memory/long_term.db-shm b/workspace/.memory/long_term.db-shm
+new file mode 100644
+index 0000000..2eaef51
+Binary files /dev/null and b/workspace/.memory/long_term.db-shm differ
+diff --git a/workspace/.memory/long_term.db-wal b/workspace/.memory/long_term.db-wal
+new file mode 100644
+index 0000000..1bd3ec7
+Binary files /dev/null and b/workspace/.memory/long_term.db-wal differ
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..af80c17
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..223f4cb
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..52af8e5
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ
+diff --git a/workspace/.task_queue/tasks.db b/workspace/.task_queue/tasks.db
+new file mode 100644
+index 0000000..e77faef
+Binary files /dev/null and b/workspace/.task_queue/tasks.db differ
+diff --git a/workspace/.task_queue/tasks.db-shm b/workspace/.task_queue/tasks.db-shm
+new file mode 100644
+index 0000000..fe9ac28
+Binary files /dev/null and b/workspace/.task_queue/tasks.db-shm differ
+diff --git a/workspace/.task_queue/tasks.db-wal b/workspace/.task_queue/tasks.db-wal
+new file mode 100644
+index 0000000..e69de29

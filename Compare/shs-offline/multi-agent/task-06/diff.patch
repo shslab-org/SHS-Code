@@ -1,0 +1,65 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/logs/20260906_042319.log b/logs/20260906_042319.log
+new file mode 100644
+index 0000000..7e93ce4
+--- /dev/null
++++ b/logs/20260906_042319.log
+@@ -0,0 +1,11 @@
++2026-09-06 04:23:20,558 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=local-qwen3-1b timeout=600s (long_thinking=False)
++2026-09-06 04:23:20,562 | INFO     | agent=SHSCode step=0 trace=b66b09ca-4fd2-488f-b145-34104b3794f9 task=916c902e | shscode:run:374 — [FastPath] chat request — planner LLM call skipped
++2026-09-06 04:23:20,574 | INFO     | agent=SHSCode step=0 trace=b66b09ca-4fd2-488f-b145-34104b3794f9 task=916c902e | shscode:refresh:193 — [Intel] refresh repo: {'files': 6, 'symbols': 26, 'changed': 0, 'removed': 0, 'skipped': 6, 'ms': 0}
++2026-09-06 04:23:20,582 | INFO     | agent=SHSCode step=0 trace=b66b09ca-4fd2-488f-b145-34104b3794f9 task=916c902e | shscode:run:443 — Starting run task=916c902e session=db885c46-ecd mode=build max_steps=30
++2026-09-06 04:23:20,582 | INFO     | agent=SHSCode step=1 trace=b66b09ca-4fd2-488f-b145-34104b3794f9 task=916c902e | shscode:run:467 — Step 1/30
++2026-09-06 04:23:20,589 | DEBUG    | agent=SHSCode step=1 trace=b66b09ca-4fd2-488f-b145-34104b3794f9 task=916c902e | shscode:score:268 — [ToolSelector] Goal: What is 2+2? Reply with just the number.
++  [████████████░░░░░░░░]  60%  web_search              ← web_search is a good fit for this step (conf=0.60, signals: what is(+0.50))  (signals: what is(+0.50))
++  [██░░░░░░░░░░░░░░░░░░]  10%  python_execute          ← python_execute is a low relevance for this step (conf=0.10, signals: no strong s  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  node_execute            ← node_execute is a low relevance for this step (conf=0.10, signals: no strong sig  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  str_replace_editor      ← str_replace_editor is a low relevance for this step (conf=0.10, signals: no stro  (signals: general capability)
++  [██░░░░░░░░░░░░░░░░░░]  10%  browser_use             ← browser_use is a low relevance for this step (conf=0.10, signals: no strong sign  (signals: general capability)
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+diff --git a/workspace/.memory/long_term.db b/workspace/.memory/long_term.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.memory/long_term.db differ
+diff --git a/workspace/.memory/long_term.db-shm b/workspace/.memory/long_term.db-shm
+new file mode 100644
+index 0000000..5405dc8
+Binary files /dev/null and b/workspace/.memory/long_term.db-shm differ
+diff --git a/workspace/.memory/long_term.db-wal b/workspace/.memory/long_term.db-wal
+new file mode 100644
+index 0000000..a73a9fa
+Binary files /dev/null and b/workspace/.memory/long_term.db-wal differ
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..08735e2
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..4e410ba
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ

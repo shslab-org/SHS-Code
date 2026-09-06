@@ -1,0 +1,10 @@
+{"event": "turn_start", "agent": "shs-single", "prompt": "Read calc.py. Which function performs safe division (raising on zero divisor)? Remember its exact name. Reply with just the function name.", "turn2": false, "model_switch": false, "timeout": 300, "ts": 0.0}
+{"event": "spawn", "cmd": "/home/z/.venv/bin/shscode --no-color Read calc.py. Which function performs safe division (raising on zero divisor)? Remember its exact name. Reply with just the function name.", "cwd": "/home/z/my-project/benchmark/runs/task-25/shs-single/repo", "ts": 0.0}
+{"event": "stream", "stream": "out", "text": "03:08:50 | WARNING  | SHSCode@1 [43882ed2-0ebc-4042-b9ff-5fffa46b1f44] \u2014 [CredentialPool] Key ...VC-6Jk exhausted, cooling 60s", "ts": 73.2}
+{"event": "stream", "stream": "out", "text": "03:08:50 | WARNING  | SHSCode@1 [43882ed2-0ebc-4042-b9ff-5fffa46b1f44] \u2014 [LLM] Rate limited (attempt 1/40). Retry-After=None. Waiting 2.0s \u2014 state preserved.", "ts": 73.2}
+{"event": "timeout_kill", "at_s": 300.1, "ts": 300.08}
+{"event": "turn_end", "exit_code": -9, "killed": true, "wall_s": 300.1, "ts": 300.09}
+{"event": "turn_start", "agent": "shs-single", "prompt": "Write the name of the function you identified in the previous turn to Write the name of the function you identified in the previous turn to a file named SAFEFUNC.txt (create it). Reply with the function name.", "turn2": true, "model_switch": true, "timeout": 150, "ts": 0.0}
+{"event": "spawn", "cmd": "/home/z/.venv/bin/shscode --no-color --model openai/gpt-oss-20b Write the name of the function you identified in the previous turn to Write the name of the function you identified in the previous turn to a file named SAFEFUNC.txt (create it). Reply with the function name.", "cwd": "/home/z/my-project/benchmark/runs/task-25/shs-single/repo", "ts": 0.0}
+{"event": "timeout_kill", "at_s": 150.1, "ts": 150.05}
+{"event": "turn_end", "exit_code": -9, "killed": true, "wall_s": 150.1, "ts": 150.06}

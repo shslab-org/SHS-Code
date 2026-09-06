@@ -452,3 +452,22 @@ Commit v2.1.0 (stabil5 + docs) and push to origin/main.
    BEFORE burning retries (spec §45), and REQUIRES_USER → task BLOCKED, never lost.
 5. Fake features forbidden: every command/tool has a real execution path; all
    claims verified by the E2E suite on a real temp filesystem + git repo.
+
+## Final forensic benchmark (2026-09-06) — v3.1.0 measured
+
+- Re-run of SHS Code v3.1.0 (single + multi) on the identical 25-task benchmark;
+  competitors frozen (no CLI updates since v2 window). Result:
+  **SHS single 149/250 (59.6%) — rank 1, 2.0× the nearest competitor**
+  (OpenCode 74, OpenHands 74, Hermes 57). Multi: 78 (31.2%).
+- v3.0.1 → v3.1.0 delta: single +69 (80→149), multi +19 (59→78). Biggest
+  evidence-linked gains: task-18 MCP 1→10 (real tool call), task-03 memory
+  file 1→7, task-02 cross-session recall 2→7, task-07 slugify 2→7,
+  task-06 Q&A 8→10 (3.5 s / 1 request), task-23 injected-429 handling 1→7.
+- New OFFLINE round: 25 tasks × 2 configs against local
+  `inference-optimization/Qwen3.8-1.0B-A0.6B` (1.93 GB, CPU). Finding: that
+  model is a random-init `create-tiny-model` artifact (flat greedy logits) —
+  pipeline verified end-to-end (0 crashes, wire contract incl. tool_calls +
+  model switching), but 0/64 responses completed within budgets (~310 s per
+  2048-token thinking generation at ~6.6 tok/s). Offline floor: 50/250.
+  Full evidence + reproducible harness in `Compare/` (891 files, secret-scan
+  clean) and `Compare/harness/local_llm_server.py`.

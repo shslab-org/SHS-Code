@@ -1,0 +1,42 @@
+{
+ "task": "task-13",
+ "agent": "openhands",
+ "title": "O3 refactor (class-based Calculator, API compat)",
+ "category": "output",
+ "turns": {
+  "t1": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 300.1
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 9,
+  "responses": 8,
+  "ok": 3,
+  "429": 5,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 0,
+  "chat_calls": 9,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 8,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "has_class": false,
+  "has_methods": true,
+  "module_fns_wrapped": true,
+  "suite": "10p/2f",
+  "tests_unchanged_pass": false
+ }
+}

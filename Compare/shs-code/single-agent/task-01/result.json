@@ -1,0 +1,40 @@
+{
+ "task": "task-01",
+ "agent": "shs-single",
+ "title": "M1 short-term context retention (2 turns, same session)",
+ "category": "memory",
+ "turns": {
+  "t1": {
+   "exit": 0,
+   "killed": false,
+   "wall_s": 197.6
+  },
+  "t2": {
+   "exit": -9,
+   "killed": true,
+   "wall_s": 150.0
+  }
+ },
+ "proxy": {
+  "requests": 11,
+  "responses": 10,
+  "ok": 10,
+  "429": 0,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 0,
+  "errors": 0,
+  "chat_calls": 11,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 20,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "answer": "7",
+  "correct": true,
+  "note": "7 defs = 4 calc + 3 textproc; must be recalled without re-reading"
+ }
+}

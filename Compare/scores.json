@@ -1,0 +1,783 @@
+{
+ "scores": {
+  "task-01/opencode": {
+   "score": 2,
+   "note": "answer file: '' | t1=275.1s exit=1 reqs=13 429=13 tools~0; t2=150.1s exit=-9"
+  },
+  "task-01/openhands": {
+   "score": 8,
+   "note": "recalled 7 without re-reading | t1=254.1s exit=0 reqs=13 429=9 tools~2; t2=150.1s exit=-9"
+  },
+  "task-01/hermes": {
+   "score": 2,
+   "note": "answer file: '' | t1=74.5s exit=0 reqs=64 429=6 tools~0; t2=102.0s exit=0"
+  },
+  "task-01/shs-single": {
+   "score": 8,
+   "note": "recalled 7 without re-reading | t1=197.6s exit=0 reqs=11 429=0 tools~0; t2=150.0s exit=-9"
+  },
+  "task-01/shs-multi": {
+   "score": 2,
+   "note": "answer file: '' [TIMEOUT] | t1=300.1s exit=-9 reqs=5 429=0 tools~0; t2=150.1s exit=-9"
+  },
+  "task-01/shs-offline-single": {
+   "score": 2,
+   "note": "answer file: '' [TIMEOUT] | t1=300.1s exit=-9 reqs=2 429=0 tools~0; t2=150.1s exit=-9"
+  },
+  "task-01/shs-offline-multi": {
+   "score": 2,
+   "note": "answer file: '' [TIMEOUT] | t1=300.1s exit=-9 reqs=2 429=0 tools~0; t2=150.0s exit=-9"
+  },
+  "task-02/opencode": {
+   "score": 2,
+   "note": "PORT.txt='' [TIMEOUT] | t1=240.1s exit=-9 reqs=14 429=11 tools~0; t2=150.1s exit=-9"
+  },
+  "task-02/openhands": {
+   "score": 2,
+   "note": "PORT.txt='' [TIMEOUT] | t1=240.1s exit=-9 reqs=13 429=10 tools~1; t2=150.1s exit=-9"
+  },
+  "task-02/hermes": {
+   "score": 2,
+   "note": "PORT.txt='' | t1=83.5s exit=0 reqs=64 429=4 tools~0; t2=93.0s exit=0"
+  },
+  "task-02/shs-single": {
+   "score": 7,
+   "note": "port recalled in a NEW session (persistent long-term memory) [TIMEOUT] | t1=240.1s exit=-9 reqs=11 429=0 tools~0; t2=150.0s exit=-9"
+  },
+  "task-02/shs-multi": {
+   "score": 2,
+   "note": "PORT.txt='' [TIMEOUT] | t1=240.1s exit=-9 reqs=4 429=0 tools~0; t2=150.0s exit=-9"
+  },
+  "task-02/shs-offline-single": {
+   "score": 2,
+   "note": "PORT.txt='' [TIMEOUT] | t1=240.1s exit=-9 reqs=2 429=0 tools~0; t2=150.0s exit=-9"
+  },
+  "task-02/shs-offline-multi": {
+   "score": 2,
+   "note": "PORT.txt='' [TIMEOUT] | t1=240.1s exit=-9 reqs=2 429=0 tools~0; t2=150.0s exit=-9"
+  },
+  "task-03/opencode": {
+   "score": 1,
+   "note": "memory-file checks 0/6 | t1=211.6s exit=1 reqs=7 429=6 tools~0"
+  },
+  "task-03/openhands": {
+   "score": 1,
+   "note": "memory-file checks 0/6 [TIMEOUT] | t1=300.1s exit=-9 reqs=9 429=7 tools~1"
+  },
+  "task-03/hermes": {
+   "score": 1,
+   "note": "memory-file checks 0/6 | t1=176.5s exit=0 reqs=35 429=3 tools~0"
+  },
+  "task-03/shs-single": {
+   "score": 7,
+   "note": "memory-file checks 6/6 [TIMEOUT] | t1=300.1s exit=-9 reqs=8 429=0 tools~0"
+  },
+  "task-03/shs-multi": {
+   "score": 1,
+   "note": "memory-file checks 0/6 [TIMEOUT] | t1=300.1s exit=-9 reqs=2 429=0 tools~0"
+  },
+  "task-03/shs-offline-single": {
+   "score": 1,
+   "note": "memory-file checks 0/6 [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-03/shs-offline-multi": {
+   "score": 1,
+   "note": "memory-file checks 0/6 [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-04/opencode": {
+   "score": 1,
+   "note": "worklog=False fn=False tests=False stages=0 | t1=207.1s exit=1 reqs=7 429=6 tools~0"
+  },
+  "task-04/openhands": {
+   "score": 1,
+   "note": "worklog=False fn=False tests=False stages=0 [TIMEOUT] | t1=330.2s exit=-9 reqs=11 429=6 tools~4"
+  },
+  "task-04/hermes": {
+   "score": 1,
+   "note": "worklog=False fn=False tests=False stages=0 | t1=210.6s exit=0 reqs=36 429=4 tools~0"
+  },
+  "task-04/shs-single": {
+   "score": 3,
+   "note": "worklog=False fn=True tests=False stages=0 [TIMEOUT] | t1=330.1s exit=-9 reqs=7 429=0 tools~0"
+  },
+  "task-04/shs-multi": {
+   "score": 1,
+   "note": "worklog=False fn=False tests=False stages=0 [TIMEOUT] | t1=330.1s exit=-9 reqs=4 429=0 tools~0"
+  },
+  "task-04/shs-offline-single": {
+   "score": 1,
+   "note": "worklog=False fn=False tests=False stages=0 [TIMEOUT] | t1=330.2s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-04/shs-offline-multi": {
+   "score": 1,
+   "note": "worklog=False fn=False tests=False stages=0 [TIMEOUT] | t1=330.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-05/opencode": {
+   "score": 1,
+   "note": "CH.md items=0 checked=0 done_marker=False | t1=70.1s exit=-9 reqs=8 429=5 tools~0; t2=150.1s exit=-9"
+  },
+  "task-05/openhands": {
+   "score": 1,
+   "note": "CH.md items=0 checked=0 done_marker=False | t1=70.0s exit=-9 reqs=7 429=4 tools~1; t2=150.1s exit=-9"
+  },
+  "task-05/hermes": {
+   "score": 1,
+   "note": "CH.md items=0 checked=0 done_marker=False | t1=70.0s exit=-9 reqs=66 429=5 tools~0; t2=150.1s exit=-9"
+  },
+  "task-05/shs-single": {
+   "score": 3,
+   "note": "CH.md items=5 checked=0 done_marker=False | t1=70.0s exit=-9 reqs=6 429=0 tools~0; t2=150.1s exit=-9"
+  },
+  "task-05/shs-multi": {
+   "score": 1,
+   "note": "CH.md items=0 checked=0 done_marker=False | t1=70.1s exit=-9 reqs=3 429=0 tools~0; t2=150.1s exit=-9"
+  },
+  "task-05/shs-offline-single": {
+   "score": 1,
+   "note": "CH.md items=0 checked=0 done_marker=False | t1=70.1s exit=-9 reqs=2 429=0 tools~0; t2=150.1s exit=-9"
+  },
+  "task-05/shs-offline-multi": {
+   "score": 1,
+   "note": "CH.md items=0 checked=0 done_marker=False | t1=70.1s exit=-9 reqs=2 429=0 tools~0; t2=150.1s exit=-9"
+  },
+  "task-06/opencode": {
+   "score": 8,
+   "note": "answered '4' in 173.1s, 6 reqs, 0 tool calls | t1=173.1s exit=0 reqs=6 429=5 tools~0"
+  },
+  "task-06/openhands": {
+   "score": 2,
+   "note": "no/wrong answer: 'conversation.' | t1=131.5s exit=0 reqs=4 429=3 tools~1"
+  },
+  "task-06/hermes": {
+   "score": 2,
+   "note": "no/wrong answer: 'API call failed after 3 retries: HTTP 42' | t1=74.5s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-06/shs-single": {
+   "score": 10,
+   "note": "answered '4' in 3.5s, 1 reqs, 0 tool calls | t1=3.5s exit=0 reqs=1 429=0 tools~0"
+  },
+  "task-06/shs-multi": {
+   "score": 10,
+   "note": "answered '4' in 3.5s, 1 reqs, 0 tool calls | t1=3.5s exit=0 reqs=1 429=0 tools~0"
+  },
+  "task-06/shs-offline-single": {
+   "score": 2,
+   "note": "no/wrong answer: '' [TIMEOUT] | t1=240.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-06/shs-offline-multi": {
+   "score": 2,
+   "note": "no/wrong answer: '' [TIMEOUT] | t1=240.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-07/opencode": {
+   "score": 7,
+   "note": "all slugify hidden cases pass [TIMEOUT] | t1=300.2s exit=-9 reqs=10 429=7 tools~2"
+  },
+  "task-07/openhands": {
+   "score": 2,
+   "note": "no slugify: module 'textproc' has no attribute 'slugify' [TIMEOUT] | t1=300.1s exit=-9 reqs=10 429=8 tools~1"
+  },
+  "task-07/hermes": {
+   "score": 2,
+   "note": "no slugify: module 'textproc' has no attribute 'slugify' | t1=74.0s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-07/shs-single": {
+   "score": 7,
+   "note": "all slugify hidden cases pass [TIMEOUT] | t1=300.1s exit=-9 reqs=7 429=0 tools~0"
+  },
+  "task-07/shs-multi": {
+   "score": 2,
+   "note": "no slugify: module 'textproc' has no attribute 'slugify' [TIMEOUT] | t1=300.1s exit=-9 reqs=2 429=0 tools~0"
+  },
+  "task-07/shs-offline-single": {
+   "score": 2,
+   "note": "no slugify: module 'textproc' has no attribute 'slugify' [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-07/shs-offline-multi": {
+   "score": 2,
+   "note": "no slugify: module 'textproc' has no attribute 'slugify' [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-08/opencode": {
+   "score": 1,
+   "note": "stats module checks 0/3 suite=10p/2f | t1=277.1s exit=1 reqs=9 429=9 tools~0"
+  },
+  "task-08/openhands": {
+   "score": 1,
+   "note": "stats module checks 0/3 suite=10p/2f [TIMEOUT] | t1=330.1s exit=-9 reqs=11 429=10 tools~0"
+  },
+  "task-08/hermes": {
+   "score": 1,
+   "note": "stats module checks 0/3 suite=10p/2f | t1=142.5s exit=0 reqs=34 429=3 tools~0"
+  },
+  "task-08/shs-single": {
+   "score": 1,
+   "note": "stats module checks 0/3 suite=10p/2f [TIMEOUT] | t1=330.1s exit=-9 reqs=10 429=0 tools~0"
+  },
+  "task-08/shs-multi": {
+   "score": 1,
+   "note": "stats module checks 0/3 suite=10p/2f [TIMEOUT] | t1=330.1s exit=-9 reqs=3 429=0 tools~0"
+  },
+  "task-08/shs-offline-single": {
+   "score": 1,
+   "note": "stats module checks 0/3 suite=10p/2f [TIMEOUT] | t1=330.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-08/shs-offline-multi": {
+   "score": 1,
+   "note": "stats module checks 0/3 suite=10p/2f [TIMEOUT] | t1=330.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-09/opencode": {
+   "score": 4,
+   "note": "suite=10p/2f fixed=False tests_untouched=True | t1=278.6s exit=1 reqs=9 429=9 tools~0"
+  },
+  "task-09/openhands": {
+   "score": 4,
+   "note": "suite=10p/2f fixed=False tests_untouched=True [TIMEOUT] | t1=300.1s exit=-9 reqs=9 429=9 tools~0"
+  },
+  "task-09/hermes": {
+   "score": 4,
+   "note": "suite=10p/2f fixed=False tests_untouched=True | t1=74.5s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-09/shs-single": {
+   "score": 7,
+   "note": "suite=12p/0f fixed=False tests_untouched=True [TIMEOUT] | t1=300.1s exit=-9 reqs=10 429=3 tools~0"
+  },
+  "task-09/shs-multi": {
+   "score": 4,
+   "note": "suite=10p/2f fixed=False tests_untouched=True [TIMEOUT] | t1=300.1s exit=-9 reqs=5 429=0 tools~0"
+  },
+  "task-09/shs-offline-single": {
+   "score": 4,
+   "note": "suite=10p/2f fixed=False tests_untouched=True [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-09/shs-offline-multi": {
+   "score": 4,
+   "note": "suite=10p/2f fixed=False tests_untouched=True [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-10/opencode": {
+   "score": 8,
+   "note": "fizzbuzz cases 5/5 tests=True suite=15p/2f | t1=312.1s exit=1 reqs=10 429=9 tools~2"
+  },
+  "task-10/openhands": {
+   "score": 1,
+   "note": "fizzbuzz cases 0/5 tests=False suite=10p/2f [TIMEOUT] | t1=330.1s exit=-9 reqs=11 429=8 tools~2"
+  },
+  "task-10/hermes": {
+   "score": 1,
+   "note": "fizzbuzz cases 0/5 tests=False suite=10p/2f | t1=74.0s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-10/shs-single": {
+   "score": 7,
+   "note": "fizzbuzz cases 5/5 tests=True suite=15p/2f [TIMEOUT] | t1=330.1s exit=-9 reqs=11 429=4 tools~0"
+  },
+  "task-10/shs-multi": {
+   "score": 1,
+   "note": "fizzbuzz cases 0/5 tests=False suite=10p/2f [TIMEOUT] | t1=330.1s exit=-9 reqs=8 429=4 tools~0"
+  },
+  "task-10/shs-offline-single": {
+   "score": 1,
+   "note": "fizzbuzz cases 0/5 tests=False suite=10p/2f [TIMEOUT] | t1=330.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-10/shs-offline-multi": {
+   "score": 1,
+   "note": "fizzbuzz cases 0/5 tests=False suite=10p/2f [TIMEOUT] | t1=330.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-11/opencode": {
+   "score": 1,
+   "note": "hidden email tests 0/1 | t1=277.1s exit=1 reqs=9 429=9 tools~0"
+  },
+  "task-11/openhands": {
+   "score": 1,
+   "note": "hidden email tests 0/1 [TIMEOUT] | t1=330.1s exit=-9 reqs=11 429=10 tools~0"
+  },
+  "task-11/hermes": {
+   "score": 1,
+   "note": "hidden email tests 0/1 | t1=74.5s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-11/shs-single": {
+   "score": 1,
+   "note": "hidden email tests 0/1 [TIMEOUT] | t1=330.1s exit=-9 reqs=11 429=10 tools~0"
+  },
+  "task-11/shs-multi": {
+   "score": 1,
+   "note": "hidden email tests 0/1 [TIMEOUT] | t1=330.1s exit=-9 reqs=11 429=10 tools~0"
+  },
+  "task-11/shs-offline-single": {
+   "score": 1,
+   "note": "hidden email tests 0/1 [TIMEOUT] | t1=330.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-11/shs-offline-multi": {
+   "score": 1,
+   "note": "hidden email tests 0/1 [TIMEOUT] | t1=330.2s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-12/opencode": {
+   "score": 3,
+   "note": "hidden word_count tests 3/11 regressions=True | t1=276.1s exit=1 reqs=9 429=9 tools~0"
+  },
+  "task-12/openhands": {
+   "score": 3,
+   "note": "hidden word_count tests 3/11 regressions=True [TIMEOUT] | t1=300.2s exit=-9 reqs=9 429=7 tools~3"
+  },
+  "task-12/hermes": {
+   "score": 3,
+   "note": "hidden word_count tests 3/11 regressions=True | t1=108.5s exit=0 reqs=33 429=3 tools~0"
+  },
+  "task-12/shs-single": {
+   "score": 7,
+   "note": "hidden word_count tests 10/11 regressions=True [TIMEOUT] | t1=300.1s exit=-9 reqs=7 429=0 tools~0"
+  },
+  "task-12/shs-multi": {
+   "score": 3,
+   "note": "hidden word_count tests 3/11 regressions=True [TIMEOUT] | t1=300.1s exit=-9 reqs=2 429=0 tools~0"
+  },
+  "task-12/shs-offline-single": {
+   "score": 3,
+   "note": "hidden word_count tests 3/11 regressions=True [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-12/shs-offline-multi": {
+   "score": 3,
+   "note": "hidden word_count tests 3/11 regressions=True [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-13/opencode": {
+   "score": 4,
+   "note": "class=False compat=False suite=10p/2f [TIMEOUT] | t1=300.2s exit=-9 reqs=10 429=7 tools~2"
+  },
+  "task-13/openhands": {
+   "score": 4,
+   "note": "class=False compat=False suite=10p/2f [TIMEOUT] | t1=300.1s exit=-9 reqs=9 429=5 tools~5"
+  },
+  "task-13/hermes": {
+   "score": 4,
+   "note": "class=False compat=False suite=10p/2f | t1=74.5s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-13/shs-single": {
+   "score": 7,
+   "note": "class=True compat=False suite=10p/2f [TIMEOUT] | t1=300.1s exit=-9 reqs=9 429=0 tools~0"
+  },
+  "task-13/shs-multi": {
+   "score": 4,
+   "note": "class=False compat=False suite=10p/2f [TIMEOUT] | t1=300.1s exit=-9 reqs=6 429=2 tools~0"
+  },
+  "task-13/shs-offline-single": {
+   "score": 4,
+   "note": "class=False compat=False suite=10p/2f [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-13/shs-offline-multi": {
+   "score": 4,
+   "note": "class=False compat=False suite=10p/2f [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-14/opencode": {
+   "score": 9,
+   "note": "test-quality checks 5/6 new_tests=6 suite=10p/2f | t1=211.6s exit=1 reqs=7 429=6 tools~0"
+  },
+  "task-14/openhands": {
+   "score": 7,
+   "note": "test-quality checks 5/6 new_tests=6 suite=10p/2f [TIMEOUT] | t1=300.1s exit=-9 reqs=9 429=9 tools~0"
+  },
+  "task-14/hermes": {
+   "score": 9,
+   "note": "test-quality checks 5/6 new_tests=6 suite=10p/2f | t1=74.5s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-14/shs-single": {
+   "score": 7,
+   "note": "test-quality checks 5/6 new_tests=6 suite=10p/2f [TIMEOUT] | t1=300.1s exit=-9 reqs=6 429=0 tools~0"
+  },
+  "task-14/shs-multi": {
+   "score": 7,
+   "note": "test-quality checks 5/6 new_tests=6 suite=10p/2f [TIMEOUT] | t1=300.1s exit=-9 reqs=2 429=0 tools~0"
+  },
+  "task-14/shs-offline-single": {
+   "score": 7,
+   "note": "test-quality checks 5/6 new_tests=6 suite=10p/2f [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-14/shs-offline-multi": {
+   "score": 7,
+   "note": "test-quality checks 5/6 new_tests=6 suite=10p/2f [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-15/opencode": {
+   "score": 6,
+   "note": "README checks 5/9 | t1=278.6s exit=1 reqs=9 429=9 tools~0"
+  },
+  "task-15/openhands": {
+   "score": 6,
+   "note": "README checks 5/9 [TIMEOUT] | t1=330.2s exit=-9 reqs=11 429=10 tools~0"
+  },
+  "task-15/hermes": {
+   "score": 6,
+   "note": "README checks 5/9 | t1=74.5s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-15/shs-single": {
+   "score": 7,
+   "note": "README checks 8/9 [TIMEOUT] | t1=330.1s exit=-9 reqs=7 429=0 tools~0"
+  },
+  "task-15/shs-multi": {
+   "score": 6,
+   "note": "README checks 5/9 [TIMEOUT] | t1=330.1s exit=-9 reqs=2 429=0 tools~0"
+  },
+  "task-15/shs-offline-single": {
+   "score": 6,
+   "note": "README checks 5/9 [TIMEOUT] | t1=330.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-15/shs-offline-multi": {
+   "score": 6,
+   "note": "README checks 5/9 [TIMEOUT] | t1=330.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-16/opencode": {
+   "score": 1,
+   "note": "git workflow 0/5 | t1=281.1s exit=1 reqs=9 429=9 tools~0"
+  },
+  "task-16/openhands": {
+   "score": 1,
+   "note": "git workflow 0/5 [TIMEOUT] | t1=330.1s exit=-9 reqs=11 429=10 tools~0"
+  },
+  "task-16/hermes": {
+   "score": 1,
+   "note": "git workflow 0/5 | t1=74.5s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-16/shs-single": {
+   "score": 5,
+   "note": "git workflow 2/5 [TIMEOUT] | t1=330.1s exit=-9 reqs=10 429=0 tools~0"
+  },
+  "task-16/shs-multi": {
+   "score": 1,
+   "note": "git workflow 0/5 [TIMEOUT] | t1=330.1s exit=-9 reqs=4 429=0 tools~0"
+  },
+  "task-16/shs-offline-single": {
+   "score": 1,
+   "note": "git workflow 0/5 [TIMEOUT] | t1=330.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-16/shs-offline-multi": {
+   "score": 1,
+   "note": "git workflow 0/5 [TIMEOUT] | t1=330.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-17/opencode": {
+   "score": 6,
+   "note": "repo created; issue missing; 3 local commits | t1=275.1s exit=1 reqs=9 429=9 tools~0"
+  },
+  "task-17/openhands": {
+   "score": 6,
+   "note": "repo created; issue missing; 3 local commits [TIMEOUT] | t1=390.1s exit=-9 reqs=12 429=10 tools~1"
+  },
+  "task-17/hermes": {
+   "score": 2,
+   "note": "no repo; 3 local commits | t1=74.5s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-17/shs-single": {
+   "score": 7,
+   "note": "repo created AND issue opened with function list; 3 local commits [TIMEOUT] | t1=390.1s exit=-9 reqs=11 429=0 tools~0"
+  },
+  "task-17/shs-multi": {
+   "score": 2,
+   "note": "no repo; 3 local commits [TIMEOUT] | t1=390.1s exit=-9 reqs=2 429=0 tools~0"
+  },
+  "task-17/shs-offline-single": {
+   "score": 2,
+   "note": "no repo; 3 local commits [TIMEOUT] | t1=390.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-17/shs-offline-multi": {
+   "score": 2,
+   "note": "no repo; 3 local commits [TIMEOUT] | t1=390.2s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-18/opencode": {
+   "score": 1,
+   "note": "no TIME.txt content | t1=275.1s exit=1 reqs=9 429=9 tools~0"
+  },
+  "task-18/openhands": {
+   "score": 1,
+   "note": "no TIME.txt content [TIMEOUT] | t1=330.1s exit=-9 reqs=11 429=8 tools~2"
+  },
+  "task-18/hermes": {
+   "score": 1,
+   "note": "no TIME.txt content | t1=74.5s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-18/shs-single": {
+   "score": 10,
+   "note": "MCP tool actually called; real server timestamp written | t1=316.1s exit=0 reqs=8 429=0 tools~0"
+  },
+  "task-18/shs-multi": {
+   "score": 1,
+   "note": "no TIME.txt content [TIMEOUT] | t1=330.1s exit=-9 reqs=2 429=0 tools~0"
+  },
+  "task-18/shs-offline-single": {
+   "score": 1,
+   "note": "no TIME.txt content [TIMEOUT] | t1=330.2s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-18/shs-offline-multi": {
+   "score": 1,
+   "note": "no TIME.txt content [TIMEOUT] | t1=330.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-19/opencode": {
+   "score": 1,
+   "note": "checks 0/3 md_copied=0 | t1=275.1s exit=1 reqs=9 429=9 tools~0"
+  },
+  "task-19/openhands": {
+   "score": 1,
+   "note": "checks 0/3 md_copied=0 [TIMEOUT] | t1=330.1s exit=-9 reqs=11 429=10 tools~0"
+  },
+  "task-19/hermes": {
+   "score": 1,
+   "note": "checks 0/3 md_copied=0 | t1=108.5s exit=0 reqs=33 429=3 tools~0"
+  },
+  "task-19/shs-single": {
+   "score": 7,
+   "note": "checks 3/3 md_copied=2 [TIMEOUT] | t1=330.1s exit=-9 reqs=9 429=0 tools~0"
+  },
+  "task-19/shs-multi": {
+   "score": 1,
+   "note": "checks 0/3 md_copied=0 [TIMEOUT] | t1=330.1s exit=-9 reqs=8 429=6 tools~0"
+  },
+  "task-19/shs-offline-single": {
+   "score": 1,
+   "note": "checks 0/3 md_copied=0 [TIMEOUT] | t1=330.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-19/shs-offline-multi": {
+   "score": 1,
+   "note": "checks 0/3 md_copied=0 [TIMEOUT] | t1=330.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-20/opencode": {
+   "score": 1,
+   "note": "release workflow 0/5 | t1=275.6s exit=1 reqs=9 429=9 tools~0"
+  },
+  "task-20/openhands": {
+   "score": 1,
+   "note": "release workflow 0/5 [TIMEOUT] | t1=390.1s exit=-9 reqs=12 429=12 tools~0"
+  },
+  "task-20/hermes": {
+   "score": 1,
+   "note": "release workflow 0/5 | t1=74.0s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-20/shs-single": {
+   "score": 3,
+   "note": "release workflow 1/5 [TIMEOUT] | t1=390.1s exit=-9 reqs=8 429=0 tools~0"
+  },
+  "task-20/shs-multi": {
+   "score": 1,
+   "note": "release workflow 0/5 [TIMEOUT] | t1=390.1s exit=-9 reqs=3 429=0 tools~0"
+  },
+  "task-20/shs-offline-single": {
+   "score": 1,
+   "note": "release workflow 0/5 [TIMEOUT] | t1=390.2s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-20/shs-offline-multi": {
+   "score": 1,
+   "note": "release workflow 0/5 [TIMEOUT] | t1=390.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-21/opencode": {
+   "score": 1,
+   "note": "HEADLINE.txt='' | t1=241.1s exit=1 reqs=8 429=6 tools~1"
+  },
+  "task-21/openhands": {
+   "score": 7,
+   "note": "headline correct in 300.1s (9 reqs) [TIMEOUT] | t1=300.1s exit=-9 reqs=9 429=7 tools~2"
+  },
+  "task-21/hermes": {
+   "score": 1,
+   "note": "HEADLINE.txt='' | t1=74.5s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-21/shs-single": {
+   "score": 9,
+   "note": "headline correct in 213.5s (7 reqs) | t1=213.5s exit=0 reqs=7 429=0 tools~0"
+  },
+  "task-21/shs-multi": {
+   "score": 7,
+   "note": "headline correct in 300.1s (9 reqs) [TIMEOUT] | t1=300.1s exit=-9 reqs=9 429=0 tools~0"
+  },
+  "task-21/shs-offline-single": {
+   "score": 1,
+   "note": "HEADLINE.txt='' [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-21/shs-offline-multi": {
+   "score": 1,
+   "note": "HEADLINE.txt='' [TIMEOUT] | t1=300.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-22/opencode": {
+   "score": 1,
+   "note": "died after faults (ok=0, 429=7) | t1=72.0s exit=1 reqs=9 429=7 tools~0"
+  },
+  "task-22/openhands": {
+   "score": 1,
+   "note": "died after faults (ok=0, 429=13) | t1=144.0s exit=0 reqs=15 429=13 tools~0"
+  },
+  "task-22/hermes": {
+   "score": 4,
+   "note": "died after faults (ok=1, 429=3) | t1=14.0s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-22/shs-single": {
+   "score": 9,
+   "note": "survived 2 injected 502s, completed task | t1=197.1s exit=0 reqs=26 429=18 tools~0"
+  },
+  "task-22/shs-multi": {
+   "score": 9,
+   "note": "survived 2 injected 502s, completed task | t1=248.6s exit=0 reqs=29 429=21 tools~0"
+  },
+  "task-22/shs-offline-single": {
+   "score": 1,
+   "note": "died after faults (ok=0, 429=0) [TIMEOUT] | t1=330.1s exit=-9 reqs=3 429=0 tools~0"
+  },
+  "task-22/shs-offline-multi": {
+   "score": 1,
+   "note": "died after faults (ok=0, 429=0) [TIMEOUT] | t1=330.1s exit=-9 reqs=3 429=0 tools~0"
+  },
+  "task-23/opencode": {
+   "score": 1,
+   "note": "failed after injected 429s (ok=0) | t1=92.5s exit=1 reqs=9 429=6 tools~0"
+  },
+  "task-23/openhands": {
+   "score": 1,
+   "note": "failed after injected 429s (ok=0) | t1=182.1s exit=0 reqs=15 429=12 tools~0"
+  },
+  "task-23/hermes": {
+   "score": 3,
+   "note": "failed after injected 429s (ok=1) | t1=13.5s exit=0 reqs=32 429=3 tools~0"
+  },
+  "task-23/shs-single": {
+   "score": 7,
+   "note": "handled 3 injected 429s (Retry-After), completed [TIMEOUT] | t1=390.1s exit=-9 reqs=74 429=63 tools~0"
+  },
+  "task-23/shs-multi": {
+   "score": 7,
+   "note": "handled 3 injected 429s (Retry-After), completed [TIMEOUT] | t1=390.1s exit=-9 reqs=78 429=68 tools~0"
+  },
+  "task-23/shs-offline-single": {
+   "score": 1,
+   "note": "failed after injected 429s (ok=0) [TIMEOUT] | t1=390.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-23/shs-offline-multi": {
+   "score": 1,
+   "note": "failed after injected 429s (ok=0) [TIMEOUT] | t1=390.1s exit=-9 reqs=1 429=0 tools~0"
+  },
+  "task-24/opencode": {
+   "score": 1,
+   "note": "cipher checks 0/2 suite=10p/2f  | t1=70.2s exit=-9 reqs=8 429=4 tools~1; t2=150.2s exit=-9"
+  },
+  "task-24/openhands": {
+   "score": 1,
+   "note": "cipher checks 0/2 suite=10p/2f  | t1=70.1s exit=-9 reqs=8 429=5 tools~1; t2=150.1s exit=-9"
+  },
+  "task-24/hermes": {
+   "score": 1,
+   "note": "cipher checks 0/2 suite=10p/2f  | t1=70.1s exit=-9 reqs=64 429=4 tools~0; t2=103.0s exit=0"
+  },
+  "task-24/shs-single": {
+   "score": 1,
+   "note": "cipher checks 0/2 suite=10p/2f  | t1=70.0s exit=-9 reqs=8 429=7 tools~0; t2=150.0s exit=-9"
+  },
+  "task-24/shs-multi": {
+   "score": 1,
+   "note": "cipher checks 0/2 suite=10p/2f  | t1=70.0s exit=-9 reqs=8 429=7 tools~0; t2=150.0s exit=-9"
+  },
+  "task-24/shs-offline-single": {
+   "score": 1,
+   "note": "cipher checks 0/2 suite=10p/2f  | t1=70.1s exit=-9 reqs=2 429=0 tools~0; t2=150.1s exit=-9"
+  },
+  "task-24/shs-offline-multi": {
+   "score": 1,
+   "note": "cipher checks 0/2 suite=10p/2f  | t1=70.0s exit=-9 reqs=2 429=0 tools~0; t2=150.1s exit=-9"
+  },
+  "task-25/opencode": {
+   "score": 2,
+   "note": "SAFEFUNC.txt='' (model did switch, context lost/timeout) [TIMEOUT] | t1=300.2s exit=-9 reqs=14 429=9 tools~2; t2=150.1s exit=-9"
+  },
+  "task-25/openhands": {
+   "score": 10,
+   "note": "context survived the model switch (div recalled) | t1=288.1s exit=0 reqs=13 429=7 tools~4; t2=135.6s exit=0"
+  },
+  "task-25/hermes": {
+   "score": 2,
+   "note": "SAFEFUNC.txt='' (model did switch, context lost/timeout) | t1=74.5s exit=0 reqs=66 429=3 tools~0; t2=150.1s exit=-9"
+  },
+  "task-25/shs-single": {
+   "score": 2,
+   "note": "SAFEFUNC.txt='' (model did switch, context lost/timeout) [TIMEOUT] | t1=300.1s exit=-9 reqs=5 429=3 tools~0; t2=150.1s exit=-9"
+  },
+  "task-25/shs-multi": {
+   "score": 2,
+   "note": "SAFEFUNC.txt='' (model did switch, context lost/timeout) [TIMEOUT] | t1=300.1s exit=-9 reqs=9 429=3 tools~0; t2=150.1s exit=-9"
+  },
+  "task-25/shs-offline-single": {
+   "score": 2,
+   "note": "SAFEFUNC.txt='' (model did switch, context lost/timeout) [TIMEOUT] | t1=300.1s exit=-9 reqs=2 429=0 tools~0; t2=150.0s exit=-9"
+  },
+  "task-25/shs-offline-multi": {
+   "score": 2,
+   "note": "SAFEFUNC.txt='' (model did switch, context lost/timeout) [TIMEOUT] | t1=300.1s exit=-9 reqs=2 429=0 tools~0; t2=150.0s exit=-9"
+  }
+ },
+ "totals": {
+  "opencode": {
+   "cats": {
+    "memory": 7,
+    "planning": 28,
+    "output": 23,
+    "tools": 10,
+    "reliability": 6
+   },
+   "total": 74,
+   "pct": 29.6
+  },
+  "openhands": {
+   "cats": {
+    "memory": 13,
+    "planning": 10,
+    "output": 21,
+    "tools": 10,
+    "reliability": 20
+   },
+   "total": 74,
+   "pct": 29.6
+  },
+  "hermes": {
+   "cats": {
+    "memory": 7,
+    "planning": 10,
+    "output": 23,
+    "tools": 6,
+    "reliability": 11
+   },
+   "total": 57,
+   "pct": 22.8
+  },
+  "shs-single": {
+   "cats": {
+    "memory": 28,
+    "planning": 32,
+    "output": 29,
+    "tools": 32,
+    "reliability": 28
+   },
+   "total": 149,
+   "pct": 59.6
+  },
+  "shs-multi": {
+   "cats": {
+    "memory": 7,
+    "planning": 18,
+    "output": 21,
+    "tools": 6,
+    "reliability": 26
+   },
+   "total": 78,
+   "pct": 31.2
+  },
+  "shs-offline-single": {
+   "cats": {
+    "memory": 7,
+    "planning": 10,
+    "output": 21,
+    "tools": 6,
+    "reliability": 6
+   },
+   "total": 50,
+   "pct": 20.0
+  },
+  "shs-offline-multi": {
+   "cats": {
+    "memory": 7,
+    "planning": 10,
+    "output": 21,
+    "tools": 6,
+    "reliability": 6
+   },
+   "total": 50,
+   "pct": 20.0
+  }
+ }
+}

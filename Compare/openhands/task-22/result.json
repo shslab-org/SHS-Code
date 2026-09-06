@@ -1,0 +1,39 @@
+{
+ "task": "task-22",
+ "agent": "openhands",
+ "title": "R2 provider fault resilience (2 injected 502s)",
+ "category": "reliability",
+ "turns": {
+  "t1": {
+   "exit": 0,
+   "killed": false,
+   "wall_s": 144.0
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 15,
+  "responses": 13,
+  "ok": 0,
+  "429": 13,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 2,
+  "errors": 0,
+  "chat_calls": 15,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 8,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "branch": "",
+  "correct": false
+ }
+}

@@ -1,0 +1,56 @@
+diff --git a/.gitignore b/.gitignore
+old mode 100644
+new mode 100755
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+old mode 100644
+new mode 100755
+diff --git a/README.md b/README.md
+old mode 100644
+new mode 100755
+diff --git a/calc.py b/calc.py
+old mode 100644
+new mode 100755
+diff --git a/logs/20260906_012845.log b/logs/20260906_012845.log
+new file mode 100644
+index 0000000..9997ad3
+--- /dev/null
++++ b/logs/20260906_012845.log
+@@ -0,0 +1,14 @@
++2026-09-06 01:28:45,189 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:173 — [Orchestrator:f28e18d4] ▶ Multi-agent run | mode=build | triage=complex | goal=Create a new module stats.py with mean(nums) and median(nums) functions (median 
++2026-09-06 01:28:45,193 | INFO     | agent=system step=0 trace=———— task= | shscode:run_pipeline:195 — [Orchestrator:f28e18d4] Execution order: product_manager → architect → engineer → qa
++2026-09-06 01:28:45,193 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:238 — [Orchestrator:f28e18d4] ── Role: product_manager ──
++2026-09-06 01:28:46,077 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=minimaxai/minimax-m3 timeout=600s (long_thinking=False)
++2026-09-06 01:28:46,078 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:81 — [product_manager] Generating PRD for goal: Create a new module stats.py with mean(nums) and median(nums) functions (median 
++2026-09-06 01:30:48,842 | INFO     | agent=system step=0 trace=———— task= | shscode:_call_with_retry:991 — [LLM] Long response received after 123s (model=minimaxai/minimax-m3). This is normal for deep-thinking models.
++2026-09-06 01:30:48,842 | WARNING  | agent=system step=0 trace=———— task= | shscode:_think_act_publish:95 — [product_manager] Attempt 1: Missing sections: IN SCOPE. Retrying.
++2026-09-06 01:33:39,980 | INFO     | agent=system step=0 trace=———— task= | shscode:_call_with_retry:991 — [LLM] Long response received after 171s (model=minimaxai/minimax-m3). This is normal for deep-thinking models.
++2026-09-06 01:33:39,981 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:117 — [product_manager] PRD complete (3941 chars). Publishing to Architect.
++2026-09-06 01:33:39,981 | INFO     | agent=system step=0 trace=———— task= | shscode:run:164 — [product_manager] ■ Done in 293.9s
++2026-09-06 01:33:39,981 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:249 — [Orchestrator:f28e18d4] product_manager ✓ (3941 chars, 294.8s)
++2026-09-06 01:33:39,982 | INFO     | agent=system step=0 trace=———— task= | shscode:_run_role:238 — [Orchestrator:f28e18d4] ── Role: architect ──
++2026-09-06 01:33:39,983 | INFO     | agent=system step=0 trace=———— task= | shscode:__init__:308 — [OpenAIClient] model=minimaxai/minimax-m3 timeout=600s (long_thinking=False)
++2026-09-06 01:33:39,983 | INFO     | agent=system step=0 trace=———— task= | shscode:_think_act_publish:89 — [architect] Generating system design from PRD (3941 chars).
+diff --git a/pyproject.toml b/pyproject.toml
+old mode 100644
+new mode 100755
+diff --git a/test_calc.py b/test_calc.py
+old mode 100644
+new mode 100755
+diff --git a/test_textproc.py b/test_textproc.py
+old mode 100644
+new mode 100755
+diff --git a/textproc.py b/textproc.py
+old mode 100644
+new mode 100755
+diff --git a/workspace/.sessions/shscode.db b/workspace/.sessions/shscode.db
+new file mode 100644
+index 0000000..73a0692
+Binary files /dev/null and b/workspace/.sessions/shscode.db differ
+diff --git a/workspace/.sessions/shscode.db-shm b/workspace/.sessions/shscode.db-shm
+new file mode 100644
+index 0000000..ace2c64
+Binary files /dev/null and b/workspace/.sessions/shscode.db-shm differ
+diff --git a/workspace/.sessions/shscode.db-wal b/workspace/.sessions/shscode.db-wal
+new file mode 100644
+index 0000000..9f4e81d
+Binary files /dev/null and b/workspace/.sessions/shscode.db-wal differ

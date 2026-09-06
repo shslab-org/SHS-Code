@@ -1,0 +1,4 @@
+{"event": "turn_start", "agent": "shs-offline-single", "prompt": "What is 2+2? Reply with just the number.", "turn2": false, "model_switch": false, "timeout": 240, "ts": 0.0}
+{"event": "spawn", "cmd": "/home/z/.venv/bin/shscode --no-color What is 2+2? Reply with just the number.", "cwd": "/home/z/my-project/benchmark/runs/task-06/shs-offline-single/repo", "ts": 0.0}
+{"event": "timeout_kill", "at_s": 240.1, "ts": 240.07}
+{"event": "turn_end", "exit_code": -9, "killed": true, "wall_s": 240.1, "ts": 240.08}

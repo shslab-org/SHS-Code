@@ -1,0 +1,6 @@
+{"event": "turn_start", "agent": "shs-single", "prompt": "What is 2+2? Reply with just the number.", "turn2": false, "model_switch": false, "timeout": 240, "ts": 0.0}
+{"event": "spawn", "cmd": "/home/z/.venv/bin/shscode --no-color What is 2+2? Reply with just the number.", "cwd": "/home/z/my-project/benchmark/runs/task-06/shs-single/repo", "ts": 0.0}
+{"event": "stream", "stream": "out", "text": "\ud83e\udd16 ASSISTANT", "ts": 3.08}
+{"event": "stream", "stream": "out", "text": "4                                                                               ", "ts": 3.08}
+{"event": "stream", "stream": "out", "text": "\u2699 SYSTEM: session: f0323a17-3ed", "ts": 3.08}
+{"event": "turn_end", "exit_code": 0, "killed": false, "wall_s": 3.5, "ts": 3.51}

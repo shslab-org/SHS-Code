@@ -1,0 +1,39 @@
+{
+ "task": "task-22",
+ "agent": "shs-single",
+ "title": "R2 provider fault resilience (2 injected 502s)",
+ "category": "reliability",
+ "turns": {
+  "t1": {
+   "exit": 0,
+   "killed": false,
+   "wall_s": 197.1
+  },
+  "t2": {
+   "exit": null,
+   "killed": false,
+   "wall_s": 0.0
+  }
+ },
+ "proxy": {
+  "requests": 26,
+  "responses": 24,
+  "ok": 6,
+  "429": 18,
+  "502": 0,
+  "injected_429": 0,
+  "injected_502": 2,
+  "errors": 0,
+  "chat_calls": 26,
+  "total_wait_events": 0
+ },
+ "git": {
+  "status_lines": 13,
+  "commits": 3
+ },
+ "gh": null,
+ "checks": {
+  "branch": "master",
+  "correct": true
+ }
+}
