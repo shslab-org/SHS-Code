@@ -34,7 +34,8 @@ Engineer workers + 1 QA). Version bumped 3.1.0 → 4.0.0 across
   sqlite 0.10ms / tiered write 2.46ms / read 0.05ms / DAG 4.9x / log 2.4ms).
 - **`app/v4/wiring.py`** — production wiring: single additive/lazy/reversible
   import point binding all 20 opts into the live agent (caches, prefetcher,
-  router, plan cache, event log, risk tiers, JSON repair, context summarize).
+  router, plan cache, event log, risk tiers, JSON repair, context summarize +
+  live Team103 entry (`get_team103`/`run_team103`) + `MultiAgentOrchestrator.run_team103`).
 
 ### Changed
 
@@ -43,7 +44,7 @@ Engineer workers + 1 QA). Version bumped 3.1.0 → 4.0.0 across
 
 ### Verification
 
-- `tests/v4/`: **27 passed**.
+- `tests/v4/`: **31 passed**.
 - Full suite spot-check: pre-existing failure only
   (`tests/test_deep_subsystems.py::TestSkillsRuntime::test_relevant_skill_selected_for_task`);
   v4 introduces no regressions.

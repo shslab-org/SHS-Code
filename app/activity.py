@@ -66,3 +66,12 @@ class ActivityBus:
 def emit(kind: str, **data: Any) -> None:
     """Module-level convenience wrapper."""
     ActivityBus.emit(kind, **data)
+    # v4.0 OPT-16: buffered structured event log (never blocks, never raises)
+    try:
+        from app.v4.wiring import emit_event as _ee
+        _ee(task_id=str(data.get("task_id", "") or ""),
+            worker_id=str(data.get("worker_id", "") or ""),
+            correlation_id=str(data.get("correlation_id", "") or ""),
+            tool=kind, detail=str({k: str(v)[:200] for k, v in data.items()})[:1000])
+    except Exception:
+        pass

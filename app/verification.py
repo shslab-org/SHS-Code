@@ -120,8 +120,23 @@ class VerificationEngine:
             return None
 
     def select_kinds(self, ptype: str, changed_files: Optional[List[str]] = None,
-                     level: str = "standard") -> List[str]:
-        """Which verification kinds apply to this project (spec §15)."""
+                     level: str = "standard", milestone: bool = False) -> List[str]:
+        """Which verification kinds apply to this project (spec §15).
+        v4.0 OPT-13: risk-aware tiers — low→targeted, medium→related,
+        high→broad, milestone→full. Falls back to legacy level logic."""
+        try:
+            from app.v4.wiring import risk_tier_for, kinds_for_risk_tier
+            if changed_files is not None:
+                _risk = risk_tier_for(changed_files or [],
+                                      touches_core=any("app/agent" in f or "app/llm" in f for f in (changed_files or [])))
+                kinds = kinds_for_risk_tier(_risk, milestone=milestone)
+                # php syntax special-case preserved
+                if changed_files and ptype == "php" and "syntax" not in kinds:
+                    kinds = ["syntax"] + kinds
+                return [k for k in kinds
+                        if any(self._commands_for(k, ptype, changed_files or []))]
+        except Exception:
+            pass
         kinds = ["build", "test"]
         if level == "fast":
             kinds = ["build"]

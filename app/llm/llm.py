@@ -903,6 +903,13 @@ class LLM:
         logger.warning(f"No valid LLM config (provider={provider!r}). Using MockLLM.")
         return MockLLM()
 
+    # v4.0 OPT-11: smart model routing (fast vs strong, benchmark vs production)
+    def _v4_route(self, task_kind: str = "general"):
+        try:
+            from app.v4.wiring import get_model_router as _gmr
+            return _gmr().route(task_kind)
+        except Exception:
+            return ("strong", self._model)
     async def ask(self, messages: list[Message], **kwargs: Any) -> Message:
         raw = [m.to_dict() for m in messages]
         data = await self._call_with_retry(raw, tools=None)

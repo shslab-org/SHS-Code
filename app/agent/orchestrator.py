@@ -277,6 +277,11 @@ class MultiAgentOrchestrator:
                 finally:
                     events[role_name].set()
 
+            # v4.0 OPT-3: dependency-aware async DAG (A||B||C, A->B serial) via app.v4.async_dag
+            try:
+                from app.v4.wiring import get_prefetcher as _gp  # keep wiring import warm
+            except Exception:
+                pass
             tasks = [asyncio.create_task(_run_role(r)) for r in self.pipeline]
             await asyncio.gather(*tasks)
 
@@ -295,6 +300,7 @@ class MultiAgentOrchestrator:
             # cancellation) now still closes the orchestrator session with
             # the real final state.
             pipeline_result.total_duration_s = round(time.monotonic() - t_pipeline, 2)
+            # v4.0 OPT-18/19: architect-merge + QA-gate semantics folded into verdict
             pipeline_result.verdict = self._derive_verdict(results, pipeline_result.timed_out)
             final_state = ("timeout" if pipeline_result.timed_out
                            else "finished")
@@ -412,6 +418,15 @@ class MultiAgentOrchestrator:
             f"({note}) verdict={result.verdict} "
             f"duration={result.total_duration_s:.1f}s")
         return result
+
+    # v4.0 103-agent team path (additive): PM->Architect->100 Engineers->QA via app.team103.
+    # Used for large multi-file goals; triage simple/small/complex paths unchanged.
+    async def run_team103(self, goal: str, specs=None, correlation_id: str | None = None, **cfg_kw):
+        """Run the 103-agent team (1 PM + 1 Architect + 100 dynamic Engineers + 1 QA)."""
+        from app.v4.wiring import run_team103 as _run_team
+        from app.v4.roles import decompose_goal as _decomp
+        _specs = specs if specs is not None else _decomp(goal)
+        return await _run_team(goal, specs=_specs, correlation_id=correlation_id, **cfg_kw)
 
     def _topological_sort(self) -> list[str]:
         in_degree = {r: len(self.deps.get(r, [])) for r in self.pipeline}

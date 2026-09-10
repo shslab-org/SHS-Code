@@ -56,11 +56,28 @@ class CodeSearchTool(BaseTool):
             from app.intelligence import current_intelligence
             from app.intelligence.search import format_search_results
             intel = current_intelligence()
+            # v4.0 OPT-2: context-aware semantic cache (ctx=root+mode, invalidated on index change)
+            _sc_hit = False
+            try:
+                from app.v4.wiring import get_semantic_cache as _gsc
+                _sc = _gsc()
+                _ctx = f"{getattr(intel,'root','.')}:{mode}"
+                _hit, _val = _sc.get(query, _ctx)
+                if _hit:
+                    return _val
+            except Exception:
+                _sc = None
             intel.ensure_indexed()
             res = intel.search(mode, query, limit=max(1, min(int(limit), 50)))
             out = format_search_results(res)
             if not (res.get("results") or res.get("symbols")):
                 out += "\n(no matches — try another mode or broaden the query)"
-            return ToolResult(output=out)
+            _tr = ToolResult(output=out)
+            try:
+                if _sc is not None:
+                    _sc.put(query, _ctx, _tr)
+            except Exception:
+                pass
+            return _tr
         except Exception as e:
             return ToolResult(error=f"code_search failed: {e}")

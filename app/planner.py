@@ -156,11 +156,29 @@ async def generate_plan(journal, task_id: str, goal: str, llm=None,
     except Exception:
         pass
 
+    # v4.0 OPT-12: plan cache — reuse plans when goal+project+state unchanged
     steps: Optional[List[Dict[str, Any]]] = None
-    if use_llm and llm is not None:
-        steps = await llm_plan(goal, llm, project_summary)
+    _pc_hit = False
+    try:
+        from app.v4.wiring import plan_cache_key, plan_cache_put
+        _fp = f"{len(project_summary)}:{project_summary[:64]}"
+        _cached = plan_cache_key(goal, project_summary[:500], _fp)
+        if _cached:
+            steps = _cached
+            _pc_hit = True
+    except Exception:
+        pass
     if not steps:
-        steps = _heuristic_plan(goal, project_summary)
+        if use_llm and llm is not None:
+            steps = await llm_plan(goal, llm, project_summary)
+        if not steps:
+            steps = _heuristic_plan(goal, project_summary)
+    if steps and not _pc_hit:
+        try:
+            from app.v4.wiring import plan_cache_put as _pc_put
+            _pc_put(goal, project_summary[:500], _fp, steps)
+        except Exception:
+            pass
 
     if graph.nodes():
         # merge: append new steps not already present

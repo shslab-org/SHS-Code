@@ -299,6 +299,13 @@ class BaseAgent(ABC):
         # per agent lifetime; /new (CLI) resets the memory which re-arms this.
         if not getattr(self, "_system_injected", False):
             sys_content = SHSCODE_IDENTITY + "\n\n" + (self.system_prompt or "") + CORE_DIRECTIVES
+            # v4.0 OPT-1: stable static prefix cache — reuse key when static content unchanged
+            try:
+                from app.v4.wiring import get_prefix_cache as _gpc
+                _pc = _gpc()
+                _pc.build(SHSCODE_IDENTITY, self.system_prompt or "", CORE_DIRECTIVES)
+            except Exception:
+                pass
             self.memory.add(Message.system(sys_content))
             self._system_injected = True
 
@@ -306,6 +313,12 @@ class BaseAgent(ABC):
         # REAL execution behavior — prompt bias, step budget, verification level,
         # plan depth. Persisted in ~/.shscode — survives restarts.
         self._apply_mode_and_profile()
+        # v4.0 OPT-7: background prefetch (intel index + git) — hides cold 1346ms off critical path
+        try:
+            from app.v4.wiring import start_project_prefetch as _pf
+            _pf(".")
+        except Exception:
+            pass
 
         # v3.0 chat fast-path: purely local classification, hoisted BEFORE
         # skill injection so chat requests can also skip skill noise (a

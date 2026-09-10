@@ -90,6 +90,16 @@ def get_stream_parser():
     from app.v4.stream_parser import StreamToolParser as P
     return P()
 
+# --- OPT-4: DAG-aware parallel tool dispatch (read-only fan-out, write serial) ---
+async def dispatch_tools_dag(tasks, runner, limit: int = 8):
+    from app.v4.parallel_tools import dispatch
+    return await dispatch(tasks, runner, limit=limit)
+
+def make_tool_tasks(calls):
+    """Adapt (name, args, tc_id) triples to OPT-4 ToolTasks (no deps = full fan-out)."""
+    from app.v4.parallel_tools import ToolTask
+    return [ToolTask(id=tc_id or f"t{i}", name=n, args=a or {}) for i, (n, a, tc_id) in enumerate(calls)]
+
 # --- OPT-12: plan cache wrapper (planner overhead) ---
 def plan_cache_key(goal: str, project_hint: str, state_fingerprint: str) -> Optional[List[Dict[str, Any]]]:
     try:
@@ -182,3 +192,31 @@ def wiring_stats() -> Dict[str, Any]:
         except Exception as e:
             out[k] = f"stats-error: {e}"
     return out
+
+# --- 103-agent team: live entry (PM->Architect->100 Engineers->QA) ---
+def get_team103(engine_fn=None, **cfg_kw):
+    """Lazy Team103 factory. engine_fn required on first use; cached per engine."""
+    from app.team103.scheduler import Team103, TeamConfig
+    key = f"team103:{id(engine_fn)}:{sorted(cfg_kw.items())}"
+    if key not in _singletons:
+        cfg = TeamConfig(**{k: v for k, v in cfg_kw.items() if hasattr(TeamConfig, k)})
+        if engine_fn is None:
+            # default engine: single SHSCode agent per TaskSpec (bounded, journaled)
+            async def _default_engine(spec, wid):
+                from app.agent.shscode import SHSCode
+                from app.v4.merger import WorkerResult
+                try:
+                    agent = SHSCode()
+                    out = await agent.run(f"{spec.title}\nContext: {spec.context_slice[:2000]}\nFiles: {','.join(spec.files[:5])}")
+                    return WorkerResult(wid, list(spec.files), [], out[:3000], [], [], 0.75)
+                except Exception as e:
+                    from app.v4.merger import WorkerResult as _WR
+                    return _WR(wid, [], [], f"error: {e}", [], [spec.title], 0.2)
+            engine_fn = _default_engine
+        _singletons[key] = Team103(engine_fn, cfg)
+    return _singletons[key]
+
+async def run_team103(goal: str, specs=None, engine_fn=None, correlation_id=None, **cfg_kw):
+    """One-call Team103 run: PM decompose -> Architect waves -> Engineers -> QA gate."""
+    team = get_team103(engine_fn, **cfg_kw)
+    return await team.run(goal, specs=specs, correlation_id=correlation_id)

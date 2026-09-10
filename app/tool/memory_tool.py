@@ -59,6 +59,17 @@ class MemoryTool(BaseTool):
         "required": ["action"],
     }
 
+    # v4.0 OPT-8: tiered L1-L4 cache (best-effort mirror)
+    # v4.0 OPT-9: intelligent classify/retrieve (best-effort mirror)
+    def _v4_mirror(self, action: str, content: str = ""):
+        try:
+            from app.v4.wiring import get_tiered_memory as _gtm, get_intel_memory as _gim
+            _tm = _gtm(); _im = _gim()
+            if action in ("write_memory", "append_memory") and content:
+                _tm.put(f"mem:{hash(content) % 10**8}", content[:2000])
+                _im.add(content[:2000])
+        except Exception:
+            pass
     async def execute(self, action: str, content: str = "") -> ToolResult:
         workspace = _get_workspace()
         memory_file = _memory_file()
@@ -71,6 +82,7 @@ class MemoryTool(BaseTool):
                 return ToolResult(output=memory_file.read_text(encoding="utf-8"))
             elif action == "write_memory":
                 memory_file.write_text(content, encoding="utf-8")
+                self._v4_mirror(action, content)
                 return ToolResult(output=f"MEMORY.md written ({len(content)} chars).")
             elif action == "append_memory":
                 # FIX: Use lock to prevent race condition on concurrent appends

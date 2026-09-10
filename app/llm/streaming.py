@@ -410,6 +410,14 @@ class AsyncStreamProcessor:
             # Signal end of iteration
             await self._buffer.put(None)
 
+    # v4.0 OPT-5: incremental tool-call dispatch on valid JSON boundary via app.v4.stream_parser
+    def _v4_stream_parse(self, text: str):
+        try:
+            from app.v4.wiring import get_stream_parser as _gsp
+            _p = _gsp()
+            return _p.feed(text)
+        except Exception:
+            return []
     def _extract_deltas(self, chunk: Any) -> list[StreamingDelta]:
         """Extract StreamingDelta objects from a raw stream chunk.
 

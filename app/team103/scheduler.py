@@ -14,10 +14,10 @@ import asyncio, time, uuid
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
-from app.v4.dedup import DedupRegistry
-from app.v4.merger import WorkerResult, merge_results
+from app.v4.dedup import DedupRegistry  # v4.0 OPT-17: dedup + file/symbol locks
+from app.v4.merger import WorkerResult, merge_results  # v4.0 OPT-18: result merging
 from app.v4.async_log import AsyncEventLog
-from app.v4.roles import TaskSpec, decompose_goal, specialize
+from app.v4.roles import TaskSpec, decompose_goal, specialize  # v4.0 OPT-20: PM/Arch/Eng/QA roles
 from app.v4.context_mgmt import summarize_output
 
 EngineFn = Callable[[TaskSpec, str], Awaitable[WorkerResult]]
@@ -168,7 +168,7 @@ class Team103:
             for s, _ in indexed:
                 self.dedup.heartbeat("hb", s.title, s.files)
         merged = merge_results(results)
-        from app.v4.cont_qa import ContinuousQA
+        from app.v4.cont_qa import ContinuousQA  # v4.0 OPT-19: continuous QA
         qa = ContinuousQA()
         await qa.check_changed(merged.merged_files[:50])
         failed = sum(1 for f in qa.findings if not f.passed)

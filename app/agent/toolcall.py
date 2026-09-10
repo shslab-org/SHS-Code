@@ -49,6 +49,15 @@ def _cap_tool_output(text: str,
     (view with line ranges) instead of assuming it saw everything."""
     if not text or len(text) <= max_chars:
         return text
+    # v4.0 OPT-10: loss-aware summarize — errors/symbols preserved, middle summarized
+    try:
+        from app.v4.wiring import summarize_tool_output as _sum
+        _ch = _sum("tool", text, budget=max_chars)
+        _s = _ch.summary if hasattr(_ch, "summary") else str(_ch)
+        if _s and len(_s) <= max_chars + 500:
+            return _s
+    except Exception:
+        pass
     head = text[:_TOOL_OUTPUT_HEAD]
     tail = text[-_TOOL_OUTPUT_TAIL:]
     omitted = len(text) - _TOOL_OUTPUT_HEAD - _TOOL_OUTPUT_TAIL
@@ -518,7 +527,17 @@ tool or different arguments — DO NOT repeat the same failing call.
             try:
                 args = json.loads(tc.function.arguments) if tc.function.arguments else {}
             except json.JSONDecodeError as e:
-                args = {}
+                # v4.0 OPT-14: malformed JSON repair (H4) before dropping args
+                try:
+                    from app.v4.wiring import repair_tool_args as _repair
+                    _r = _repair(tc.function.arguments or "")
+                    args = _r if isinstance(_r, dict) else {}
+                    if args:
+                        logger.info(f"OPT-14 repaired JSON for {name}")
+                    else:
+                        args = {}
+                except Exception:
+                    args = {}
                 # NOTE: no agent-name bracket prefix here — the structured log
                 # context already renders `agent@step`; bracketed names in the
                 # message body mangle as `anus]` in ANSI-fragile viewers.
@@ -528,8 +547,10 @@ tool or different arguments — DO NOT repeat the same failing call.
         outputs: list[str] = []
 
         # ── Phase 2 (spec §19): parallel batch when ALL calls are read-only ──
+        # v4.0 OPT-4: DAG-aware dispatch (read-only fan-out, write serial) via app.v4.parallel_tools
         if len(calls) >= 2 and all(_is_read_only_call(n, a) for n, a, _ in calls):
             from app.activity import emit
+            from app.schema import ToolResult as _TCResult
             emit("parallel_tools", count=len(calls),
                  tools=[n for n, _, _ in calls][:6])
 
@@ -537,12 +558,20 @@ tool or different arguments — DO NOT repeat the same failing call.
                 self._selector.record_use(name)
                 return await self._execute_with_retry(name, args, tool_call_id=tc_id)
 
-            results = await asyncio.gather(
-                *[_run_one(n, a, i) for n, a, i in calls],
-                return_exceptions=True)
+            try:
+                from app.v4.wiring import dispatch_tools_dag, make_tool_tasks
+                _tasks = make_tool_tasks(calls)
+                async def _runner(nm: str, ag: dict, tid: str):
+                    return await _run_one(nm, ag, tid)
+                _res = await dispatch_tools_dag(_tasks, _runner, limit=8)
+                results = [_res.get(tc_id, _TCResult(error="missing result")) for _, _, tc_id in calls]
+            except Exception:
+                results = await asyncio.gather(
+                    *[_run_one(n, a, i) for n, a, i in calls],
+                    return_exceptions=True)
             for (name, args, tc_id), result in zip(calls, results):
                 if isinstance(result, Exception):
-                    result = ToolResult(error=str(result))
+                    result = _TCResult(error=str(result))
                 outputs.append(str(result))
                 self._selector.record_success(name) if not result.error \
                     else self._selector.record_failure(name)
@@ -562,6 +591,7 @@ tool or different arguments — DO NOT repeat the same failing call.
             return "\n".join(outputs) if outputs else None
 
         # ── Sequential path (mutating / dependent operations) ──
+        # v4.0 OPT-6: speculative prep (safe read-only prefetch, validated before use)
         for name, args, tc_id in calls:
             self._selector.record_use(name)
             result = await self._execute_with_retry(name, args, tool_call_id=tc_id)

@@ -36,6 +36,13 @@ class BrowserUseTool(BaseTool):
         self._page: Any = None
         self._playwright: Any = None
 
+    # v4.0 OPT-15: bounded pool bookkeeping (best-effort, never breaks live path)
+    def _v4_pool_stats(self):
+        try:
+            from app.v4.wiring import get_browser_pool as _gbp
+            return _gbp().stats()
+        except Exception:
+            return {}
     async def _ensure_browser(self) -> None:
         if self._browser is None:
             try:
