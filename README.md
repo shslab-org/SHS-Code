@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Version-3.1.0-ff69b4?style=for-the-badge&logo=github&logoColor=white" alt="Version">
+<img src="https://img.shields.io/badge/Version-4.0.0-ff69b4?style=for-the-badge&logo=github&logoColor=white" alt="Version">
 <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
 <img src="https://img.shields.io/badge/License-MIT-FFD700?style=for-the-badge&logo=opensourceinitiative&logoColor=black" alt="License">
 <img src="https://img.shields.io/badge/Status-Persistent%20%7C%20Autonomous-00C853?style=for-the-badge&logo=bugsnag&logoColor=white" alt="Status">
@@ -38,6 +38,13 @@ SHS Code initialized.
 | 🔎 **Codebase intelligence** | AST-level indexing, semantic + structural search, project profiles |
 | 🩺 **`/doctor`** | Full diagnostics with actionable hints |
 | 🖥️ **Stable terminal** | Live activity feed (thinking / tools / rate-limit waits), no input flicker |
+
+> ### 🆕 v4.0.0 — Latency + 103-agent architecture (20 optimizations)
+> - **20 measured optimizations**: prefix cache, semantic cache, async DAG, streaming parser, speculative execution, prefetch, tiered memory, intelligent memory, context management, smart model routing, plan cache, risk-aware verification, robust recovery, browser pool, async observability, dedup/locks, result merging, continuous QA, role specialization.
+> - **103-agent team** (`app/team103`): 1 PM + 1 Architect + 100 dynamic Engineer workers + 1 QA — bounded pool, dependency waves, file-conflict serialization, AIMD dynamic concurrency, timeout/retry/checkpoint, work-stealing, task-specific context slices. NOT 103 full LLM loops.
+> - **Tests**: `tests/v4/` — 27 passed (optimization correctness + 10/25/50/75/100-worker stress, conflict serialization, crash recovery, phase ordering).
+> - **Docs**: `docs/v4/POSTMORTEM.md` (measured baselines + root causes) + `docs/v4/LATENCY_PROFILE.md`.
+> - **Version**: single source `app/__init__.py` → `4.0.0` (CLI, server, pyproject aligned).
 
 > ### 🆕 v3.1.0 — Forensic-perfection round: memory, context, multi-agent, leaks
 > - **Conversations remember across processes**: one-shot runs now AUTO-CONTINUE the recent session — "remember 91" → new process → "what was the number?" → "91" (the benchmark task-01 killer, fixed).

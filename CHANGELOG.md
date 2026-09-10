@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+---
+
+## [4.0.0] — 2026-09-10
+
+### Summary
+
+v4.0.0 is a **latency + architecture release**: 20 measured optimizations
+plus a 103-agent team architecture (1 PM + 1 Architect + 100 dynamic
+Engineer workers + 1 QA). Version bumped 3.1.0 → 4.0.0 across
+`app/__init__.py`, `pyproject.toml`, CLI, server, and README (single source).
+
+### Added
+
+- **`app/v4/`** — 20 optimization modules: prefix_cache, semantic_cache,
+  async_dag, stream_parser, speculative, prefetch, memory_tiers,
+  intel_memory, context_mgmt, metrics, model_router, plan_cache,
+  risk_verify, recovery, browser_pool, async_log, dedup, merger,
+  cont_qa, roles.
+- **`app/team103/`** — Team103 scheduler: PM decompose, Architect waves,
+  bounded worker pool (8→100 AIMD), dependency waves, file-conflict
+  serialization, timeout/retry/checkpoint, work-stealing, QA gate.
+- **`tests/v4/`** — 27 tests: optimization correctness, 10/25/50/75/100
+  worker stress, conflict serialization, crash recovery, phase ordering.
+- **`docs/v4/`** — POSTMORTEM.md (measured baselines + root causes),
+  LATENCY_PROFILE.md.
+
+### Changed
+
+- Bumped version `3.1.0` → `4.0.0` (single source `app/__init__.py`).
+- README: version badge + v4.0.0 feature block.
+
+### Verification
+
+- `tests/v4/`: **27 passed**.
+- Full suite spot-check: pre-existing failure only
+  (`tests/test_deep_subsystems.py::TestSkillsRuntime::test_relevant_skill_selected_for_task`);
+  v4 introduces no regressions.
+
 
 ## [5.1.1] — 2026-06-20
 
