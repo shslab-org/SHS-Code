@@ -27,7 +27,7 @@ def summarize_output(ref: str, text: str, budget: int = 4000, head_n: int = 1500
     lines = text.splitlines()
     ex = [ln[:300] for ln in lines if any(k in ln.lower() for k in keys)][:10]
     omitted = n - head_n - tail_n
-    summary = f"{head}\n\n[… {omitted} chars omitted — full artifact at {ref} …]\n\n{tail}"
+    summary = f"{head}\n\n[… {omitted} chars truncated/omitted — full artifact at {ref} …]\n\n{tail}"
     if ex: summary += "\n\nKey excerpts:\n" + "\n".join(f"- {e}" for e in ex)
     return ContextChunk(ref, summary, ex, head, tail, n, True)
 
