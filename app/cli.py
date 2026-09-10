@@ -1974,6 +1974,11 @@ async def _interactive_loop(skin_name: str = "default") -> None:
         if user_input.lower() in ("exit", "quit", "q!"):
             break
 
+        # Bare --help / -h / help shows the command list instead of
+        # being sent to the agent as a task.
+        if user_input.strip().lower() in ("--help", "-h", "help", "?"):
+            user_input = "/help"
+
         # Handle slash commands
         if user_input.startswith("/"):
             try:
@@ -2102,6 +2107,10 @@ def main() -> None:
     if args.prompt:
         # Single-shot mode: SHSCode "do something"
         prompt_text = " ".join(args.prompt)
+        if prompt_text.strip().lower() in ("--help", "-h", "help", "?"):
+            # Mirror argparse --help: print usage without starting an agent.
+            parser.print_help()
+            return
 
         async def _run_once():
             from app.agent.shscode import SHSCode
