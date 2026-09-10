@@ -361,11 +361,22 @@ class SkillEngine:
             return True
         return bool(skill)
 
+    # v4.0.0 audit FIX: stopwords (a/with/write/...) tied every skill at
+    # overlap=1 and buried the right skill. Filter stopwords, weight
+    # name/tag matches above description matches, tie-break by name.
+    _STOPWORDS = frozenset({
+        "a", "an", "the", "and", "or", "with", "in", "on", "at",
+        "to", "for", "of", "write", "make", "create", "build", "run",
+        "using", "use",
+    })
+
     def get_relevant(self, goal: str, max_skills: int = 3) -> list[Skill]:
         self._ensure_loaded()
         goal_lower = goal.lower()
-        words = set(re.findall(r"\w+", goal_lower))
-        ranked: list[tuple[int, Skill]] = []
+        words = set(re.findall(r"\w+", goal_lower)) - self._STOPWORDS
+        if not words:
+            words = set(re.findall(r"\w+", goal_lower))
+        ranked: list[tuple[tuple[int, int, int], Skill]] = []
         for skill in self._skills.values():
             if not skill.enabled:
                 continue
@@ -374,12 +385,17 @@ class SkillEngine:
             # disabled set entirely.
             if self.is_disabled(skill.name):
                 continue
-            skill_text = (skill.description + " " + " ".join(skill.tags)).lower()
-            skill_words = set(re.findall(r"\w+", skill_text))
-            overlap = len(words & skill_words)
+            desc_words = set(re.findall(r"\w+", skill.description.lower())) - self._STOPWORDS
+            tag_words: set[str] = set()
+            for tg in skill.tags:
+                tag_words.update(re.findall(r"\w+", str(tg).lower()))
+            name_words = set(re.findall(r"\w+", skill.name.lower().replace("-", " ").replace("_", " ")))
+            overlap = len(words & (desc_words | tag_words | name_words))
             if overlap > 0:
-                ranked.append((overlap, skill))
-        ranked.sort(key=lambda x: x[0], reverse=True)
+                tag_hit = len(words & tag_words)
+                name_hit = len(words & name_words)
+                ranked.append(((overlap, tag_hit, name_hit), skill))
+        ranked.sort(key=lambda x: (x[0], x[1].name), reverse=True)
         return [s for _, s in ranked[:max_skills]]
 
     def should_suggest_skill(self, tool_call_count: int) -> bool:
