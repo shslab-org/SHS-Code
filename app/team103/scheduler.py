@@ -95,9 +95,19 @@ class Team103:
                 s.context_slice = specialize(s.role_hint) + f" | files={','.join(s.files[:5])}"
         self.log.emit(team_id, "architect", corr, "architect.plan",
                       f"{len(waves)} waves; roles={[s.role_hint for s in tasks][:10]}")
-        sem = asyncio.Semaphore(self._ctrl.cur)
         results: List[WorkerResult] = []
         active = 0
+        active_lock = asyncio.Lock()
+
+        async def _acquire_slot():
+            # Dynamic concurrency gate: wait until active < current AIMD limit.
+            # Limit grows 8→100 on success, halves on failure (spec: dynamic scaling).
+            while True:
+                async with active_lock:
+                    limit = max(1, min(self._ctrl.cur, self.cfg.max_workers))
+                    if active < limit:
+                        return limit
+                await asyncio.sleep(0.001)
 
         async def _one(spec: TaskSpec, idx: int) -> Optional[WorkerResult]:
             nonlocal active
@@ -112,36 +122,37 @@ class Team103:
             if len(spec.context_slice) > 4000:
                 ch = summarize_output(f"ctx:{spec.title}", spec.context_slice, budget=4000)
                 spec.context_slice = ch.summary
-            async with sem:
+            await _acquire_slot()
+            async with active_lock:
                 active += 1
                 self.peak = max(self.peak, active)
-                try:
-                    self.log.emit(team_id, wid, corr, "engineer.start", spec.title)
-                    st = time.monotonic()
-                    last_err: Exception | None = None
-                    for attempt in range(self.cfg.max_retries + 1):
-                        try:
-                            res = await asyncio.wait_for(self.engine_fn(spec, wid), self.cfg.task_timeout_s)
-                            self._ctrl.success(time.monotonic() - st)
-                            self.log.emit(team_id, wid, corr, "engineer.done", f"{spec.title} attempt={attempt}")
-                            self.dedup.release(wid, spec.title, spec.files, res)
-                            return res
-                        except asyncio.TimeoutError as e:
-                            last_err = e
-                            self._ctrl.failure()
-                            self.log.emit(team_id, wid, corr, "engineer.timeout", f"{spec.title} attempt={attempt}")
-                        except Exception as e:
-                            last_err = e
-                            self._ctrl.failure()
-                            self.log.emit(team_id, wid, corr, "engineer.error", f"{spec.title} attempt={attempt}: {e}")
-                        if attempt < self.cfg.max_retries:
-                            self.retries += 1
-                            await asyncio.sleep(0.05 * (2 ** attempt))
-                    self.dedup.release(wid, spec.title, spec.files)
-                    return WorkerResult(wid, [], [], f"error: {last_err}", [], [spec.title], 0.2)
-                finally:
+            try:
+                self.log.emit(team_id, wid, corr, "engineer.start", spec.title)
+                st = time.monotonic()
+                last_err: Exception | None = None
+                for attempt in range(self.cfg.max_retries + 1):
+                    try:
+                        res = await asyncio.wait_for(self.engine_fn(spec, wid), self.cfg.task_timeout_s)
+                        self._ctrl.success(time.monotonic() - st)
+                        self.log.emit(team_id, wid, corr, "engineer.done", f"{spec.title} attempt={attempt}")
+                        self.dedup.release(wid, spec.title, spec.files, res)
+                        return res
+                    except asyncio.TimeoutError as e:
+                        last_err = e
+                        self._ctrl.failure()
+                        self.log.emit(team_id, wid, corr, "engineer.timeout", f"{spec.title} attempt={attempt}")
+                    except Exception as e:
+                        last_err = e
+                        self._ctrl.failure()
+                        self.log.emit(team_id, wid, corr, "engineer.error", f"{spec.title} attempt={attempt}: {e}")
+                    if attempt < self.cfg.max_retries:
+                        self.retries += 1
+                        await asyncio.sleep(0.05 * (2 ** attempt))
+                self.dedup.release(wid, spec.title, spec.files)
+                return WorkerResult(wid, [], [], f"error: {last_err}", [], [spec.title], 0.2)
+            finally:
+                async with active_lock:
                     active -= 1
-            # unreachable
         # Execute wave by wave (A->D serial across waves, parallel within wave = work-stealing via gather)
         idx = 0
         for wave in waves:
