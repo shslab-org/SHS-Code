@@ -30,7 +30,11 @@ Engineer workers + 1 QA). Version bumped 3.1.0 → 4.0.0 across
 - **`tests/v4/`** — 27 tests: optimization correctness, 10/25/50/75/100
   worker stress, conflict serialization, crash recovery, phase ordering.
 - **`docs/v4/`** — POSTMORTEM.md (measured baselines + root causes),
-  LATENCY_PROFILE.md.
+  LATENCY_PROFILE.md (re-verified this run: cold 860.7ms / warm 14.6ms /
+  sqlite 0.10ms / tiered write 2.46ms / read 0.05ms / DAG 4.9x / log 2.4ms).
+- **`app/v4/wiring.py`** — production wiring: single additive/lazy/reversible
+  import point binding all 20 opts into the live agent (caches, prefetcher,
+  router, plan cache, event log, risk tiers, JSON repair, context summarize).
 
 ### Changed
 
