@@ -119,7 +119,7 @@ SHS-Code is a **tool-using coding agent** with:
 - a FastAPI server with REST + WebSocket + webchat/canvas UIs (`shscode-server` / `python -m app.server`, default port `8765`),
 - a provider/model layer supporting cloud APIs and local/offline models,
 - persistent memory (short-term, long-term SQLite, tiered cache, journal, checkpoints),
-- 20 agent tools, 29 built-in skills, 4 skill levels, MCP client + server,
+- 18 agent tools, 29 built-in skills, 4 skill levels, MCP client + server,
 - code/project intelligence over a persistent incremental index,
 - browser + web search + URL extraction,
 - Git + GitHub/GitLab/Azure DevOps/Bitbucket/Forgejo integrations,
@@ -180,7 +180,7 @@ To use SHS-Code, pick any of these:
 | Reliability | Checkpoints, retries, recovery, verification, continuous QA, loop detection |
 | Knowledge | Tiered memory, context condenser, skills (4 levels), MCP |
 | Understanding | AST index, semantic search, project profiles, environment detection |
-| Action | 20 tools: shell, Python/Node, editor, browser, search, planning, verify |
+| Action | 18 tools: shell, Python/Node, editor, browser, search, verify |
 | Models | Universal + OpenAI/Anthropic/Google/Mistral/Bedrock/Ollama/GGUF/HF, failover, pools, routing |
 | Ops | Sessions/resume, doctor/diagnostics, cron, webhooks, SSH/sandbox, channels |
 | Interfaces | CLI, server REST/WS, webchat/canvas, `shscode-*` console scripts |
@@ -196,7 +196,7 @@ flowchart TB
   Cron[Cron shscode-cron] --> Agent
   Webhook[Webhooks] --> Agent
   Agent --> Planner[Planner + Task DAG + Team103]
-  Planner --> Tools[20 tools]
+  Planner --> Tools[18 tools]
   Tools --> CodeIntel[AST index + project intel]
   Tools --> Browser[Browser/search/crawl]
   Tools --> Git[Git + forges]
@@ -412,7 +412,7 @@ To configure, edit `[context]` in `config.toml`. To compress manually, run `/com
 
 ## 25. Tools
 
-SHS-Code provides **20 agent tools** (`app/tool/`):
+SHS-Code provides **18 agent tools** (`app/tool/`):
 
 | Tool | Purpose |
 |---|---|
@@ -427,7 +427,6 @@ SHS-Code provides **20 agent tools** (`app/tool/`):
 | `crawl` | Clean text extraction from URLs |
 | `memory` | Persistent memory read/write |
 | `cross_session_search` | Full-text search across past sessions |
-| `planning` | Plan decomposition |
 | `task_dag` | Persisted task graph |
 | `delegate` | Spawn isolated subagent |
 | `skill_manager` | Create/patch/delete/list skills |
@@ -435,7 +434,8 @@ SHS-Code provides **20 agent tools** (`app/tool/`):
 | `ask_human` | Request user clarification |
 | `terminate` | Signal task completion |
 | `image_generate` | Generate images (FAL.ai or mock) |
-| `data_viz` | Charts/visualization |
+
+planning.py, data_viz.py and platform_control.py exist as tool modules in app/tool/ but are not exposed in the default agent tool collection.
 
 To list tools in the shell: `/tools`. Every tool emits an OpenAI-compatible schema for the model.
 
@@ -582,7 +582,7 @@ SHS-Code ships **29 built-in skills** (verified via `SkillEngine.list_skills()`;
 
 `android-development`, `api-development`, `automation`, `browser-automation`, `c`, `code_review`, `cpp`, `csharp`, `data_analysis`, `database-engineering`, `debugging`, `deep_research`, `devops_deploy`, `documentation`, `git`, `github_workflow`, `java`, `javascript`, `kotlin`, `linux`, `mlops_training`, `php`, `python`, `security-engineering`, `sql`, `testing`, `typescript`, `ui-ux`, `web-development`
 
-Source files live in `app/skills/builtin/*.md` (30 files on disk; engine loads 29). Coverage: languages (Python, JavaScript, TypeScript, Java, Kotlin, C, C++, C#, PHP, SQL), engineering (web, API, database, security, DevOps, MLOps, testing, debugging, documentation, automation, data analysis, research, browser automation, Git, GitHub, Linux, UI/UX, Android).
+Source files live in `app/skills/builtin/*.md` (29 files on disk, 29 loaded). Coverage: languages (Python, JavaScript, TypeScript, Java, Kotlin, C, C++, C#, PHP, SQL), engineering (web, API, database, security, DevOps, MLOps, testing, debugging, documentation, automation, data analysis, research, browser automation, Git, GitHub, Linux, UI/UX, Android).
 
 ---
 
