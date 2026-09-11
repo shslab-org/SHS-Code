@@ -28,6 +28,7 @@ checkpointed); at the prompt it exits cleanly.
 
 import asyncio
 import json
+import re
 import os
 import signal
 import sys
@@ -77,6 +78,22 @@ SLASH_COMMANDS = [
     # Stabilization pass: previously-advertised commands that did not exist
     "/undo", "/retry", "/browser",
 ]
+
+
+_HELP_FLAG_RE = re.compile(r"(^|\s)(--help|-h)(?=\s|$|=)", re.IGNORECASE)
+
+
+def _contains_help_flag(text: str) -> bool:
+    """Detect a --help / -h flag anywhere in user input.
+
+    Token-aware (regex on whitespace boundaries, case-insensitive) so
+    ``deploy --help``, ``--help deploy`` and ``/status --help`` all match,
+    while ``--helper`` / ``--helpful`` do NOT match. ``=`` is accepted so
+    ``--help=x`` also counts.
+    """
+    if not text:
+        return False
+    return bool(_HELP_FLAG_RE.search(text.strip()))
 
 
 def _get_skin(name: str = "default") -> dict:
@@ -356,6 +373,13 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
     parts = cmd.strip().split(None, 1)
     command = parts[0].lower()
     arg = parts[1] if len(parts) > 1 else ""
+
+    # --help flag on any slash command shows help instead of running it
+    # (e.g. "/status --help", "/model --help").
+    if _contains_help_flag(arg) and command != "/help" and command != "/?":
+        base = await _handle_slash("/help", agent=agent, session_id=session_id,
+                                   task_queue=task_queue, runtime=runtime)
+        return f"Help for {command}:\n  Usage: {command} [options]\n  (Flag --help detected — showing full command list.)\n\n{base}"
 
     # ------------------------------------------------------------------ help
     if command in ("/help", "/?"):
@@ -1974,9 +1998,10 @@ async def _interactive_loop(skin_name: str = "default") -> None:
         if user_input.lower() in ("exit", "quit", "q!"):
             break
 
-        # Bare --help / -h / help shows the command list instead of
-        # being sent to the agent as a task.
-        if user_input.strip().lower() in ("--help", "-h", "help", "?"):
+        # --help / -h anywhere in input shows the command list instead
+        # of being sent to the agent as a task (bare or embedded:
+        # "deploy --help", "/status --help", "--help deploy").
+        if user_input.strip().lower() in ("--help", "-h", "help", "?") or _contains_help_flag(user_input):
             user_input = "/help"
 
         # Handle slash commands
@@ -2107,8 +2132,9 @@ def main() -> None:
     if args.prompt:
         # Single-shot mode: SHSCode "do something"
         prompt_text = " ".join(args.prompt)
-        if prompt_text.strip().lower() in ("--help", "-h", "help", "?"):
+        if prompt_text.strip().lower() in ("--help", "-h", "help", "?") or _contains_help_flag(prompt_text):
             # Mirror argparse --help: print usage without starting an agent.
+            # Detected anywhere ("SHSCode deploy --help", "SHSCode --help deploy").
             parser.print_help()
             return
 
