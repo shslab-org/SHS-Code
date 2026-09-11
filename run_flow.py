@@ -7,7 +7,6 @@ Usage:
     python run_flow.py "Analyse this CSV and generate a bar chart"
 """
 import asyncio
-import sys
 
 from app.config import Config
 from app.flow.planning import PlanningFlow
@@ -26,10 +25,20 @@ async def main(goal: str) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        goal = " ".join(sys.argv[1:])
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="SHS Code — PlanningFlow entry point.",
+        prog="run_flow.py",
+    )
+    parser.add_argument("goal", nargs="*", help="Goal text for the PlanningFlow agent")
+    args = parser.parse_args()
+    if args.goal:
+        goal = " ".join(args.goal)
     else:
-        goal = input("Enter goal: ").strip()
+        try:
+            goal = input("Enter goal: ").strip()
+        except EOFError:
+            goal = ""
         if not goal:
             goal = "Write a hello world Python script and save it to workspace/hello.py"
     asyncio.run(main(goal))
