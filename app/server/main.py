@@ -500,6 +500,11 @@ if _STATIC_DIR.is_dir():
 from app.server.webhook_router import router as webhook_router
 from app import env
 app.include_router(webhook_router)
+try:
+    from app.secrets.router import router as secrets_router
+    app.include_router(secrets_router)
+except Exception as _e:
+    pass  # secrets store optional; endpoints unavailable if import fails
 
 
 @app.get("/chat", response_class=HTMLResponse)

@@ -26,10 +26,11 @@ Usage::
 
 from __future__ import annotations
 
-import os
+import threading
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
 from app.logger import logger
@@ -59,7 +60,7 @@ router = APIRouter(prefix="/secrets", tags=["secrets"])
 
 # Module-level store (lazy-initialized)
 _store: Optional[SecretsStore] = None
-_store_lock = __import__("threading").Lock()
+_store_lock = threading.Lock()
 
 
 def _get_store() -> SecretsStore:
@@ -75,20 +76,22 @@ def _get_store() -> SecretsStore:
 # API Key dependency (same pattern as main server)
 # ──────────────────────────────────────────────────────────────────────────────
 
-_API_KEY = env.getenv("API_KEY", "")
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def _current_api_key() -> str:
+    """Read the API key at CALL time (env may change after import; test-safe)."""
+    return env.getenv("API_KEY", "") or ""
 
 
 async def require_api_key(
-    x_api_key: Optional[str] = None,
+    key: Optional[str] = Depends(_api_key_header),
 ) -> None:
     """Validate the API key if SHSCODE_API_KEY is configured."""
-    if not _API_KEY:
+    expected = _current_api_key()
+    if not expected:
         return
-    # FastAPI header dependency
-    if x_api_key is None:
-        from fastapi.security import APIKeyHeader
-        _header = APIKeyHeader(name="X-API-Key", auto_error=False)
-    if x_api_key != _API_KEY:
+    if key != expected:
         raise HTTPException(status_code=401, detail="Invalid or missing API key.")
 
 
@@ -128,7 +131,7 @@ def _handle_store_error(exc: SecretsStoreError) -> HTTPException:
 # Endpoints
 # ──────────────────────────────────────────────────────────────────────────────
 
-@router.get("", response_model=SecretListResponse)
+@router.get("", response_model=SecretListResponse, dependencies=[Depends(require_api_key)])
 async def list_secrets():
     """
     List all stored secrets.
@@ -146,7 +149,7 @@ async def list_secrets():
         raise _handle_store_error(exc)
 
 
-@router.get("/{name}", response_model=SecretResponse)
+@router.get("/{name}", response_model=SecretResponse, dependencies=[Depends(require_api_key)])
 async def get_secret(name: str):
     """
     Get a single secret's metadata by name.
@@ -162,7 +165,7 @@ async def get_secret(name: str):
         raise _handle_store_error(exc)
 
 
-@router.post("", response_model=SecretResponse, status_code=201)
+@router.post("", response_model=SecretResponse, status_code=201, dependencies=[Depends(require_api_key)])
 async def create_secret(req: SecretCreateRequest):
     """
     Create a new secret.
@@ -212,7 +215,7 @@ async def create_secret(req: SecretCreateRequest):
         raise _handle_store_error(exc)
 
 
-@router.put("/{name}", response_model=SecretResponse)
+@router.put("/{name}", response_model=SecretResponse, dependencies=[Depends(require_api_key)])
 async def update_secret(name: str, req: SecretUpdateRequest):
     """
     Update an existing secret.
@@ -270,7 +273,7 @@ async def update_secret(name: str, req: SecretUpdateRequest):
         raise _handle_store_error(exc)
 
 
-@router.delete("/{name}")
+@router.delete("/{name}", dependencies=[Depends(require_api_key)])
 async def delete_secret(name: str):
     """
     Delete a secret by name.
@@ -288,7 +291,7 @@ async def delete_secret(name: str):
         raise _handle_store_error(exc)
 
 
-@router.get("/{name}/check")
+@router.get("/{name}/check", dependencies=[Depends(require_api_key)])
 async def check_secret(name: str):
     """
     Check if a secret exists and is available for resolution.

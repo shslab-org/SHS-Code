@@ -23,14 +23,19 @@ from app import env
 # API Key authentication — enabled only when SHSCODE_API_KEY is set
 # ---------------------------------------------------------------------------
 
-_API_KEY = env.getenv("API_KEY", "")
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
+def _current_api_key() -> str:
+    """Read API key at CALL time (env may change after import; test-safe)."""
+    return env.getenv("API_KEY", "") or ""
+
+
 async def require_api_key(key: Optional[str] = Depends(_api_key_header)) -> None:
-    if not _API_KEY:
+    expected = _current_api_key()
+    if not expected:
         return
-    if key != _API_KEY:
+    if key != expected:
         raise HTTPException(status_code=401, detail="Invalid or missing API key.")
 
 
