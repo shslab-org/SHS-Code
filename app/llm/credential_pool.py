@@ -218,10 +218,24 @@ class CrossProviderRotator:
         return sum(p.available_count for p in self._pools.values())
 
 
-def build_pool_from_config(provider: str, primary_key: Optional[str] = None) -> Optional[CredentialPool]:
-    """
-    Build a CredentialPool from environment variables.
-    Looks for OPENAI_API_KEY, OPENAI_API_KEY_2, OPENAI_API_KEY_3, etc.
+def build_pool_from_config(
+    provider: str,
+    primary_key: Optional[str] = None,
+    extra_keys: Optional[list[str]] = None,
+) -> Optional[CredentialPool]:
+    """Build a CredentialPool from config + environment variables.
+
+    Key resolution order (first = highest priority):
+      1. ``primary_key`` (config ``llm.api_key`` / provider-specific env)
+      2. ``extra_keys`` (config ``llm.extra_api_keys`` — per-request
+         credential rotation candidates, spec §3)
+      3. ``<PREFIX>_2`` … ``<PREFIX>_9`` env vars (e.g. ``OPENAI_API_KEY_2``)
+      4. ``<PREFIX>`` env var itself (when it differs from primary_key)
+      5. Generic ``LLM_API_KEY`` / ``LLM_API_KEY_2`` … ``_9`` — covers the
+         ``universal`` / OpenAI-compatible provider (NVIDIA NIM, vLLM,
+         Together, …) which has no vendor prefix of its own.
+
+    Returns None when no key material exists anywhere.
     """
     import os
     prefix_map = {
@@ -230,25 +244,31 @@ def build_pool_from_config(provider: str, primary_key: Optional[str] = None) -> 
         "mistral": "MISTRAL_API_KEY",
         "bedrock": "AWS_ACCESS_KEY_ID",
         "google": "GOOGLE_API_KEY",
+        "gemini": "GOOGLE_API_KEY",
     }
-    prefix = prefix_map.get(provider.lower())
-    if not prefix:
-        if primary_key:
-            return CredentialPool.from_env([primary_key])
-        return None
+    prefix = prefix_map.get((provider or "").lower())
 
     keys: list[str] = []
-    if primary_key:
-        keys.append(primary_key)
-    # Also try OPENAI_API_KEY_2, _3, etc.
-    for i in range(2, 10):
-        k = os.getenv(f"{prefix}_{i}", "")
-        if k and k not in keys:
+    def _add(k: Optional[str]) -> None:
+        if k and k.strip() and k not in keys:
             keys.append(k)
 
-    if not keys:
-        env_k = os.getenv(prefix, "")
-        if env_k:
-            keys.append(env_k)
+    _add(primary_key)
+    for k in (extra_keys or []):
+        _add(k)
+    if prefix:
+        # Numbered siblings first so _2 outranks a bare-prefix fallback.
+        for i in range(2, 10):
+            _add(os.getenv(f"{prefix}_{i}", ""))
+        _add(os.getenv(prefix, ""))
+        # NOTE: generic LLM_API_KEY is intentionally NOT re-added here.
+        # Config._load already resolves it into primary_key, so adding it
+        # again would only break direct-call isolation (test env leaks).
+    else:
+        # Prefix-less providers (universal / openai-compat / ollama / ...):
+        # generic LLM_API_KEY(_2.._9) is the only env source.
+        _add(os.getenv("LLM_API_KEY", ""))
+        for i in range(2, 10):
+            _add(os.getenv(f"LLM_API_KEY_{i}", ""))
 
     return CredentialPool.from_env(keys) if keys else None

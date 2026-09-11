@@ -843,7 +843,41 @@ class LLM:
         provider = (cfg.llm.provider or "").lower()
         if provider in ("mock",):
             return None
-        return build_pool_from_config(provider, cfg.llm.api_key)
+        # FIX SPEC §3: wire config extra_api_keys into the pool so every
+        # request can rotate across primary + standby credentials.
+        extra = list(getattr(cfg.llm, "extra_api_keys", None) or [])
+        return build_pool_from_config(provider, cfg.llm.api_key, extra_keys=extra)
+
+    def _fallback_models(self) -> list[str]:
+        """Ordered model-fallback chain for this request (spec §3).
+
+        Reads ``[llm.fallback]``: when ``enabled`` the chain entries after
+        the current model are tried in order once the primary exhausts its
+        retry budget (or 404s as model-not-found). Empty when disabled.
+        """
+        try:
+            cfg = Config.get()
+            fb = getattr(cfg.llm, "fallback", None)
+            if fb is None or not getattr(fb, "enabled", False):
+                return []
+            chain = [str(m).strip() for m in (getattr(fb, "chain", None) or []) if str(m).strip()]
+            # Skip the primary model wherever it appears; fallbacks follow it.
+            if self._model in chain:
+                chain = chain[chain.index(self._model) + 1:]
+            # Never retry the model we just failed on.
+            return [m for m in chain if m != self._model]
+        except Exception:
+            return []
+
+    def _set_backend_model(self, model: str) -> None:
+        """Point the live backend at ``model`` for a fallback attempt."""
+        backend = self._backend
+        for attr in ("model", "_model_name", "model_name"):
+            try:
+                if hasattr(backend, attr):
+                    setattr(backend, attr, model)
+            except Exception:
+                pass
 
     def _build_backend(self, cfg: Any) -> Any:
         provider = (cfg.llm.provider or "").lower().strip()
@@ -924,6 +958,74 @@ class LLM:
 
     async def _call_with_retry(self, messages: list[dict[str, Any]],
                                 tools: Optional[list[dict[str, Any]]]) -> dict[str, Any]:
+        """Primary + model-fallback retry loop (spec §3).
+
+        Tries the configured primary model first (full retry budget via
+        ``_call_single_with_retry``); on exhaustion — or immediately on a
+        model-not-found 404 — walks ``_fallback_models()`` in order. Each
+        fallback gets its own full retry budget. Backend + ``self._model``
+        are restored to the primary afterwards so the configured model
+        stays canonical; per-request ``emit``/health events record which
+        model actually served the call. Message history is never mutated,
+        so context survives across fallback attempts.
+        """
+        primary = self._model
+        fallbacks = self._fallback_models()
+        if not fallbacks:
+            return await self._call_single_with_retry(messages, tools)
+        last_err: Optional[Exception] = None
+        for idx, model in enumerate([primary] + fallbacks):
+            if idx > 0:
+                self._set_backend_model(model)
+                self._model = model
+                logger.warning(f"[LLM] Model fallback {idx}/{len(fallbacks)}: trying '{model}' (primary '{primary}' failed: {last_err})")
+                try:
+                    emit("llm_fallback", provider=self._provider, model=model, primary=primary)
+                except Exception:
+                    pass
+            try:
+                result = await self._call_single_with_retry(messages, tools)
+                if idx > 0:
+                    logger.info(f"[LLM] Model fallback succeeded on '{model}'")
+                return result
+            except (TokenLimitExceeded,) as e:
+                # Context-window overflow MIGHT succeed on a bigger fallback
+                # model when the chain is configured for it; otherwise surface.
+                last_err = e
+                err_s = str(e).lower()
+                is_ctx = any(k in err_s for k in ("context", "token", "max_tokens", "context_length"))
+                if not is_ctx or idx >= len(fallbacks):
+                    raise
+                logger.warning(f"[LLM] Context overflow on '{model}' — trying fallback")
+            except (asyncio.TimeoutError, TimeoutError):
+                raise
+            except SHSCodeError as e:
+                last_err = e
+                txt_e = str(e)
+                is_404 = "404" in txt_e or "Not Found" in txt_e or "not found on this endpoint" in txt_e
+                if idx >= len(fallbacks):
+                    raise
+                if not is_404:
+                    logger.warning(f"[LLM] Primary '{model}' failed ({e}) — trying fallback")
+            except Exception as e:
+                last_err = e
+                if idx >= len(fallbacks):
+                    raise
+                logger.warning(f"[LLM] Model '{model}' error ({e}) — trying fallback")
+            finally:
+                # Restore canonical primary backend/model before next attempt
+                # (next loop iteration re-points at its own fallback) or return.
+                if idx > 0 or (last_err is not None):
+                    try:
+                        self._set_backend_model(primary)
+                    except Exception:
+                        pass
+                    self._model = primary
+        assert last_err is not None
+        raise last_err
+
+    async def _call_single_with_retry(self, messages: list[dict[str, Any]],
+                                          tools: Optional[list[dict[str, Any]]]) -> dict[str, Any]:
         wait = RETRY_BASE_WAIT
         rl_wait = 2.0                       # v3.0: rate-limit backoff track
         rl_attempts = 0                     # v3.0: separate 429 budget
