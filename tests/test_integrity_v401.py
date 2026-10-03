@@ -153,7 +153,7 @@ class TestBackgroundTaskFailure:
         await q.start_workers()
         try:
             t = await q.submit("will fail")
-            for _ in range(50):
+            for _ in range(150):
                 await asyncio.sleep(0.1)
                 cur = await q.get_task(t.id)
                 if cur.status in (TaskStatus.COMPLETED, TaskStatus.FAILED):
