@@ -98,6 +98,11 @@
 - [68. Contributing](#68-contributing)
 - [69. Full documentation](#69-full-documentation)
 - [70. Contact](#70-contact)
+- [71. GUI (v4.0.1)](#71-gui-v401)
+- [72. Task lifecycle integrity (v4.0.1)](#72-task-lifecycle-integrity-v401)
+- [73. SHS-Code-Agent GitHub identity (v4.0.1)](#73-shs-code-agent-github-identity-v401)
+- [74. Token streaming (v4.0.1)](#74-token-streaming-v401)
+- [75. Agnes API testing (v4.0.1)](#75-agnes-api-testing-v401)
 
 ---
 
@@ -105,9 +110,9 @@
 
 **SHS-Code** is the persistent autonomous AI coding agent by **SHS Lab (Sazzad Hussain Shobuj)** — https://github.com/shslab-org/shs-code.
 
-> Single product, single version: **`4.0.0`** (source of truth: `app/__init__.py::__version__` and `pyproject.toml`). Python `>=3.11`. Distribution name `shscode`; import package `app`.
+> Single product, single version: **`4.0.1`** (source of truth: `app/__init__.py::__version__` and `pyproject.toml`). Python `>=3.11`. Distribution name `shscode`; import package `app`.
 
-SHS-Code plans, implements, and verifies software tasks through tools — and remembers work across sessions.
+SHS-Code plans, implements, and verifies software tasks through tools — and remembers work across sessions. It ships with a CLI **and** a full web GUI (§71), both sitting on the same Python runtime.
 
 ---
 
@@ -117,16 +122,17 @@ SHS-Code is a **tool-using coding agent** with:
 
 - an interactive CLI (`shscode` / `SHSCode`), one-shot task mode, and background execution,
 - a FastAPI server with REST + WebSocket + webchat/canvas UIs (`shscode-server` / `python -m app.server`, default port `8765`),
-- a provider/model layer supporting cloud APIs and local/offline models,
+- a **full web GUI** at `/gui` (§71) — dashboard, agent chat with live token streaming, task DAG visualization, workspace, terminal, Git/GitHub panels, QA, sessions, memory, settings,
+- a provider/model layer supporting cloud APIs and local/offline models, with **real SSE token streaming**,
 - persistent memory (short-term, long-term SQLite, tiered cache, journal, checkpoints),
 - 18 agent tools, 29 built-in skills, 4 skill levels, MCP client + server,
 - code/project intelligence over a persistent incremental index,
 - browser + web search + URL extraction,
-- Git + GitHub/GitLab/Azure DevOps/Bitbucket/Forgejo integrations,
+- Git + GitHub/GitLab/Azure DevOps/Bitbucket/Forgejo integrations with the dedicated **SHS-Code-Agent** automation identity (§73),
 - messaging channels, cron scheduling, and webhooks,
 - single-agent, autonomous, and multi-agent (Team103) execution.
 
-To start SHS-Code, install the package, configure one provider key, and run `shscode`.
+To start SHS-Code, install the package, configure one provider key, and run `shscode` (CLI) or `shscode-server` and open `/gui` (GUI).
 
 ---
 
@@ -261,6 +267,10 @@ SHS-Code supports two multi-agent paths: (1) the `run_multi_agent.py` build/plan
 
 Team103 is the multi-agent crew in `app/team103/scheduler.py`. To use it, give SHS-Code a large goal — the PM decomposes it, the Architect plans waves, Engineers implement in parallel, and QA gates the merge.
 
+**Entry points (v4.0.1):** CLI `/team103 <goal>` and server `POST /team103 {"goal": …}` — plus the documented `run_team103` API for programmatic use.
+
+> **Honest architecture note:** Team103 is 1 PM + 1 Architect + up to 100 **lightweight coroutine engineer workers sharing one LLM engine** + 1 QA gate — NOT 103 independent LLM instances. PM/Architect decomposition is heuristic (regex-based planning plus role specialization); the engineers are real journaled `SHSCode` agent runs.
+
 ```mermaid
 flowchart LR
   PM[PM decompose] --> Arch[Architect DAG + waves + conflicts]
@@ -270,7 +280,7 @@ flowchart LR
   QA --> Merge[Result merge]
 ```
 
-SHS-Code provides dynamic concurrency (AIMD), file-conflict serialization, work-stealing within waves, checkpoints, retries, and a final QA gate. It is designed for multi-file features where solo execution would bottleneck.
+SHS-Code provides dynamic concurrency (AIMD), file-conflict serialization, work-stealing within waves, checkpoints, retries, and a final QA gate (v4.0.1: the gate fails on empty changed files, missing files, and low aggregate confidence — worker confidence is keyed off each worker's actual finish reason, not a hardcoded value). It is designed for multi-file features where solo execution would bottleneck.
 
 ---
 
@@ -539,13 +549,15 @@ To work with GitHub (and other forges), SHS-Code provides `app/git_providers/`:
 
 | Forge | Module | Token env var |
 |---|---|---|
-| GitHub | `github/` | `GITHUB_TOKEN` |
+| GitHub | `github/` | `SHSCODE_GITHUB_TOKEN` or `GITHUB_TOKEN` |
 | GitLab | `gitlab/` | `GITLAB_TOKEN` (+ `GITLAB_URL`) |
 | Azure DevOps | `azure_devops/` | `AZURE_DEVOPS_TOKEN` (+ org) |
 | Bitbucket | `bitbucket/` | username + app password |
 | Forgejo | `forgejo/` | `FORGEJO_TOKEN` (+ URL) |
 
 Base features (`base.py`): repos, single repo, issues, PRs, rate-limit handling, retry with backoff, sync + async APIs. `suggested_tasks.py` proposes work from forge state. Tokens come from env vars or `~/.shscode/connectors` — never hardcoded. Requires optional `github`/`gitlab` extras (`PyGithub`, `python-gitlab`).
+
+**v4.0.1 — GitHubProvider + SHS-Code-Agent identity (§73):** the centralized facade `app/git_providers/github_provider.py` adds local git operations (clone / branch / commit / push / pull / stash / diff / log) alongside the API operations, with agent-attributed commits and one-shot authenticated push URLs (tokens are never stored in remote URLs). Reachable from the CLI (`/github status|commit|branch|push|pull|stash|diff|log|prs|issues|pr`) and the GUI GitHub panel.
 
 ---
 
@@ -1154,4 +1166,109 @@ It covers: full documentation, installation guide, beginner guide, CLI reference
 
 ---
 
-<p align="center"><b>SHS-Code 4.0.0 — Persistent Autonomous AI Coding Agent · SHS Lab</b><br/>Plan · Implement · Verify — with memory, tools, skills, MCP, and Team103.</p>
+## 71. GUI (v4.0.1)
+
+The full web GUI ships with the package — start the server and open `/gui`:
+
+```bash
+shscode-server              # default port 8765
+# then open http://localhost:8765/gui
+# (append ?api_key=… when SHSCODE_API_KEY is set)
+```
+
+The GUI is a single-page app (`app/server/static/gui.html`) that sits **directly on the same Python runtime as the CLI** — no separate backend, no duplicated business logic, no terminal-scraping:
+
+```
+GUI  →  REST + structured WebSocket events  →  SHS-Code runtime
+```
+
+Panels (full CLI parity):
+
+| Panel | What it shows / does |
+|---|---|
+| **Dashboard** | provider/model/version, GitHub identity, local git state, recent journal tasks, sessions |
+| **Agent** | chat with LIVE token streaming, structured activity feed (internal events — separated from user messages by design), run progress (step/tool count/finish reason), cancellation, session continuation |
+| **Tasks** | journal task lifecycle list + visual task DAG (wave layout, per-state coloring) + journal event tail |
+| **Team103** | goal runner via `POST /team103` with the honest architecture description |
+| **Workspace** | expandable file tree + file viewer (path-confined to the server workspace) |
+| **Terminal** | command execution in the server workspace |
+| **Git** | status / branch / commit / push / pull / stash / diff / log — commits carry the SHS-Code-Agent trailer |
+| **GitHub** | agent identity card, PR creation, PR/issue lists |
+| **QA** | VerificationEngine runner (the same engine the agent uses) |
+| **Sessions** | list + message browser with final/interim separation + one-click continue |
+| **Logs** | live tail (auto-refresh) — separate from the conversation |
+| **Memory** | MEMORY.md / USER.md / long-term memory entries |
+| **Settings** | effective config (secrets masked) + model/provider switch |
+
+CLI and GUI share the same state: a session started from the CLI can be continued in the GUI (Sessions → Continue), and both read the same journal, session DB, memory, and git state.
+
+---
+
+## 72. Task lifecycle integrity (v4.0.1)
+
+SHS-Code never claims a task completed when it was skipped, abandoned, or unverified. Every run tracks an explicit **finish reason**:
+
+| Reason | Meaning | Journal status |
+|---|---|---|
+| `final_answer` | text answer stood (plan finished / no plan) | `completed` |
+| `terminate` | terminate tool accepted (plan gate passed) | `completed` |
+| `done_pattern` | keyword "done" match (gated: only when the persisted plan has NO unfinished steps) | `completed` |
+| `max_steps` | step budget exhausted mid-work | **`partial`** |
+| `token_budget` | token budget + grace exhausted | **`partial`** |
+| `error` / `permission_denied` | run failed | `failed` / `blocked` |
+
+The `partial` state (new in v4.0.1) is the honest middle ground: work stopped without a verified final answer — the task is explicitly NOT completed, `/resume` can continue it from the checkpoint, and the user-facing response says so plainly.
+
+Dependency handling is strict: a DAG node can only be marked completed when every dependency reached `completed` or was **explicitly skipped** (the old code silently auto-completed active dependencies — removed). The plan gate nudges the model to finish or explicitly skip remaining steps before a final answer is accepted; keyword "done" claims with unfinished plan steps no longer end runs.
+
+The user-facing response channel carries **only the final answer** — raw tool outputs, retry diagnostics, and terminate markers stay in `agent.last_run_step_outputs` (GUI/debug consumers), never in the assistant message.
+
+---
+
+## 73. SHS-Code-Agent GitHub identity (v4.0.1)
+
+GitHub work performed by SHS-Code is attributed to the dedicated automation identity **[SHS-Code-Agent](https://github.com/SHS-Code-Agent)** rather than pretending the human user did everything.
+
+Mechanisms (priority order):
+
+1. **GitHub App installation token** (official bot identity): set `SHSCODE_GITHUB_APP_ID`, `SHSCODE_GITHUB_APP_PRIVATE_KEY_PATH` (or `…_PRIVATE_KEY`), `SHSCODE_GITHUB_APP_INSTALLATION_ID` — SHS-Code mints the RS256 JWT and exchanges it for short-lived installation tokens (cached, auto-refreshed). Requires the `github-app` extra (`pip install 'shscode[github-app]'`).
+2. **Personal access token**: `SHSCODE_GITHUB_TOKEN` (preferred) or `GITHUB_TOKEN`, or a token in `~/.shscode/connectors`.
+
+Every commit made through the GitHubProvider (CLI `/github commit`, GUI Git panel) carries the GitHub-supported trailer:
+
+```
+Generated with SHS-Code
+
+Co-Authored-By: SHS-Code-Agent <SHS-Code-Agent@users.noreply.github.com>
+```
+
+Attribution follows GitHub's actual model: the commit author reflects the authenticated account; the agent is credited as co-author (GitHub renders the profile link). The system never claims the organization owns every commit. Pushes authenticate via one-shot URLs — tokens are never stored in remote URLs. **Known limitation (honest):** commits the AGENT makes directly via `bash git commit` carry the trailer only when the model includes it; use `/github commit` for guaranteed attribution.
+
+---
+
+## 74. Token streaming (v4.0.1)
+
+The universal OpenAI-compatible client streams real SSE token deltas:
+
+- `UniversalClient.chat(..., on_delta=…)` — `stream: true` request, incremental content callbacks, tool-call fragments accumulated across chunks (id/name/arguments, indexed), final response identical in shape to the non-streaming call (retries/token accounting unchanged). Backends that reject streaming fall back transparently.
+- The agent loop forwards content deltas to the ActivityBus (`llm_delta`); the CLI renders them as a growing live line (without duplicating the final answer), and the server bridges them to WebSocket clients as structured `{event: "llm_delta", text}` frames for the GUI.
+- Tool-call argument fragments are never streamed — only conversational content reaches the user channel.
+
+---
+
+## 75. Agnes API testing (v4.0.1)
+
+SHS-Code v4.0.1 was stabilization-tested against a real third-party OpenAI-compatible provider — the **Agnes API** (`agnes-3.0-flash`):
+
+```bash
+export LLM_BASE_URL="https://apihub.agnes-ai.com/v1"
+export LLM_API_KEY="…"
+export LLM_MODEL="agnes-3.0-flash"
+shscode
+```
+
+Verified live (fresh `pip install`, run from outside the repo): token streaming over WebSocket, a repo-understanding task, multi-file implementation (18/18 tests), bug fixing, multi-task execution, failure recovery, a full git workflow (branch → changes → tests → commit → push), and a long-horizon todo-application build (26 steps, honest plan-gate rejection of premature termination observed). Two real bugs found in this testing were fixed with regression tests: tool-call arguments must always serialize as valid JSON (strict providers 400 otherwise), and working-directory awareness (the ENVIRONMENT system message). The Agnes endpoint's tight rate limits are handled by the existing rolling-window limiter with state-preserving waits.
+
+---
+
+<p align="center"><b>SHS-Code 4.0.1 — Persistent Autonomous AI Coding Agent · SHS Lab</b><br/>Plan · Implement · Verify — with memory, tools, skills, MCP, Team103, streaming, GUI, and the SHS-Code-Agent identity.</p>
