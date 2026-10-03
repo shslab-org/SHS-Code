@@ -765,6 +765,134 @@ async def github_create_pr(req: PROpRequest):
         raise HTTPException(status_code=500, detail=str(e)[:400])
 
 
+# ─── Terminal / QA / Memory / Logs endpoints (GUI panels, mission §14) ────
+
+class TerminalRequest(BaseModel):
+    command: str
+    timeout: int = 30
+
+
+@app.post("/terminal/exec", dependencies=[Depends(require_api_key)])
+async def terminal_exec(req: TerminalRequest):
+    """v4.0.1 (mission §14 — GUI Terminal panel): run a command in the
+    server's working directory. Protected by the server API key when
+    configured; output is capped."""
+    import subprocess as _sp
+    if not req.command.strip():
+        raise HTTPException(status_code=400, detail="command required")
+    try:
+        proc = await asyncio.to_thread(
+            _sp.run, req.command, shell=True,
+            capture_output=True, text=True, timeout=max(1, min(req.timeout, 120)),
+            cwd=os.getcwd())
+        return {
+            "returncode": proc.returncode,
+            "stdout": proc.stdout[:20000],
+            "stderr": proc.stderr[:8000],
+        }
+    except Exception as e:
+        return {"returncode": -1, "stdout": "", "stderr": str(e)[:500]}
+
+
+class QARequest(BaseModel):
+    kinds: Optional[list[str]] = None
+    changed_files: Optional[list[str]] = None
+
+
+@app.post("/qa/verify", dependencies=[Depends(require_api_key)])
+async def qa_verify(req: QARequest):
+    """v4.0.1 (mission §14 — GUI QA panel): run the project-aware
+    VerificationEngine (build/test/lint/typecheck)."""
+    from app.verification import VerificationEngine
+    try:
+        engine = VerificationEngine()
+        report = await engine.verify(kinds=req.kinds,
+                                     changed_files=req.changed_files or [])
+        return {"report": report}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)[:400])
+
+
+@app.get("/memory", dependencies=[Depends(require_api_key)])
+async def memory_view():
+    """v4.0.1 (mission §14 — GUI Memory panel): MEMORY.md / USER.md +
+    long-term memory stats + recent entries."""
+    from app.tool import memory_tool as mt
+    from app.memory.long_term import LongTermMemory
+    out: dict = {}
+    for label, path in (("memory_md", mt.MEMORY_FILE),
+                        ("user_md", mt.USER_FILE)):
+        try:
+            out[label] = {
+                "path": str(path),
+                "content": path.read_text(errors="replace")[:20000]
+                           if path.exists() else "",
+            }
+        except Exception as e:
+            out[label] = {"path": str(path), "content": "", "error": str(e)}
+    try:
+        ltm = LongTermMemory()
+        out["long_term"] = {
+            "count": await ltm.count(),
+            "recent": await ltm.get_recent(10),
+        }
+    except Exception as e:
+        out["long_term"] = {"count": 0, "recent": [], "error": str(e)[:200]}
+    return out
+
+
+@app.get("/logs/recent", dependencies=[Depends(require_api_key)])
+async def logs_recent(lines: int = 80):
+    """v4.0.1 (mission §14 — GUI Logs panel): tail of the newest log file.
+    Logs are SEPARATE from the user conversation by design (mission §14)."""
+    from app.logger import _LOG_DIR
+    try:
+        logs = sorted(_LOG_DIR.glob("*.log"), key=lambda p: p.stat().st_mtime)
+        if not logs:
+            return {"file": None, "lines": []}
+        newest = logs[-1]
+        with open(newest, "r", errors="replace") as f:
+            all_lines = f.readlines()
+        return {"file": str(newest), "lines": [l.rstrip() for l in all_lines[-lines:]]}
+    except Exception as e:
+        return {"file": None, "lines": [], "error": str(e)[:200]}
+
+
+class ModelSwitchRequest(BaseModel):
+    provider: Optional[str] = None
+    model: Optional[str] = None
+    base_url: Optional[str] = None
+    api_key: Optional[str] = None
+
+
+@app.post("/settings/model", dependencies=[Depends(require_api_key)])
+async def switch_model(req: ModelSwitchRequest):
+    """v4.0.1 (mission §14 — GUI Settings panel): switch the LLM backend.
+    Persisted via Config.save_llm (0600); affects agents created after the
+    switch (in-flight runs keep their backend — context is never destroyed)."""
+    from app.config import Config
+    from app.llm.llm import LLM
+    try:
+        cfg = Config.get()
+        if req.base_url:
+            cfg.llm.base_url = req.base_url
+        if req.provider:
+            cfg.llm.provider = req.provider
+        if req.model:
+            cfg.llm.model = req.model
+        if req.api_key:
+            cfg.llm.api_key = req.api_key
+        Config.save_llm()
+        result = await LLM().switch(
+            provider=req.provider or cfg.llm.provider,
+            model=req.model or cfg.llm.model,
+            base_url=req.base_url or cfg.llm.base_url,
+            api_key=req.api_key or cfg.llm.api_key)
+        return {"switched": True, "result": {k: str(v) for k, v in result.items()}}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)[:400])
+
+
 @app.get("/sessions/{session_id}/messages", dependencies=[Depends(require_api_key)])
 async def get_messages(session_id: str):
     msgs = await db.get_session_messages(session_id)
@@ -944,6 +1072,23 @@ async def chat_page():
     if chat_html.is_file():
         return HTMLResponse(content=chat_html.read_text(encoding="utf-8"))
     return HTMLResponse(content="<h1>SHS Code WebChat</h1><p>chat.html not found.</p>")
+
+
+@app.get("/gui", response_class=HTMLResponse)
+async def gui_page():
+    """v4.0.1 (mission §13/§14): the full SHS-Code GUI — a single-page app
+    sitting on the SAME Python runtime the CLI uses (REST + structured
+    WebSocket events; zero business logic duplicated client-side)."""
+    gui_html = _STATIC_DIR / "gui.html"
+    if gui_html.is_file():
+        return HTMLResponse(content=gui_html.read_text(encoding="utf-8"))
+    return HTMLResponse(content="<h1>SHS Code GUI</h1><p>gui.html not found.</p>")
+
+
+@app.get("/gui/status")
+async def gui_status_check():
+    # (kept distinct from the panel routes; trivial presence probe)
+    return {"gui": True}
 
 
 @app.get("/canvas", response_class=HTMLResponse)

@@ -121,6 +121,18 @@ shscode-webhook = "app.server.webhooks:main_cli"
 where = ["."]
 include = ["app*"]
 
+# v4.0.1 (installation bug caught by fresh-install testing): non-Python
+# data files inside app/ never shipped — the GUI/static pages and the
+# built-in skills were silently missing from every installed package.
+[tool.setuptools.package-data]
+app = [
+    "server/static/*.html",
+    "skills/builtin/*.md",
+    "skills/builtin/*.yaml",
+    "migrations/*.ini",
+    "migrations/versions/*.py",
+]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

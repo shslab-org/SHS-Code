@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHS Code — GUI</title>
+<style>
+:root {
+  --bg: #0d1117; --bg2: #161b22; --bg3: #21262d; --border: #30363d;
+  --fg: #e6edf3; --fg-dim: #8b949e; --accent: #58a6ff; --accent2: #1f6feb;
+  --green: #3fb950; --red: #f85149; --yellow: #d29922; --purple: #bc8cff;
+  --orange: #f0883e; --cyan: #39c5cf;
+  --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--sans);
+  display: flex; overflow: hidden; font-size: 14px;
+}
+/* ── Sidebar ── */
+#sidebar {
+  width: 220px; min-width: 220px; background: var(--bg2);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+}
+#logo {
+  padding: 18px 16px; border-bottom: 1px solid var(--border);
+  font-weight: 700; font-size: 16px; letter-spacing: 0.5px;
+}
+#logo span { color: var(--accent); }
+#logo .sub { display: block; font-size: 10px; color: var(--fg-dim); font-weight: 400; margin-top: 2px; }
+#nav { flex: 1; overflow-y: auto; padding: 8px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  border-radius: 6px; cursor: pointer; color: var(--fg-dim); margin-bottom: 2px;
+  transition: background .12s, color .12s; user-select: none;
+}
+.nav-item:hover { background: var(--bg3); color: var(--fg); }
+.nav-item.active { background: var(--accent2); color: #fff; }
+.nav-item .ic { width: 18px; text-align: center; font-size: 15px; }
+#conn-status {
+  padding: 10px 16px; border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--fg-dim);
+}
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.dot.on { background: var(--green); } .dot.off { background: var(--red); }
+/* ── Main ── */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#topbar {
+  height: 46px; background: var(--bg2); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 18px; gap: 12px; flex-shrink: 0;
+}
+#topbar h2 { font-size: 14px; font-weight: 600; }
+#topbar .meta { color: var(--fg-dim); font-size: 12px; margin-left: auto; display: flex; gap: 14px; }
+#content { flex: 1; overflow-y: auto; padding: 20px; }
+.panel { display: none; }
+.panel.active { display: block; }
+/* ── Cards / grids ── */
+.grid { display: grid; gap: 14px; }
+.grid.cols2 { grid-template-columns: 1fr 1fr; }
+.grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 1100px) { .grid.cols2, .grid.cols3 { grid-template-columns: 1fr; } }
+.card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px;
+}
+.card h3 { font-size: 12px; text-transform: uppercase; color: var(--fg-dim);
+  letter-spacing: 0.8px; margin-bottom: 12px; }
+.kv { display: flex; justify-content: space-between; padding: 5px 0;
+  border-bottom: 1px solid var(--border); font-size: 13px; }
+.kv:last-child { border-bottom: none; }
+.kv .k { color: var(--fg-dim); } .kv .v { font-family: var(--mono); font-size: 12px; }
+.big { font-size: 26px; font-weight: 700; }
+.muted { color: var(--fg-dim); font-size: 12px; }
+/* ── Buttons / inputs ── */
+button, .btn {
+  background: var(--bg3); color: var(--fg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px;
+  font-family: var(--sans); transition: background .12s;
+}
+button:hover { background: var(--border); }
+button.primary { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+button.primary:hover { background: var(--accent); }
+button.danger { background: #da3633; border-color: #da3633; color: #fff; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.sm { padding: 4px 10px; font-size: 12px; }
+input, select, textarea {
+  background: var(--bg); color: var(--fg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 10px; font-size: 13px; font-family: var(--sans);
+}
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+textarea { font-family: var(--mono); font-size: 12px; resize: vertical; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+/* ── Badges ── */
+.badge {
+  display: inline-block; padding: 2px 9px; border-radius: 12px;
+  font-size: 11px; font-weight: 600; font-family: var(--mono);
+}
+.b-green { background: rgba(63,185,80,.15); color: var(--green); }
+.b-red { background: rgba(248,81,73,.15); color: var(--red); }
+.b-yellow { background: rgba(210,153,34,.15); color: var(--yellow); }
+.b-blue { background: rgba(88,166,255,.15); color: var(--accent); }
+.b-purple { background: rgba(188,140,255,.15); color: var(--purple); }
+.b-gray { background: rgba(139,148,158,.15); color: var(--fg-dim); }
+.b-cyan { background: rgba(57,197,207,.15); color: var(--cyan); }
+/* ── Tables ── */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; color: var(--fg-dim); font-size: 11px; text-transform: uppercase;
+  letter-spacing: .6px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+td { padding: 8px 10px; border-bottom: 1px solid var(--border); font-family: var(--mono);
+  font-size: 12px; vertical-align: top; }
+tr:hover td { background: rgba(88,166,255,.04); }
+tr.clickable { cursor: pointer; }
+/* ── Chat ── */
+#agent-layout { display: flex; gap: 14px; height: calc(100vh - 46px - 40px); }
+#chat-col { flex: 1.6; display: flex; flex-direction: column; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+#chat-msgs { flex: 1; overflow-y: auto; padding: 18px; display: flex;
+  flex-direction: column; gap: 14px; }
+.msg { max-width: 88%; border-radius: 10px; padding: 10px 14px; line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word; font-size: 13.5px; }
+.msg.user { align-self: flex-end; background: var(--accent2); color: #fff; }
+.msg.assistant { align-self: flex-start; background: var(--bg3); border: 1px solid var(--border); }
+.msg.system { align-self: center; background: none; color: var(--fg-dim); font-size: 12px; }
+.msg .who { font-size: 10px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; margin-bottom: 4px; opacity: .7; }
+#chat-input-bar { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
+#chat-input { flex: 1; }
+#activity-col { flex: 1; display: flex; flex-direction: column; gap: 14px; min-width: 320px; }
+#activity-feed {
+  flex: 1; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  overflow-y: auto; padding: 12px; font-family: var(--mono); font-size: 11.5px;
+}
+.act-line { padding: 3px 0; border-bottom: 1px solid rgba(48,54,61,.4); color: var(--fg-dim); }
+.act-line .t { color: var(--accent); }
+.act-line.tool { color: var(--purple); }
+.act-line.ok { color: var(--green); }
+.act-line.err { color: var(--red); }
+.act-line.delta { color: var(--fg); opacity: .75; }
+/* ── DAG ── */
+.dag-node { border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px;
+  background: var(--bg2); min-width: 180px; }
+.dag-node .title { font-weight: 600; font-size: 12.5px; margin-bottom: 4px; }
+.dag-node.pending { border-color: var(--fg-dim); }
+.dag-node.ready { border-color: var(--cyan); }
+.dag-node.active, .dag-node.retryable { border-color: var(--yellow); }
+.dag-node.completed { border-color: var(--green); }
+.dag-node.failed, .dag-node.blocked { border-color: var(--red); }
+.dag-node.skipped { border-color: var(--fg-dim); opacity: .6; }
+.dag-wave { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+.dag-arrow { text-align: center; color: var(--fg-dim); font-size: 16px; margin: 4px 0 12px; }
+/* ── File tree ── */
+#ws-layout { display: flex; gap: 14px; height: calc(100vh - 46px - 40px); }
+#file-tree { width: 300px; min-width: 260px; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 8px; overflow-y: auto; padding: 10px; }
+.ft-item { padding: 4px 8px; cursor: pointer; border-radius: 4px; font-size: 13px;
+  font-family: var(--mono); display: flex; align-items: center; gap: 6px; }
+.ft-item:hover { background: var(--bg3); }
+.ft-item.dir { color: var(--accent); } .ft-item.file { color: var(--fg); }
+.ft-children { margin-left: 16px; border-left: 1px solid var(--border); padding-left: 4px; }
+#file-view { flex: 1; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+#file-view-head { padding: 10px 14px; border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 12px; color: var(--fg-dim);
+  display: flex; justify-content: space-between; }
+#file-content { flex: 1; overflow: auto; padding: 14px; font-family: var(--mono);
+  font-size: 12px; white-space: pre; line-height: 1.55; }
+/* ── Terminal ── */
+#term-box { background: #010409; border: 1px solid var(--border); border-radius: 8px;
+  height: calc(100vh - 46px - 40px); display: flex; flex-direction: column; }
+#term-out { flex: 1; overflow-y: auto; padding: 14px; font-family: var(--mono);
+  font-size: 12.5px; white-space: pre-wrap; line-height: 1.5; }
+#term-in { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); }
+#term-in input { flex: 1; font-family: var(--mono); }
+.prompt-sym { color: var(--green); font-weight: 700; }
+/* ── Logs ── */
+#log-box { background: #010409; border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px; font-family: var(--mono); font-size: 11.5px; line-height: 1.6;
+  max-height: calc(100vh - 140px); overflow-y: auto; white-space: pre-wrap; }
+.log-line .lvl-INFO { color: var(--accent); }
+.log-line .lvl-WARNING { color: var(--yellow); }
+.log-line .lvl-ERROR, .log-line .lvl-CRITICAL { color: var(--red); }
+.log-line .lvl-DEBUG { color: var(--fg-dim); }
+/* ── Misc ── */
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty { color: var(--fg-dim); text-align: center; padding: 40px; font-size: 13px; }
+.section { margin-bottom: 20px; }
+pre.code { background: #010409; border: 1px solid var(--border); border-radius: 6px;
+  padding: 12px; font-family: var(--mono); font-size: 12px; overflow-x: auto;
+  white-space: pre-wrap; line-height: 1.5; }
+.tag-note { background: rgba(31,111,235,.1); border: 1px solid var(--accent2);
+  border-radius: 6px; padding: 10px 14px; font-size: 12.5px; color: var(--accent);
+  margin-bottom: 14px; line-height: 1.5; }
+.scroll-y { max-height: 420px; overflow-y: auto; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border); }
+::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="logo">SHS <span>Code</span><span class="sub">Agent Platform · GUI</span></div>
+  <div id="nav">
+    <div class="nav-item active" data-panel="dashboard"><span class="ic">◧</span>Dashboard</div>
+    <div class="nav-item" data-panel="agent"><span class="ic">✦</span>Agent</div>
+    <div class="nav-item" data-panel="tasks"><span class="ic">⬢</span>Tasks</div>
+    <div class="nav-item" data-panel="team103"><span class="ic">⧉</span>Team103</div>
+    <div class="nav-item" data-panel="workspace"><span class="ic">▤</span>Workspace</div>
+    <div class="nav-item" data-panel="terminal"><span class="ic">▸_</span>Terminal</div>
+    <div class="nav-item" data-panel="git"><span class="ic">⑂</span>Git</div>
+    <div class="nav-item" data-panel="github"><span class="ic">◉</span>GitHub</div>
+    <div class="nav-item" data-panel="qa"><span class="ic">✓</span>QA</div>
+    <div class="nav-item" data-panel="sessions"><span class="ic">◷</span>Sessions</div>
+    <div class="nav-item" data-panel="logs"><span class="ic">≣</span>Logs</div>
+    <div class="nav-item" data-panel="memory"><span class="ic">◈</span>Memory</div>
+    <div class="nav-item" data-panel="settings"><span class="ic">⚙</span>Settings</div>
+  </div>
+  <div id="conn-status"><span class="dot off" id="ws-dot"></span><span id="ws-label">WebSocket idle</span></div>
+</div>
+
+<div id="main">
+  <div id="topbar">
+    <h2 id="topbar-title">Dashboard</h2>
+    <div class="meta">
+      <span id="top-model"></span>
+      <span id="top-project"></span>
+      <button class="sm" onclick="refreshCurrent()" title="Refresh panel">↻ Refresh</button>
+    </div>
+  </div>
+  <div id="content">
+
+  <!-- ══════════ DASHBOARD ══════════ -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="grid cols3" style="margin-bottom:14px">
+      <div class="card">
+        <h3>Agent Runtime</h3>
+        <div class="kv"><span class="k">Provider</span><span class="v" id="db-provider">—</span></div>
+        <div class="kv"><span class="k">Model</span><span class="v" id="db-model">—</span></div>
+        <div class="kv"><span class="k">Base URL</span><span class="v" id="db-baseurl">—</span></div>
+        <div class="kv"><span class="k">Version</span><span class="v" id="db-version">—</span></div>
+      </div>
+      <div class="card">
+        <h3>GitHub Identity</h3>
+        <div class="kv"><span class="k">Agent</span><span class="v">SHS-Code-Agent</span></div>
+        <div class="kv"><span class="k">Auth mode</span><span class="v" id="db-gh-mode">—</span></div>
+        <div class="kv"><span class="k">Account</span><span class="v" id="db-gh-account">—</span></div>
+        <div class="kv"><span class="k">Trailer</span><span class="v" style="font-size:10px">Co-Authored-By ✓</span></div>
+      </div>
+      <div class="card">
+        <h3>Local Git</h3>
+        <div class="kv"><span class="k">Branch</span><span class="v" id="db-branch">—</span></div>
+        <div class="kv"><span class="k">Working tree</span><span class="v" id="db-dirty">—</span></div>
+        <div class="kv"><span class="k">Last commit</span><span class="v" id="db-lastcommit">—</span></div>
+      </div>
+    </div>
+    <div class="grid cols2">
+      <div class="card">
+        <h3>Recent Tasks (journal lifecycle)</h3>
+        <div id="db-tasks" class="scroll-y"></div>
+      </div>
+      <div class="card">
+        <h3>Sessions</h3>
+        <div id="db-sessions" class="scroll-y"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ AGENT ══════════ -->
+  <div class="panel" id="panel-agent">
+    <div class="row" style="margin-bottom:10px">
+      <span class="muted">Session:</span>
+      <input id="agent-session" style="width:280px" placeholder="(new session)">
+      <button class="sm" onclick="agentNewSession()">New</button>
+      <button class="sm" onclick="agentCancel()" id="agent-cancel-btn" disabled>■ Cancel run</button>
+      <span class="muted" id="agent-run-state" style="margin-left:auto"></span>
+    </div>
+    <div id="agent-layout">
+      <div id="chat-col">
+        <div id="chat-msgs"></div>
+        <div id="chat-input-bar">
+          <input id="chat-input" placeholder="Describe a coding task… (Enter to send)"
+                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){agentSend();event.preventDefault();}">
+          <button class="primary" onclick="agentSend()" id="agent-send-btn">Send</button>
+        </div>
+      </div>
+      <div id="activity-col">
+        <div class="card" style="flex:0 0 auto">
+          <h3>Run Progress</h3>
+          <div class="kv"><span class="k">Status</span><span class="v" id="run-status">idle</span></div>
+          <div class="kv"><span class="k">Step</span><span class="v" id="run-step">—</span></div>
+          <div class="kv"><span class="k">Finish reason</span><span class="v" id="run-reason">—</span></div>
+          <div class="kv"><span class="k">Tool calls</span><span class="v" id="run-tools">—</span></div>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; min-height:0">
+          <h3 style="font-size:12px;text-transform:uppercase;color:var(--fg-dim);letter-spacing:.8px;margin-bottom:8px">
+            Activity <span class="muted">(internal events — not user messages)</span></h3>
+          <div id="activity-feed"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ TASKS ══════════ -->
+  <div class="panel" id="panel-tasks">
+    <div class="card section">
+      <h3>Task Journal — lifecycle states</h3>
+      <div id="tasks-list"></div>
+    </div>
+    <div class="card" id="task-detail" style="display:none">
+      <h3>Task Detail — DAG</h3>
+      <div id="dag-container"></div>
+      <h3 style="margin-top:18px">Recent Events</h3>
+      <div id="task-events" class="scroll-y"></div>
+    </div>
+  </div>
+
+  <!-- ══════════ TEAM103 ══════════ -->
+  <div class="panel" id="panel-team103">
+    <div class="tag-note">
+      <b>Team103 architecture (honest):</b> 1 PM + 1 Architect + up to 100 <b>lightweight
+      coroutine engineer workers</b> sharing one LLM engine + 1 QA gate — NOT 103 independent
+      LLM instances. Workers run wave-by-wave with AIMD dynamic concurrency, dedup claims,
+      per-task timeout/retry, and a continuous QA gate over changed files.
+    </div>
+    <div class="card">
+      <h3>Run Team103</h3>
+      <div class="row">
+        <input id="t103-goal" style="flex:1" placeholder="Large goal to decompose and execute…">
+        <button class="primary" onclick="team103Run()" id="t103-btn">Execute</button>
+      </div>
+      <div id="t103-result" style="margin-top:14px"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Execution Pipeline</h3>
+      <div class="dag-wave">
+        <div class="dag-node completed"><div class="title">PM</div><div class="muted">decompose goal → task specs</div></div>
+        <div class="dag-node completed"><div class="title">Architect</div><div class="muted">dependency waves + role specialization</div></div>
+        <div class="dag-node active"><div class="title">Engineers ×N</div><div class="muted">coroutine workers, AIMD concurrency</div></div>
+        <div class="dag-node ready"><div class="title">QA</div><div class="muted">changed-file checks + confidence gate</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ WORKSPACE ══════════ -->
+  <div class="panel" id="panel-workspace">
+    <div id="ws-layout">
+      <div id="file-tree"></div>
+      <div id="file-view">
+        <div id="file-view-head"><span id="fv-path">(no file selected)</span><span id="fv-size"></span></div>
+        <div id="file-content" class="empty">Select a file to view it.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ TERMINAL ══════════ -->
+  <div class="panel" id="panel-terminal">
+    <div id="term-box">
+      <div id="term-out"><span class="muted">SHS Code GUI terminal — commands run in the server's working directory.</span></div>
+      <div id="term-in">
+        <span class="prompt-sym">$</span>
+        <input id="term-input" placeholder="type a command…" onkeydown="if(event.key==='Enter'){termExec();}">
+        <button onclick="termExec()">Run</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ GIT ══════════ -->
+  <div class="panel" id="panel-git">
+    <div class="grid cols2">
+      <div class="card">
+        <h3>Repository Status</h3>
+        <div id="git-status"></div>
+      </div>
+      <div class="card">
+        <h3>Operations</h3>
+        <div class="row" style="margin-bottom:12px">
+          <input id="git-branch-name" placeholder="branch name">
+          <button onclick="gitBranch()">Create branch</button>
+        </div>
+        <div class="row" style="margin-bottom:12px">
+          <input id="git-commit-msg" placeholder="commit message" style="flex:1">
+          <button class="primary" onclick="gitCommit()">Commit (agent-attributed)</button>
+        </div>
+        <div class="row">
+          <button onclick="gitPush()">Push</button>
+          <button onclick="gitPull()">Pull</button>
+          <button onclick="gitStash()">Stash</button>
+          <button onclick="gitStashPop()">Pop stash</button>
+        </div>
+        <div class="muted" style="margin-top:10px">
+          Commits carry the trailer <code>Co-Authored-By: SHS-Code-Agent &lt;SHS-Code-Agent@users.noreply.github.com&gt;</code>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Diff</h3>
+      <div class="row" style="margin-bottom:10px">
+        <button class="sm" onclick="gitDiff(false)">Unstaged</button>
+        <button class="sm" onclick="gitDiff(true)">Staged</button>
+        <button class="sm" onclick="gitRefresh()">↻</button>
+      </div>
+      <pre class="code" id="git-diff">(click a button)</pre>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Recent Commits</h3>
+      <div id="git-log"></div>
+    </div>
+  </div>
+
+  <!-- ══════════ GITHUB ══════════ -->
+  <div class="panel" id="panel-github">
+    <div class="grid cols2 section">
+      <div class="card">
+        <h3>SHS-Code-Agent Identity</h3>
+        <div id="gh-identity"></div>
+      </div>
+      <div class="card">
+        <h3>Create Pull Request</h3>
+        <div class="row" style="margin-bottom:8px">
+          <input id="pr-repo" placeholder="owner/name" style="width:180px">
+          <input id="pr-head" placeholder="head branch" style="width:140px">
+          <input id="pr-base" placeholder="base (main)" style="width:120px">
+        </div>
+        <div class="row" style="margin-bottom:8px">
+          <input id="pr-title" placeholder="PR title" style="flex:1">
+          <label class="muted"><input type="checkbox" id="pr-draft"> draft</label>
+        </div>
+        <textarea id="pr-body" rows="3" placeholder="description…" style="width:100%"></textarea>
+        <div style="margin-top:8px"><button class="primary" onclick="ghCreatePR()">Create PR</button></div>
+      </div>
+    </div>
+    <div class="grid cols2">
+      <div class="card">
+        <h3>Pull Requests</h3>
+        <div class="row" style="margin-bottom:10px">
+          <input id="prs-repo" placeholder="owner/name" style="width:180px">
+          <button class="sm" onclick="ghListPRs()">List PRs</button>
+        </div>
+        <div id="gh-prs"></div>
+      </div>
+      <div class="card">
+        <h3>Issues</h3>
+        <div class="row" style="margin-bottom:10px">
+          <input id="iss-repo" placeholder="owner/name" style="width:180px">
+          <button class="sm" onclick="ghListIssues()">List issues</button>
+        </div>
+        <div id="gh-issues"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ QA ══════════ -->
+  <div class="panel" id="panel-qa">
+    <div class="card">
+      <h3>Verification Engine</h3>
+      <p class="muted" style="margin-bottom:12px">
+        Project-aware checks: build · tests · lint · typecheck. This is the same
+        VerificationEngine the agent uses — the GUI calls the shared runtime, never scrapes it.
+      </p>
+      <button class="primary" onclick="qaRun()" id="qa-btn">Run verification</button>
+      <div id="qa-result" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <!-- ══════════ SESSIONS ══════════ -->
+  <div class="panel" id="panel-sessions">
+    <div class="card section">
+      <h3>Sessions</h3>
+      <div id="sessions-list"></div>
+    </div>
+    <div class="card" id="session-detail" style="display:none">
+      <h3 id="session-detail-title">Session</h3>
+      <div class="row" style="margin-bottom:10px">
+        <button class="sm primary" onclick="continueSession()">Continue in Agent panel</button>
+        <span class="muted">final vs interim messages are separated — interim rows are internal narration, never replayed</span>
+      </div>
+      <div id="session-messages" class="scroll-y"></div>
+    </div>
+  </div>
+
+  <!-- ══════════ LOGS ══════════ -->
+  <div class="panel" id="panel-logs">
+    <div class="row" style="margin-bottom:10px">
+      <label class="muted"><input type="checkbox" id="log-auto" checked> auto-refresh (3s)</label>
+      <span class="muted">Logs are separate from the user conversation by design.</span>
+    </div>
+    <div id="log-box"></div>
+  </div>
+
+  <!-- ══════════ MEMORY ══════════ -->
+  <div class="panel" id="panel-memory">
+    <div class="grid cols2">
+      <div class="card">
+        <h3>Project Memory (MEMORY.md)</h3>
+        <pre class="code scroll-y" id="mem-project">(empty)</pre>
+      </div>
+      <div class="card">
+        <h3>User Memory (USER.md)</h3>
+        <pre class="code scroll-y" id="mem-user">(empty)</pre>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Long-Term Memory <span class="muted" id="ltm-count"></span></h3>
+      <div id="ltm-recent" class="scroll-y"></div>
+    </div>
+  </div>
+
+  <!-- ══════════ SETTINGS ══════════ -->
+  <div class="panel" id="panel-settings">
+    <div class="grid cols2">
+      <div class="card">
+        <h3>Effective Configuration</h3>
+        <div id="settings-config"></div>
+      </div>
+      <div class="card">
+        <h3>Switch Model / Provider</h3>
+        <p class="muted" style="margin-bottom:10px">
+          Persisted (0600) and applied to new agents — in-flight runs keep their backend,
+          context is never destroyed.
+        </p>
+        <div class="row" style="margin-bottom:8px">
+          <input id="set-provider" placeholder="provider (universal)" style="flex:1">
+        </div>
+        <div class="row" style="margin-bottom:8px">
+          <input id="set-model" placeholder="model (agnes-3.0-flash)" style="flex:1">
+        </div>
+        <div class="row" style="margin-bottom:8px">
+          <input id="set-baseurl" placeholder="base_url (https://…/v1)" style="flex:1">
+        </div>
+        <div class="row" style="margin-bottom:12px">
+          <input id="set-apikey" type="password" placeholder="api key (stored, never displayed)" style="flex:1">
+        </div>
+        <button class="primary" onclick="switchModel()">Apply</button>
+        <span id="set-result" class="muted" style="margin-left:10px"></span>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+<script>
+/* ═════════════════════════ SHS Code GUI ═════════════════════════
+   Sits on the SAME Python runtime as the CLI:
+     GUI → REST + structured WS events → SHS-Code runtime
+   No business logic duplicated here — every action calls the server.
+══════════════════════════════════════════════════════════════════ */
+
+const $ = (id) => document.getElementById(id);
+const API = '';   // same origin
+let API_KEY = new URLSearchParams(location.search).get('api_key') || '';
+
+function hdrs() { return API_KEY ? {'X-API-Key': API_KEY} : {}; }
+async function api(path, opts = {}) {
+  const resp = await fetch(API + path, {
+    headers: {'Content-Type': 'application/json', ...hdrs()},
+    ...opts});
+  if (resp.status === 401) { return {__error: 'unauthorized — set ?api_key='}; }
+  return resp.json();
+}
+async function apiPost(path, body) {
+  return api(path, {method: 'POST', body: JSON.stringify(body)});
+}
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function statusBadge(st) {
+  const map = {
+    completed:'b-green', verified:'b-green', finished:'b-green',
+    failed:'b-red', error:'b-red', blocked:'b-red',
+    partial:'b-yellow', interrupted:'b-yellow', paused:'b-yellow',
+    in_progress:'b-blue', running:'b-blue',
+    pending:'b-gray', ready:'b-cyan', active:'b-yellow', retryable:'b-yellow',
+    skipped:'b-gray', queued:'b-gray', archived:'b-gray', unknown:'b-gray',
+  };
+  return `<span class="badge ${map[st] || 'b-gray'}">${esc(st)}</span>`;
+}
+
+/* ── Navigation ── */
+const PANELS = {dashboard:'Dashboard', agent:'Agent', tasks:'Tasks', team103:'Team103',
+  workspace:'Workspace', terminal:'Terminal', git:'Git', github:'GitHub', qa:'QA',
+  sessions:'Sessions', logs:'Logs', memory:'Memory', settings:'Settings'};
+const LOADERS = {};
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    const id = el.dataset.panel;
+    $('panel-' + id).classList.add('active');
+    $('topbar-title').textContent = PANELS[id];
+    if (LOADERS[id]) LOADERS[id]();
+  };
+});
+function refreshCurrent() {
+  const active = document.querySelector('.nav-item.active');
+  if (active && LOADERS[active.dataset.panel]) LOADERS[active.dataset.panel]();
+}
+
+/* ═════════════════════════ DASHBOARD ═════════════════════════ */
+LOADERS.dashboard = async () => {
+  const [cfg, git, gh, tasks, sessions] = await Promise.all([
+    api('/config'), api('/git/status'), api('/github/status'),
+    api('/tasks?limit=8'), api('/sessions?limit=8'),
+  ]);
+  $('db-provider').textContent = cfg.provider || '—';
+  $('db-model').textContent = cfg.model || '—';
+  $('db-baseurl').textContent = cfg.base_url || '—';
+  $('db-version').textContent = cfg.version || '—';
+  $('top-model').textContent = cfg.model ? `⚡ ${cfg.provider} · ${cfg.model}` : '';
+  $('top-project').textContent = location.pathname;
+  $('db-gh-mode').textContent = gh.auth_mode || '—';
+  $('db-gh-account').textContent = gh.account ? gh.account.login : (gh.authenticated ? '—' : 'not authenticated');
+  if (git.is_repo) {
+    $('db-branch').textContent = git.branch;
+    $('db-dirty').textContent = git.status ? `${git.status.split('\n').length} change(s)` : 'clean';
+    $('db-lastcommit').textContent = (git.log || '').split('\n')[0]?.slice(0, 40) || '—';
+  } else { $('db-branch').textContent = 'not a repo'; $('db-dirty').textContent = '—'; $('db-lastcommit').textContent = '—'; }
+  // tasks
+  if (tasks.tasks?.length) {
+    $('db-tasks').innerHTML = '<table><tr><th>Goal</th><th>Status</th><th>Steps</th><th>Tools</th></tr>' +
+      tasks.tasks.map(t => `<tr><td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.goal?.slice(0,60))}</td>
+        <td>${statusBadge(t.status)}</td><td>${t.step_count}</td><td>${t.tool_calls}</td></tr>`).join('') + '</table>';
+  } else $('db-tasks').innerHTML = '<div class="empty">No tasks yet</div>';
+  // sessions
+  if (sessions.sessions?.length) {
+    $('db-sessions').innerHTML = '<table><tr><th>Session</th><th>State</th><th>Steps</th></tr>' +
+      sessions.sessions.map(s => `<tr><td>${esc((s.id||'').slice(0,10))}</td>
+        <td>${statusBadge(s.state)}</td><td>${s.step_count ?? 0}</td></tr>`).join('') + '</table>';
+  } else $('db-sessions').innerHTML = '<div class="empty">No sessions yet</div>';
+};
+
+/* ═════════════════════════ AGENT (chat + events) ═════════════════════════ */
+let ws = null, wsSession = null, streamingMsg = null, runActive = false;
+let toolCallCount = 0, currentStep = 0;
+
+function wsUrl(sessionId) {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const key = API_KEY ? `?api_key=${encodeURIComponent(API_KEY)}` : '';
+  return `${proto}//${location.host}/ws/chat/${sessionId}${key}`;
+}
+function agentConnect(sessionId) {
+  if (ws) { try { ws.close(); } catch(e){} }
+  wsSession = sessionId;
+  ws = new WebSocket(wsUrl(sessionId));
+  ws.onopen = () => { $('ws-dot').className = 'dot on'; $('ws-label').textContent = 'WebSocket connected'; };
+  ws.onclose = () => {
+    $('ws-dot').className = 'dot off'; $('ws-label').textContent = 'WebSocket disconnected';
+    if (runActive) setRunState('disconnected');
+    setTimeout(() => { if (wsSession) agentConnect(wsSession); }, 3000);
+  };
+  ws.onmessage = (ev) => {
+    let f; try { f = JSON.parse(ev.data); } catch(e) { return; }
+    handleEvent(f);
+  };
+}
+function setRunState(s) {
+  $('run-status').textContent = s;
+  $('agent-cancel-btn').disabled = !runActive;
+  $('agent-send-btn').disabled = runActive;
+}
+function handleEvent(f) {
+  const ev = f.event || f.type;
+  if (ev === 'llm_delta') {
+    if (!streamingMsg) {
+      streamingMsg = addMsg('assistant', '');
+    }
+    streamingMsg.querySelector('.body').textContent += (f.text || '');
+    scrollChat();
+    return;
+  }
+  if (ev === 'agent_start') {
+    runActive = true; toolCallCount = 0; currentStep = 0;
+    setRunState('running'); $('run-reason').textContent = '—'; $('run-tools').textContent = '0';
+    actLine('● run started', 'ok');
+    return;
+  }
+  if (ev === 'step' || ev === 'step_start') {
+    currentStep = Math.max(currentStep, f.step || 0);
+    $('run-step').textContent = `${currentStep}${f.max_steps ? ' / ' + f.max_steps : ''}`;
+    if (ev === 'step') actLine(`step ${f.step}`, '');
+  }
+  if (ev === 'tool_start') {
+    toolCallCount++; $('run-tools').textContent = toolCallCount;
+    actLine(`⚒ ${f.tool} — ${esc((f.args_preview||'').slice(0,60))}`, 'tool');
+  }
+  if (ev === 'tool_end') {
+    actLine(`${f.success ? '✓' : '✗'} ${f.tool} ${esc((f.preview||'').slice(0,50))}`,
+            f.success ? 'ok' : 'err');
+  }
+  if (ev === 'checkpoint') actLine('💾 checkpoint', '');
+  if (ev === 'plan_created') actLine(`📋 plan: ${f.nodes} tasks`, '');
+  if (ev === 'verifying') actLine('✓ verifying…', '');
+  if (ev === 'rate_limit_wait') actLine('⏳ rate limited — waiting (state preserved)', 'err');
+  if (ev === 'task_partial') actLine(`⚠ task partial: ${esc(f.reason||'')}`, 'err');
+  if (ev === 'task_complete') actLine('✓ task completed', 'ok');
+  if (ev === 'agent_done') {
+    runActive = false; setRunState(f.state || 'finished');
+    $('run-reason').textContent = f.finish_reason || '—';
+    if (streamingMsg && streamingMsg.querySelector('.body').textContent.trim() === (f.output||'').trim()) {
+      streamingMsg = null;      // already streamed — don't duplicate
+    } else {
+      streamingMsg = null;
+      if (f.output) addMsg('assistant', f.output);
+    }
+    addMsg('system', `— run finished · ${f.steps} steps · ${f.finish_reason || ''} —`);
+    scrollChat();
+  }
+  if (ev === 'agent_error' || ev === 'error') {
+    runActive = false; setRunState('error');
+    streamingMsg = null;
+    addMsg('system', '✗ ' + (f.error || f.message || 'error'));
+  }
+}
+function addMsg(role, text) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = `<div class="who">${role}</div><div class="body"></div>`;
+  div.querySelector('.body').textContent = text;
+  $('chat-msgs').appendChild(div);
+  scrollChat();
+  return div;
+}
+function scrollChat() { const c = $('chat-msgs'); c.scrollTop = c.scrollHeight; }
+function actLine(text, cls) {
+  const d = document.createElement('div');
+  d.className = 'act-line ' + (cls || '');
+  d.innerHTML = `<span class="t">${new Date().toLocaleTimeString()}</span> ${text}`;
+  const feed = $('activity-feed');
+  feed.appendChild(d);
+  while (feed.children.length > 300) feed.removeChild(feed.firstChild);
+  feed.scrollTop = feed.scrollHeight;
+}
+function agentNewSession() {
+  const sid = 'gui-' + Date.now().toString(36);
+  $('agent-session').value = sid;
+  $('chat-msgs').innerHTML = ''; $('activity-feed').innerHTML = '';
+  agentConnect(sid);
+  addMsg('system', `— new session ${sid} —`);
+}
+function agentSend() {
+  const input = $('chat-input');
+  const text = input.value.trim();
+  if (!text || runActive) return;
+  if (!wsSession) agentNewSession();
+  if (!ws || ws.readyState !== 1) { addMsg('system', '✗ WebSocket not connected'); return; }
+  addMsg('user', text);
+  input.value = '';
+  ws.send(JSON.stringify({type: 'prompt', prompt: text}));
+}
+async function agentCancel() {
+  if (wsSession) await apiPost(`/sessions/${wsSession}/cancel`, {});
+}
+
+/* ═════════════════════════ TASKS ═════════════════════════ */
+LOADERS.tasks = async () => {
+  const data = await api('/tasks?limit=25');
+  if (!data.tasks?.length) { $('tasks-list').innerHTML = '<div class="empty">No journal tasks yet.</div>'; return; }
+  $('tasks-list').innerHTML = '<table><tr><th>ID</th><th>Goal</th><th>Status</th><th>Steps</th><th>Tools</th><th>Reason</th></tr>' +
+    data.tasks.map(t => `<tr class="clickable" onclick="taskDetail('${t.task_id}')">
+      <td>${esc(t.task_id)}</td>
+      <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((t.goal||'').slice(0,70))}</td>
+      <td>${statusBadge(t.status)}</td><td>${t.step_count}</td><td>${t.tool_calls}</td>
+      <td class="muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((t.blocked_reason||'').slice(0,50))}</td></tr>`).join('') + '</table>';
+};
+async function taskDetail(taskId) {
+  const d = await api(`/tasks/${taskId}`);
+  if (d.error || !d.task) return;
+  $('task-detail').style.display = 'block';
+  // DAG render — group by dependency waves
+  const nodes = d.nodes || [];
+  const container = $('dag-container');
+  if (!nodes.length) { container.innerHTML = '<div class="empty">No DAG nodes for this task.</div>'; }
+  else {
+    const byId = {}; nodes.forEach(n => byId[n.node_id] = n);
+    const depsOf = n => (JSON.parse(n.depends_on || '[]')).map(i => byId[Object.keys(byId)[i]] || null);
+    // wave assignment: longest path from a root
+    const wave = {};
+    const depth = (n, seen) => {
+      if (wave[n.node_id] !== undefined) return wave[n.node_id];
+      if (seen.has(n.node_id)) return 0;
+      seen.add(n.node_id);
+      let d = 0;
+      (JSON.parse(n.depends_on || '[]')).forEach(di => {
+        const dep = nodes[di] || byId[di];
+        if (dep) d = Math.max(d, depth(dep, seen) + 1);
+      });
+      wave[n.node_id] = d;
+      return d;
+    };
+    nodes.forEach(n => depth(n, new Set()));
+    const waves = {};
+    nodes.forEach(n => (waves[wave[n.node_id] || 0] = waves[wave[n.node_id] || 0] || []).push(n));
+    let html = '';
+    Object.keys(waves).sort((a,b) => a-b).forEach((w, i) => {
+      if (i > 0) html += '<div class="dag-arrow">↓</div>';
+      html += '<div class="dag-wave">' + waves[w].map(n =>
+        `<div class="dag-node ${n.status}">
+           <div class="title">${esc(n.title)}</div>
+           <div>${statusBadge(n.status)} <span class="muted">p${n.priority} · tries ${n.attempts}</span></div>
+         </div>`).join('') + '</div>';
+    });
+    container.innerHTML = html;
+  }
+  // events
+  $('task-events').innerHTML = (d.events || []).map(e =>
+    `<div class="act-line">${new Date((e.ts||0)*1000).toLocaleTimeString()} <span class="t">${esc(e.kind)}</span> ${esc((e.detail||'').slice(0,120))}</div>`
+  ).join('') || '<div class="empty">No events.</div>';
+}
+
+/* ═════════════════════════ TEAM103 ═════════════════════════ */
+async function team103Run() {
+  const goal = $('t103-goal').value.trim();
+  if (!goal) return;
+  $('t103-btn').disabled = true;
+  $('t103-result').innerHTML = '<span class="spinner"></span> Team103 running — PM → Architect → engineers → QA…';
+  const r = await apiPost('/team103', {goal});
+  $('t103-btn').disabled = false;
+  if (r.error) { $('t103-result').innerHTML = `<div class="badge b-red">failed</div> ${esc(r.error)}`; return; }
+  $('t103-result').innerHTML = `
+    <div class="row" style="margin-bottom:8px">
+      ${statusBadge(r.qa_passed ? 'completed' : 'failed')} QA gate
+      <span class="badge b-blue">${r.pm_tasks} PM tasks</span>
+      <span class="badge b-purple">peak ${r.peak_concurrency} workers</span>
+      <span class="badge b-cyan">conf ${r.avg_confidence}</span>
+      <span class="badge b-gray">${r.duration_s}s</span>
+    </div>
+    <div class="kv"><span class="k">QA detail</span><span class="v">${esc(r.qa_detail)}</span></div>
+    ${r.merged_files?.length ? `<div class="kv"><span class="k">Changed files</span><span class="v">${r.merged_files.map(esc).join(', ')}</span></div>` : ''}
+    ${r.conflicts && Object.keys(r.conflicts).length ? `<div class="kv"><span class="k">Conflicts</span><span class="v" style="color:var(--red)">${Object.keys(r.conflicts).map(esc).join(', ')}</span></div>` : ''}
+    ${r.unresolved?.length ? `<div class="kv"><span class="k">Unresolved</span><span class="v" style="color:var(--yellow)">${r.unresolved.map(esc).join('; ').slice(0,300)}</span></div>` : ''}`;
+}
+
+/* ═════════════════════════ WORKSPACE ═════════════════════════ */
+LOADERS.workspace = async () => { await loadDir('', $('file-tree')); };
+async function loadDir(path, el) {
+  const d = await api(`/workspace/files?path=${encodeURIComponent(path || '.')}`);
+  if (d.error) { el.innerHTML = `<div class="empty">${esc(d.error)}</div>`; return; }
+  el.innerHTML = '';
+  (d.entries || []).forEach(e => {
+    const item = document.createElement('div');
+    item.className = 'ft-item ' + (e.dir ? 'dir' : 'file');
+    item.innerHTML = `${e.dir ? '▸' : '·'} ${esc(e.name)} <span class="muted" style="margin-left:auto">${e.dir ? '' : fmtSize(e.size)}</span>`;
+    item.onclick = async (ev) => {
+      ev.stopPropagation();
+      if (e.dir) {
+        let child = item.nextElementSibling;
+        if (child && child.classList.contains('ft-children')) { child.remove(); item.firstChild.textContent = '▸ '; }
+        else {
+          item.firstChild.textContent = '▾ ';
+          child = document.createElement('div');
+          child.className = 'ft-children';
+          item.after(child);
+          await loadDir(e.path, child);
+        }
+      } else {
+        await viewFile(e.path);
+      }
+    };
+    el.appendChild(item);
+  });
+  if (!(d.entries || []).length) el.innerHTML = '<div class="empty" style="padding:8px">(empty)</div>';
+}
+async function viewFile(path) {
+  const d = await api(`/workspace/file?path=${encodeURIComponent(path)}`);
+  if (d.error) return;
+  $('fv-path').textContent = d.path;
+  $('fv-size').textContent = fmtSize(d.size) + (d.truncated ? ' (truncated)' : '');
+  $('file-content').classList.remove('empty');
+  $('file-content').textContent = d.content;
+}
+function fmtSize(n) { return n > 1048576 ? (n/1048576).toFixed(1)+'M' : n > 1024 ? (n/1024).toFixed(1)+'K' : n+'B'; }
+
+/* ═════════════════════════ TERMINAL ═════════════════════════ */
+async function termExec() {
+  const input = $('term-input');
+  const cmd = input.value.trim();
+  if (!cmd) return;
+  input.value = '';
+  const out = $('term-out');
+  out.innerHTML += `\n<span class="prompt-sym">$</span> ${esc(cmd)}\n`;
+  out.scrollTop = out.scrollHeight;
+  const r = await apiPost('/terminal/exec', {command: cmd, timeout: 60});
+  out.innerHTML += `<span style="color:var(--fg-dim)">${esc(r.stdout || '')}</span>` +
+                   (r.stderr ? `\n<span style="color:var(--red)">${esc(r.stderr)}</span>` : '') +
+                   `\n<span class="muted">↳ exit ${r.returncode}</span>\n`;
+  out.scrollTop = out.scrollHeight;
+}
+
+/* ═════════════════════════ GIT ═════════════════════════ */
+LOADERS.git = async () => {
+  const [st, log] = await Promise.all([api('/git/status'), api('/github/log?limit=12')]);
+  if (!st.is_repo) { $('git-status').innerHTML = '<div class="empty">Not a git repository.</div>'; return; }
+  $('git-status').innerHTML = `
+    <div class="kv"><span class="k">Branch</span><span class="v">${esc(st.branch)}</span></div>
+    <div class="kv"><span class="k">Changes</span><span class="v">${esc(st.status || 'clean')}</span></div>`;
+  $('git-log').innerHTML = (log.commits || []).map(c =>
+    `<div class="kv"><span class="v" style="color:var(--accent)">${esc(c.sha)}</span>
+     <span class="v" style="flex:1;padding-left:12px">${esc(c.subject)}</span>
+     <span class="k">${esc(c.author)}</span></div>`).join('') || '<div class="empty">No commits.</div>';
+};
+async function gitBranch() {
+  const name = $('git-branch-name').value.trim();
+  if (!name) return;
+  const r = await apiPost('/github/branch', {branch: name});
+  alert(r.error ? r.error : `Switched to ${r.branch}`); LOADERS.git();
+}
+async function gitCommit() {
+  const msg = $('git-commit-msg').value.trim();
+  if (!msg) { alert('Commit message required'); return; }
+  const r = await apiPost('/github/commit', {message: msg});
+  alert(r.error ? r.error : `Committed ${r.sha}\n\n${r.message}`);
+  $('git-commit-msg').value = ''; LOADERS.git();
+}
+async function gitPush() { const r = await apiPost('/github/push', {}); alert(r.error ? r.error : `Pushed ${r.branch}\n${r.output || ''}`); LOADERS.git(); }
+async function gitPull() { const r = await apiPost('/github/pull', {}); alert(r.error ? r.error : `Pulled\n${r.output || ''}`); LOADERS.git(); }
+async function gitStash() { const r = await apiPost('/github/stash', {}); LOADERS.git(); }
+async function gitStashPop() { const r = await apiPost('/github/stash', {branch: 'pop'}); LOADERS.git(); }
+async function gitDiff(staged) {
+  const r = await api(`/github/diff?staged=${staged}`);
+  $('git-diff').textContent = r.diff || '(no changes)';
+}
+
+/* ═════════════════════════ GITHUB ═════════════════════════ */
+LOADERS.github = async () => {
+  const st = await api('/github/status');
+  const id = st.identity || {};
+  $('gh-identity').innerHTML = `
+    <div class="kv"><span class="k">Agent</span><span class="v">${esc(id.name)}</span></div>
+    <div class="kv"><span class="k">Profile</span><span class="v"><a href="${esc(id.profile_url)}" target="_blank" style="color:var(--accent)">${esc(id.profile_url)}</a></span></div>
+    <div class="kv"><span class="k">Auth mode</span><span class="v">${esc(st.auth_mode)}</span></div>
+    <div class="kv"><span class="k">Account</span><span class="v">${st.account ? esc(st.account.login) : '—'}</span></div>
+    <div class="kv"><span class="k">Local branch</span><span class="v">${esc(st.local?.branch || '—')} ${st.local?.dirty ? '(dirty)' : ''}</span></div>
+    <div class="kv"><span class="k">Commit credit</span><span class="v" style="font-size:10px">${esc(id.co_author_trailer)}</span></div>`;
+};
+async function ghListPRs() {
+  const repo = $('prs-repo').value.trim();
+  if (!repo) return;
+  const r = await api(`/github/prs?repo=${encodeURIComponent(repo)}`);
+  $('gh-prs').innerHTML = r.error ? `<div class="empty">${esc(r.error)}</div>` :
+    (r.prs || []).map(p => `<div class="kv"><span class="v">#${p.number}</span>
+      <span class="v" style="flex:1;padding-left:10px">${esc(p.title)}</span>
+      ${statusBadge(p.state)}</div>`).join('') || '<div class="empty">No open PRs.</div>';
+}
+async function ghListIssues() {
+  const repo = $('iss-repo').value.trim();
+  if (!repo) return;
+  const r = await api(`/github/issues?repo=${encodeURIComponent(repo)}`);
+  $('gh-issues').innerHTML = r.error ? `<div class="empty">${esc(r.error)}</div>` :
+    (r.issues || []).map(i => `<div class="kv"><span class="v">#${i.number}</span>
+      <span class="v" style="flex:1;padding-left:10px">${esc(i.title)}</span>
+      ${statusBadge(i.state)}</div>`).join('') || '<div class="empty">No open issues.</div>';
+}
+async function ghCreatePR() {
+  const body = {
+    repo: $('pr-repo').value.trim(), title: $('pr-title').value.trim(),
+    body: $('pr-body').value, head: $('pr-head').value.trim(),
+    base: $('pr-base').value.trim() || 'main', draft: $('pr-draft').checked};
+  if (!body.repo || !body.title || !body.head) { alert('repo, head and title are required'); return; }
+  const r = await apiPost('/github/pr', body);
+  alert(r.error ? r.error : `PR #${r.number} created: ${r.url || r.title}`);
+}
+
+/* ═════════════════════════ QA ═════════════════════════ */
+async function qaRun() {
+  $('qa-btn').disabled = true;
+  $('qa-result').innerHTML = '<span class="spinner"></span> Running project-aware verification…';
+  const r = await apiPost('/qa/verify', {});
+  $('qa-btn').disabled = false;
+  const rep = r.report;
+  if (!rep) { $('qa-result').innerHTML = `<div class="badge b-red">error</div> ${esc(r.error||'')}`; return; }
+  let html = `<div class="row" style="margin-bottom:10px">
+    ${statusBadge(rep.ok === True ? 'completed' : rep.ok === false ? 'failed' : 'unknown')}
+    <span class="badge b-gray">${rep.project_type || '?'}</span></div>`;
+  (rep.checks || []).forEach(c => {
+    html += `<div class="kv"><span class="k">${esc(c.kind || c.label || 'check')}</span>
+      <span class="v" style="color:${c.ok ? 'var(--green)' : 'var(--red)'}">${c.ok ? 'PASS' : 'FAIL'} ${esc((c.output||'').slice(0,200))}</span></div>`;
+  });
+  $('qa-result').innerHTML = html;
+}
+
+/* ═════════════════════════ SESSIONS ═════════════════════════ */
+LOADERS.sessions = async () => {
+  const d = await api('/sessions?limit=30');
+  if (!d.sessions?.length) { $('sessions-list').innerHTML = '<div class="empty">No sessions yet.</div>'; return; }
+  $('sessions-list').innerHTML = '<table><tr><th>ID</th><th>Goal</th><th>State</th><th>Steps</th><th>Started</th></tr>' +
+    d.sessions.map(s => `<tr class="clickable" onclick="sessionDetail('${s.id}')">
+      <td>${esc((s.id||'').slice(0,12))}</td>
+      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((s.goal||'').slice(0,60))}</td>
+      <td>${statusBadge(s.state)}</td><td>${s.step_count ?? 0}</td>
+      <td class="muted">${s.started_at ? new Date(s.started_at*1000).toLocaleString() : '—'}</td></tr>`).join('') + '</table>';
+};
+async function sessionDetail(sid) {
+  const d = await api(`/sessions/${sid}/messages`);
+  $('session-detail').style.display = 'block';
+  $('session-detail-title').textContent = 'Session ' + sid.slice(0, 12);
+  $('session-messages').dataset.sid = sid;
+  $('session-messages').innerHTML = (d.messages || []).map(m =>
+    `<div class="kv"><span class="k" style="min-width:70px">${esc(m.role)}</span>
+     ${m.kind === 'interim' ? '<span class="badge b-gray">interim</span>' : ''}
+     <span class="v" style="flex:1;padding-left:8px;white-space:pre-wrap">${esc((m.content||'').slice(0,500))}</span></div>`
+  ).join('') || '<div class="empty">No messages.</div>';
+}
+function continueSession() {
+  const sid = $('session-messages').dataset.sid;
+  if (!sid) return;
+  document.querySelector('.nav-item[data-panel="agent"]').click();
+  $('agent-session').value = sid;
+  agentConnect(sid);
+  addMsg('system', `— continuing session ${sid} —`);
+}
+
+/* ═════════════════════════ LOGS ═════════════════════════ */
+LOADERS.logs = async () => { await loadLogs(); };
+async function loadLogs() {
+  const d = await api('/logs/recent?lines=120');
+  $('log-box').innerHTML = (d.lines || []).map(l => {
+    const m = l.match(/\b(INFO|WARNING|ERROR|CRITICAL|DEBUG)\b/);
+    return `<div class="log-line">${m ? l.replace(m[1], `<span class="lvl-${m[1]}">${m[1]}</span>`) : esc(l)}</div>`;
+  }).join('') || '<div class="empty">No log output yet.</div>';
+  $('log-box').scrollTop = $('log-box').scrollHeight;
+}
+setInterval(() => {
+  const active = document.querySelector('.panel.active');
+  if (active && active.id === 'panel-logs' && $('log-auto').checked) loadLogs();
+}, 3000);
+
+/* ═════════════════════════ MEMORY ═════════════════════════ */
+LOADERS.memory = async () => {
+  const d = await api('/memory');
+  $('mem-project').textContent = d.memory_md?.content || '(empty)';
+  $('mem-user').textContent = d.user_md?.content || '(empty)';
+  $('ltm-count').textContent = d.long_term?.count ? `· ${d.long_term.count} entries` : '';
+  $('ltm-recent').innerHTML = (d.long_term?.recent || []).map(m =>
+    `<div class="kv"><span class="k">${new Date((m.ts||0)*1000).toLocaleString()}</span>
+     <span class="v" style="flex:1;padding-left:10px;white-space:pre-wrap">${esc((m.content||'').slice(0,300))}</span></div>`
+  ).join('') || '<div class="empty">No long-term memories yet.</div>';
+};
+
+/* ═════════════════════════ SETTINGS ═════════════════════════ */
+LOADERS.settings = async () => {
+  const cfg = await api('/config');
+  $('settings-config').innerHTML = Object.entries(cfg).map(([k, v]) =>
+    `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('');
+};
+async function switchModel() {
+  const body = {};
+  ['provider', 'model', 'base_url'].forEach(k => {
+    const el = $('set-' + (k === 'base_url' ? 'baseurl' : k));
+    if (el.value.trim()) body[k] = el.value.trim();
+  });
+  if ($('set-apikey').value.trim()) body.api_key = $('set-apikey').value.trim();
+  if (!Object.keys(body).length) { $('set-result').textContent = 'nothing to change'; return; }
+  const r = await apiPost('/settings/model', body);
+  $('set-result').textContent = r.switched ? '✓ applied — new agents use it' : (r.error || 'failed');
+  LOADERS.settings();
+}
+
+/* ── boot ── */
+LOADERS.dashboard();
+agentNewSession();
+</script>
+</body>
+</html>
