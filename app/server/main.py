@@ -144,30 +144,51 @@ async def require_api_key(key: Optional[str] = Depends(_api_key_header)) -> None
 
 
 class ConnectionManager:
+    """v4.0.1 (mission §14/§15): multi-socket session registry.
+
+    The old manager kept ONE socket per session — a second tab/viewer
+    silently replaced the first, and the chat endpoint's sockets lived in
+    a DIFFERENT registry so they never received agent events at all.
+    Now every consumer (GUI, chat, /ws) registers here and every frame
+    fans out to ALL sockets watching that session.
+    """
+
     def __init__(self):
-        self.active: dict[str, WebSocket] = {}
+        self.active: dict[str, list[WebSocket]] = {}
+        self._lock = asyncio.Lock()
 
     async def connect(self, ws: WebSocket, session_id: str) -> None:
         await ws.accept()
-        self.active[session_id] = ws
+        async with self._lock:
+            self.active.setdefault(session_id, []).append(ws)
+
+    def disconnect_one(self, ws: WebSocket, session_id: str) -> None:
+        conns = self.active.get(session_id)
+        if conns and ws in conns:
+            conns.remove(ws)
+            if not conns:
+                self.active.pop(session_id, None)
 
     def disconnect(self, session_id: str) -> None:
         self.active.pop(session_id, None)
 
     async def send(self, session_id: str, data: dict) -> None:
-        ws = self.active.get(session_id)
-        if ws:
+        """Fan a frame out to every socket watching this session."""
+        payload = json.dumps(data)
+        for ws in list(self.active.get(session_id, [])):
             try:
-                await ws.send_text(json.dumps(data))
+                await ws.send_text(payload)
             except Exception:
-                self.disconnect(session_id)
+                self.disconnect_one(ws, session_id)
 
     async def broadcast(self, data: dict) -> None:
-        for sid, ws in list(self.active.items()):
-            try:
-                await ws.send_text(json.dumps(data))
-            except Exception:
-                self.disconnect(sid)
+        payload = json.dumps(data)
+        for sid in list(self.active.keys()):
+            for ws in list(self.active.get(sid, [])):
+                try:
+                    await ws.send_text(payload)
+                except Exception:
+                    self.disconnect_one(ws, sid)
 
 
 manager = ConnectionManager()
@@ -199,7 +220,31 @@ class StreamingSHSCode:
     (state / step_count / error) so callers can close the session with
     accurate values; the agent itself is the primary writer (BaseAgent.run
     now always closes sessions, including injected ones).
+
+    v4.0.1 (mission §15 — GUI must not scrape terminal output): while the
+    agent runs, the ActivityBus is bridged to the session's WebSocket
+    sockets as STRUCTURED event frames — llm_delta (token streaming),
+    tool_start/tool_end, plan_created, checkpoint, task lifecycle. The
+    frames use an `event` field (type is mirrored for legacy clients).
     """
+
+    # ActivityBus kinds forwarded to sockets (internal → UI-safe set)
+    _FORWARDED = {
+        "llm_delta", "llm_start", "llm_end",
+        "tool_start", "tool_end", "tool_error",
+        "step", "plan_created", "checkpoint", "verifying",
+        "parallel_tools", "review_phase", "rollback_snapshot",
+        "subagent_start", "subagent_end", "blocked", "context_compacted",
+        "memory_recall", "rate_limit_wait", "rate_limit_resume",
+        "model_switch", "provider_switch", "llm_fallback",
+        "task_start", "task_complete", "task_error", "task_partial",
+    }
+
+    # v4.0.1: bridges of currently-running streams — lets a bridge decide
+    # whether an UNATTRIBUTED event (no session_id) belongs to it. With
+    # multiple concurrent runs, unattributed events are dropped rather than
+    # cross-delivered to the wrong session's UI.
+    _active_bridges: dict[str, object] = {}
 
     def __init__(self, session_id: str, mode: AgentMode = AgentMode.BUILD, max_steps: Optional[int] = None) -> None:
         self.session_id = session_id
@@ -208,6 +253,28 @@ class StreamingSHSCode:
         self.last_state: str = ""
         self.last_step_count: int = 0
         self.last_error: Optional[str] = None
+
+    def _activity_bridge(self, kind: str, data: dict) -> None:
+        if kind not in self._FORWARDED:
+            return
+        # session-attributed events must match THIS stream's session
+        ev_sid = data.get("session_id") if isinstance(data, dict) else None
+        if ev_sid and ev_sid != self.session_id:
+            return
+        # unattributed events (LLM-layer level) are only safe to forward
+        # when a single run is active — otherwise they could belong to any
+        # concurrent run and would cross-pollute the wrong UI
+        if not ev_sid and len(self._active_bridges) > 1:
+            return
+        frame = {"event": kind, "type": kind, "session_id": self.session_id,
+                 "ts": time.time()}
+        frame.update(data if isinstance(data, dict) else {})
+        # fire-and-forget: bridge onto the running loop
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(manager.send(self.session_id, frame))
+        except RuntimeError:
+            pass
 
     async def run(self, prompt: str) -> str:
         from app.agent.shscode import SHSCode
@@ -219,34 +286,41 @@ class StreamingSHSCode:
         original_step = agent.step
 
         async def patched_step():
-            # FIX: capture current step count BEFORE calling original_step
-            # (original_step increments _step_count at the end)
-            step_num = agent._step_count + 1
+            # v4.0.1 fix: BaseAgent.run increments _step_count BEFORE calling
+            # step() — the old `+1` double-counted (step_start said 2 on the
+            # first step). Report the CURRENT step number.
+            step_num = agent._step_count
             await manager.send(self.session_id, {
-                "type": "step_start",
-                "step": step_num,
-                "ts": time.time(),
+                "event": "step_start", "type": "step_start",
+                "step": step_num, "ts": time.time(),
             })
             result = await original_step()
             if result:
                 await manager.send(self.session_id, {
-                    "type": "step_output",
+                    "event": "step_output", "type": "step_output",
                     "step": step_num,
-                    "content": result[:2000],
-                    "ts": time.time(),
+                    "content": result[:2000], "ts": time.time(),
                 })
             return result
 
         agent.step = patched_step  # type: ignore
 
+        # v4.0.1: bridge runtime activity to the session sockets
+        from app.activity import ActivityBus
+        ActivityBus.subscribe(self._activity_bridge)
+        self._active_bridges[self.session_id] = self
         try:
+            await manager.send(self.session_id, {
+                "event": "agent_start", "type": "agent_start",
+                "prompt": prompt[:200], "ts": time.time()})
             final = await agent.run(prompt)
             self.last_state = getattr(agent.state, "value", str(agent.state))
             self.last_step_count = agent._step_count
             await manager.send(self.session_id, {
-                "type": "agent_done",
+                "event": "agent_done", "type": "agent_done",
                 "output": final[:4000],
                 "state": agent.state.value,
+                "finish_reason": getattr(agent, "_finish_reason", ""),
                 "steps": agent._step_count,
                 "ts": time.time(),
             })
@@ -262,17 +336,20 @@ class StreamingSHSCode:
             self.last_step_count = agent._step_count
             self.last_error = str(e)
             await manager.send(self.session_id, {
-                "type": "agent_error",
-                "error": str(e),
-                "ts": time.time(),
+                "event": "agent_error", "type": "agent_error",
+                "error": str(e), "ts": time.time(),
             })
             raise
+        finally:
+            ActivityBus.unsubscribe(self._activity_bridge)
+            self._active_bridges.pop(self.session_id, None)
 
 
 class RunRequest(BaseModel):
     prompt: str
     mode: str = "build"
     max_steps: int = 30
+    session_id: Optional[str] = None   # v4.0.1: continue an existing session
 
 
 class RunResponse(BaseModel):
@@ -295,7 +372,17 @@ async def root():
 async def run_agent(req: RunRequest):
     mode = AgentMode.PLAN if req.mode.lower() == "plan" else AgentMode.BUILD
     mode_str = mode.value
-    session_id = await db.create_session(req.prompt, mode=mode_str)  # Fix: use enum value
+    # v4.0.1 (mission §16 — CLI/GUI shared state): an explicit session_id
+    # CONTINUES that session (conversation history is re-injected by the
+    # agent). Previously POST /run always created a new session — the GUI
+    # could not continue a conversation over REST.
+    if req.session_id:
+        row = await db.get_session(req.session_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="session not found")
+        session_id = req.session_id
+    else:
+        session_id = await db.create_session(req.prompt, mode=mode_str)  # Fix: use enum value
 
     async def _run():
         streamer = StreamingSHSCode(session_id=session_id, mode=mode, max_steps=req.max_steps)
@@ -368,6 +455,179 @@ async def run_agent_sync(req: RunRequest):
 async def list_sessions(limit: int = 20):
     sessions = await db.get_sessions(limit=limit)
     return {"sessions": sessions}
+
+
+@app.get("/sessions/{session_id}", dependencies=[Depends(require_api_key)])
+async def get_session_detail(session_id: str):
+    """v4.0.1 (mission §14): single-session detail for the GUI — registry
+    row + running-task status + socket viewer count."""
+    row = await db.get_session(session_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    _st = getattr(app.state, "session_tasks", {})
+    task = _st.get(session_id)
+    return {
+        "session": row,
+        "running": bool(task and not task.done()),
+        "viewers": len(manager.active.get(session_id, [])),
+    }
+
+
+@app.post("/sessions/{session_id}/cancel", dependencies=[Depends(require_api_key)])
+async def cancel_session(session_id: str):
+    """v4.0.1 (mission §14 — GUI cancellation): cancel a running session.
+    The agent's checkpointing already persists state — the run resumes
+    from where it stopped."""
+    _st = getattr(app.state, "session_tasks", {})
+    task = _st.get(session_id)
+    if task and not task.done():
+        task.cancel()
+        return {"cancelled": True, "session_id": session_id}
+    return {"cancelled": False, "detail": "no running task for this session"}
+
+
+@app.get("/tasks", dependencies=[Depends(require_api_key)])
+async def list_journal_tasks(limit: int = 30):
+    """v4.0.1 (mission §14 — GUI Tasks panel): journal task rows (the
+    persisted task lifecycle: in_progress / completed / partial / failed /
+    blocked / interrupted)."""
+    from app.state import Journal
+    try:
+        j = Journal.get()
+        rows = await j._aquery(
+            "SELECT task_id, goal, status, step_count, tool_calls, cwd, "
+            "provider, model, created_at, updated_at, blocked_reason "
+            "FROM tasks ORDER BY updated_at DESC LIMIT ?", (int(limit),))
+        return {"tasks": rows}
+    except Exception as e:
+        return {"tasks": [], "error": str(e)}
+
+
+@app.get("/tasks/{task_id}", dependencies=[Depends(require_api_key)])
+async def get_journal_task(task_id: str):
+    """v4.0.1: task detail + DAG nodes + journal tail for the GUI."""
+    from app.state import Journal
+    try:
+        j = Journal.get()
+        task = await j.get_task(task_id)
+        if task is None:
+            raise HTTPException(status_code=404, detail="task not found")
+        nodes = await j._aquery(
+            "SELECT node_id, title, status, priority, depends_on, files, "
+            "notes, attempts FROM task_nodes WHERE task_id=?", (task_id,))
+        events = await j._aquery(
+            "SELECT ts, kind, tool, detail FROM journal WHERE task_id=? "
+            "ORDER BY id DESC LIMIT 50", (task_id,))
+        return {"task": task, "nodes": nodes, "events": events}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/workspace/files", dependencies=[Depends(require_api_key)])
+async def workspace_files(path: str = "."):
+    """v4.0.1 (mission §14 — GUI Workspace panel): safe file tree listing.
+    Paths are confined to the server's working directory; hidden dirs,
+    __pycache__, node_modules and .git are skipped."""
+    import os as _os
+    root = _os.path.abspath(_os.getcwd())
+    target = _os.path.abspath(_os.path.join(root, path))
+    if not target.startswith(root):
+        raise HTTPException(status_code=400, detail="path escapes workspace")
+    if not _os.path.isdir(target):
+        raise HTTPException(status_code=404, detail="not a directory")
+    _SKIP = {"__pycache__", "node_modules", ".git", ".venv", "venv",
+             ".mypy_cache", ".pytest_cache", ".shscode"}
+    entries = []
+    try:
+        for name in sorted(_os.listdir(target))[:500]:
+            if name.startswith(".") and name not in (".env.example",):
+                continue
+            full = _os.path.join(target, name)
+            rel = _os.path.relpath(full, root)
+            try:
+                is_dir = _os.path.isdir(full)
+                size = 0 if is_dir else _os.path.getsize(full)
+            except OSError:
+                continue
+            if is_dir and name in _SKIP:
+                continue
+            entries.append({"name": name, "path": rel, "dir": is_dir,
+                            "size": size})
+        return {"root": root, "path": path, "entries": entries}
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/workspace/file", dependencies=[Depends(require_api_key)])
+async def workspace_file(path: str, max_bytes: int = 200000):
+    """v4.0.1: read a workspace file (confined to cwd, size-capped)."""
+    import os as _os
+    root = _os.path.abspath(_os.getcwd())
+    target = _os.path.abspath(_os.path.join(root, path))
+    if not target.startswith(root):
+        raise HTTPException(status_code=400, detail="path escapes workspace")
+    if not _os.path.isfile(target):
+        raise HTTPException(status_code=404, detail="not a file")
+    try:
+        size = _os.path.getsize(target)
+        with open(target, "r", errors="replace") as f:
+            content = f.read(max_bytes)
+        return {"path": path, "size": size, "truncated": size > max_bytes,
+                "content": content}
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/git/status", dependencies=[Depends(require_api_key)])
+async def git_status():
+    """v4.0.1 (mission §14 — GUI Git panel): branch, changed files,
+    recent commits. Graceful when cwd is not a repository."""
+    import subprocess
+
+    def _run(cmd):
+        try:
+            out = subprocess.run(cmd, capture_output=True, text=True,
+                                 timeout=10, cwd=".")
+            return out.stdout.strip() if out.returncode == 0 else None
+        except Exception:
+            return None
+
+    branch = _run(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    if branch is None:
+        return {"is_repo": False}
+    return {
+        "is_repo": True,
+        "branch": branch,
+        "status": _run(["git", "status", "--porcelain"]),
+        "log": _run(["git", "log", "--oneline", "-10"]),
+    }
+
+
+@app.get("/config", dependencies=[Depends(require_api_key)])
+async def get_config():
+    """v4.0.1 (mission §14 — GUI Settings panel): effective configuration.
+    Secrets are MASKED — never returned over the wire."""
+    from app.config import Config
+    cfg = Config.get()
+    llm = cfg.llm
+    masked_key = ""
+    if llm.api_key:
+        k = llm.api_key
+        masked_key = (k[:6] + "…" + k[-4:]) if len(k) > 12 else "****"
+    return {
+        "provider": llm.provider,
+        "model": llm.model,
+        "base_url": llm.base_url,
+        "api_key": masked_key,
+        "max_tokens": llm.max_tokens,
+        "temperature": llm.temperature,
+        "max_steps": cfg.max_steps,
+        "token_budget": cfg.token_budget,
+        "version": __import__("app").__version__,
+        "server_api_key_enabled": bool(_API_KEY),
+    }
 
 
 @app.get("/sessions/{session_id}/messages", dependencies=[Depends(require_api_key)])
@@ -448,7 +708,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             mode_str = msg.get("mode", "build")
             mode = AgentMode.PLAN if mode_str == "plan" else AgentMode.BUILD
 
-            await websocket.send_text(json.dumps({"type": "agent_start", "prompt": prompt[:200]}))
+            # v4.0.1: agent_start is emitted by StreamingSHSCode.run itself —
+            # the endpoint no longer duplicates it.
 
             # SHS Code FIX: coerce max_steps — a JSON string ("30") crashed the step
             # loop with TypeError ('<' not supported between str/int).
@@ -464,7 +725,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                 await websocket.send_text(json.dumps({"type": "error", "message": str(e)}))
 
     except WebSocketDisconnect:
-        manager.disconnect(session_id)
+        manager.disconnect_one(websocket, session_id)
         logger.info(f"[Server] WebSocket disconnected: {session_id}")
 
 
@@ -576,8 +837,12 @@ async def _auth_ws(websocket: WebSocket) -> bool:
 async def chat_websocket_endpoint(websocket: WebSocket, session_id: str):
     """WebSocket endpoint for the built-in web chat client.
 
-    Similar to the generic /ws/{session_id} but with chat-specific message
-    handling including typed prompts, file attachments, and canvas integration.
+    v4.0.1 (critical wiring fix): this endpoint used to register its
+    sockets ONLY in canvas_chat_manager while StreamingSHSCode emits
+    through the main `manager` — the shipped chat UI therefore never
+    received step/agent events. Sockets now register in BOTH registries:
+    the main manager delivers the structured agent event stream, the
+    canvas registry keeps viewer bookkeeping.
     """
     if not await _auth_ws(websocket):
         await websocket.close(code=4001)
@@ -585,7 +850,9 @@ async def chat_websocket_endpoint(websocket: WebSocket, session_id: str):
 
     await websocket.accept()
 
-    # Register connection
+    # Register connection — main manager for agent events (v4.0.1 fix)
+    manager.active.setdefault(session_id, []).append(websocket)
+    # plus the canvas viewer registry (existing behaviour)
     if session_id not in canvas_chat_manager:
         # FIX: Enforce max sessions to prevent unbounded memory growth
         while len(canvas_chat_manager) >= _MAX_CANVAS_SESSIONS:
@@ -597,6 +864,14 @@ async def chat_websocket_endpoint(websocket: WebSocket, session_id: str):
                     pass
         canvas_chat_manager[session_id] = []
     canvas_chat_manager[session_id].append(websocket)
+
+    # ensure the session row exists (same fix as /ws)
+    try:
+        if await db.get_session(session_id) is None:
+            await db.create_session("chat session", agent_name="shscode",
+                                    session_id=session_id)
+    except Exception as e:
+        logger.debug(f"[Server] chat session ensure failed: {e}")
 
     logger.info("[Server] Chat WebSocket connected: %s", session_id)
 
@@ -634,7 +909,8 @@ async def chat_websocket_endpoint(websocket: WebSocket, session_id: str):
             mode_str = msg.get("mode", "build")
             mode = AgentMode.PLAN if mode_str == "plan" else AgentMode.BUILD
 
-            await websocket.send_text(json.dumps({"type": "agent_start", "prompt": prompt[:200]}))
+            # v4.0.1: agent_start is emitted by StreamingSHSCode.run itself —
+            # the endpoint no longer duplicates it.
 
             # SHS Code FIX: coerce max_steps — a JSON string ("30") crashed the step
             # loop with TypeError ('<' not supported between str/int).
@@ -652,6 +928,7 @@ async def chat_websocket_endpoint(websocket: WebSocket, session_id: str):
     except WebSocketDisconnect:
         logger.info("[Server] Chat WebSocket disconnected: %s", session_id)
     finally:
+        manager.disconnect_one(websocket, session_id)   # v4.0.1 fix
         conns = canvas_chat_manager.get(session_id, [])
         if websocket in conns:
             conns.remove(websocket)

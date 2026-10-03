@@ -499,7 +499,8 @@ class BaseAgent(ABC):
                 set_log_context(step_id=self._step_count)
                 logger.info(f"Step {self._step_count}/{self._max_steps}")
                 from app.activity import emit
-                emit("step", step=self._step_count, max_steps=self._max_steps)
+                emit("step", step=self._step_count, max_steps=self._max_steps,
+                    session_id=self._session_id or "")
                 # SHS Code FIX (registry regression): live step_count so the
                 # session registry shows REAL progress while the agent runs.
                 self._update_db_progress()

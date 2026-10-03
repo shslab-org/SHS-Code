@@ -368,7 +368,7 @@ tool or different arguments — DO NOT repeat the same failing call.
         def _on_delta(fragment: str) -> None:
             try:
                 from app.activity import emit
-                emit("llm_delta", text=fragment)
+                emit("llm_delta", text=fragment, session_id=self._session_id or "")
             except Exception:
                 pass
 
@@ -654,7 +654,7 @@ tool or different arguments — DO NOT repeat the same failing call.
                     f"{name}({self._fmt_args(args)})"
                 )
                 emit("tool_start", tool=name, args_preview=self._fmt_args(args)[:100],
-                     attempt=attempt)
+                     attempt=attempt, session_id=self._session_id or "")
 
                 allowed = await self.check_permission(name, args)
                 if not allowed:
@@ -669,7 +669,8 @@ tool or different arguments — DO NOT repeat the same failing call.
                 result = await self.tools.execute(name, **args)
                 logger.info(f"Tool result: {str(result)[:300]}")
                 emit("tool_end", tool=name, success=not bool(result.error),
-                     preview=(result.output or result.error or "")[:100])
+                     preview=(result.output or result.error or "")[:100],
+                     session_id=self._session_id or "")
 
                 self.record_observation(
                     tool_name=name, args=args,
