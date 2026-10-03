@@ -1248,14 +1248,21 @@ class BaseAgent(ABC):
     # would close it.
     # ------------------------------------------------------------------
 
-    def _log_db_message(self, role: str, content: Optional[str]) -> None:
+    def _log_db_message(self, role: str, content: Optional[str],
+                        kind: str = "final") -> None:
         """Persist a conversation message to the session DB (fire-and-forget,
-        same reliability pattern as tool-call logging)."""
+        same reliability pattern as tool-call logging).
+
+        v4.0.1 (mission §4): ``kind='interim'`` marks mid-run assistant
+        narration — stored for the GUI/debug view, excluded from the
+        conversation replay so a resumed session never re-injects
+        tool-loop chatter as genuine dialogue.
+        """
         if not self._session_id or not content:
             return
         try:
             task = asyncio.create_task(
-                self.db.log_message(self._session_id, role, content)
+                self.db.log_message(self._session_id, role, content, kind=kind)
             )
             task.add_done_callback(self._on_db_task_done)
             self._pending_db_tasks.append(task)

@@ -361,19 +361,34 @@ tool or different arguments — DO NOT repeat the same failing call.
         self._auto_compact_if_needed()
 
         schemas = self.tools.to_openai_schemas()
+        # v4.0.1 (mission §5): token streaming — forward content deltas to
+        # the activity bus so the CLI/GUI can render live text. Tool-call
+        # fragments are NOT streamed (they are internal execution detail);
+        # only the conversational content reaches the user channel.
+        def _on_delta(fragment: str) -> None:
+            try:
+                from app.activity import emit
+                emit("llm_delta", text=fragment)
+            except Exception:
+                pass
+
         try:
-            response = await self.llm.ask_tool(self.memory.messages, tools=schemas)
+            response = await self.llm.ask_tool(
+                self.memory.messages, tools=schemas, on_delta=_on_delta)
         except Exception as exc:
             if _is_context_overflow(exc) and self._auto_compact_if_needed(force=True):
                 # one retry on the compacted context
-                response = await self.llm.ask_tool(self.memory.messages, tools=schemas)
+                response = await self.llm.ask_tool(
+                    self.memory.messages, tools=schemas, on_delta=_on_delta)
             else:
                 raise
         self.memory.add(response)
         # SHS Code FIX (registry regression): persist the assistant response
         # so /sessions/<id>/messages shows the real conversation.
+        # v4.0.1 (mission §4): mid-run narration is INTERIM — visible in the
+        # session browser, never replayed as conversation continuity.
         if response.content:
-            self._log_db_message("assistant", response.content)
+            self._log_db_message("assistant", response.content, kind="interim")
         return response.content or ""
 
     def _strip_prior_hint(self) -> None:

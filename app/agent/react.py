@@ -79,8 +79,9 @@ execute step-by-step with progress tracking.
         self.memory.add(response)
         # SHS Code FIX (registry regression): persist assistant messages for
         # plain-ReAct agents too, so /sessions/<id>/messages is populated.
+        # v4.0.1 (mission §4): interim kind — excluded from replay.
         if response.content:
-            self._log_db_message("assistant", response.content)
+            self._log_db_message("assistant", response.content, kind="interim")
         return response.content or ""
 
     async def act(self, thought: str) -> Optional[str]:

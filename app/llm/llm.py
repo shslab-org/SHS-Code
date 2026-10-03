@@ -278,8 +278,120 @@ class UniversalClient:
             resp.raise_for_status()
             return await resp.json()
 
+    async def _post_stream(self, payload: dict[str, Any],
+                           on_delta, api_key: Optional[str] = None) -> dict[str, Any]:
+        """v4.0.1 (mission §5): SSE streaming request.
+
+        POSTs with ``stream: true`` and incrementally invokes
+        ``on_delta(text_fragment)`` for every content chunk. Tool-call
+        argument fragments are accumulated across chunks (the OpenAI
+        streaming protocol sends them indexed and split). The final dict
+        matches the NON-streaming response shape exactly, so the rest of
+        the pipeline (_msg_from_openai, token accounting, retries) is
+        unchanged whether or not streaming was used.
+        """
+        import aiohttp
+        key = api_key or self.api_key
+        headers: dict[str, str] = {
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+            **self._extra_headers,
+        }
+        url = f"{self.base_url}/chat/completions"
+        session = await self._get_session()
+        payload = dict(payload)
+        payload["stream"] = True
+        logger.info(f"[UniversalClient] Streaming request to {url}")
+        content_parts: list[str] = []
+        tool_acc: dict[int, dict[str, Any]] = {}
+        usage: dict[str, Any] = {}
+        finish_reason: Optional[str] = None
+
+        async with session.post(url, json=payload, headers=headers) as resp:
+            if resp.status == 429:
+                retry_after: Optional[float] = None
+                try:
+                    ra = resp.headers.get("Retry-After") or resp.headers.get("retry-after")
+                    if ra:
+                        retry_after = float(ra)
+                except (TypeError, ValueError):
+                    retry_after = None
+                body_hint = ""
+                try:
+                    body_hint = (await resp.text())[:300]
+                except Exception:
+                    pass
+                err = RateLimitError(f"Rate limited. Retry-After={retry_after}")
+                err.retry_after = retry_after          # type: ignore[attr-defined]
+                err.body = body_hint                   # type: ignore[attr-defined]
+                raise err
+            if resp.status == 400:
+                body = await resp.text()
+                if "context" in body.lower() or "token" in body.lower():
+                    raise TokenLimitExceeded(body)
+                # Some OpenAI-compatible backends reject stream_options —
+                # retry once without it via the caller's fallback (raise the
+                # generic error; _call_single_with_retry handles it).
+                raise ValueError(f"Bad request (stream): {body[:400]}")
+            resp.raise_for_status()
+
+            async for raw_line in resp.content:
+                try:
+                    line = raw_line.decode("utf-8", errors="ignore").strip()
+                except Exception:
+                    continue
+                if not line or not line.startswith("data:"):
+                    continue
+                data_str = line[5:].strip()
+                if data_str == "[DONE]":
+                    break
+                try:
+                    chunk = _json.loads(data_str)
+                except _json.JSONDecodeError:
+                    continue
+                if isinstance(chunk.get("usage"), dict) and chunk["usage"]:
+                    usage = chunk["usage"]
+                for choice in chunk.get("choices") or []:
+                    if choice.get("finish_reason"):
+                        finish_reason = choice["finish_reason"]
+                    delta = choice.get("delta") or {}
+                    frag = delta.get("content")
+                    if frag:
+                        content_parts.append(frag)
+                        try:
+                            on_delta(frag)
+                        except Exception:
+                            pass
+                    for tc in delta.get("tool_calls") or []:
+                        idx = int(tc.get("index", 0) or 0)
+                        acc = tool_acc.setdefault(idx, {
+                            "id": None, "type": "function",
+                            "function": {"name": "", "arguments": ""}})
+                        if tc.get("id"):
+                            acc["id"] = tc["id"]
+                        fn = tc.get("function") or {}
+                        if fn.get("name"):
+                            acc["function"]["name"] += fn["name"]
+                        if fn.get("arguments"):
+                            acc["function"]["arguments"] += fn["arguments"]
+
+        message: dict[str, Any] = {
+            "role": "assistant",
+            "content": "".join(content_parts) if content_parts else None,
+        }
+        if tool_acc:
+            message["tool_calls"] = [tool_acc[i] for i in sorted(tool_acc)]
+        if not finish_reason:
+            finish_reason = "tool_calls" if tool_acc else "stop"
+        return {
+            "choices": [{"message": message, "finish_reason": finish_reason, "index": 0}],
+            "usage": usage or {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        }
+
     async def chat(self, messages: list[dict[str, Any]], tools: Optional[list[dict[str, Any]]] = None,
-                   api_key: Optional[str] = None) -> dict[str, Any]:
+                   api_key: Optional[str] = None,
+                   on_delta=None) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
@@ -289,6 +401,15 @@ class UniversalClient:
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
+        # v4.0.1: stream when a delta consumer is attached (CLI live text,
+        # GUI WebSocket). Silent no-op fallback for backends that cannot.
+        if on_delta is not None:
+            try:
+                return await self._post_stream(payload, on_delta, api_key=api_key)
+            except ValueError as e:
+                # backend rejected streaming — fall back to the plain call;
+                # the consumer simply gets the whole message at once.
+                logger.warning(f"[UniversalClient] streaming rejected, falling back: {e}")
         return await self._post(payload, api_key=api_key)
 
 
@@ -661,6 +782,20 @@ def _backend_accepts_api_key(backend: Any) -> bool:
         return False
 
 
+def _backend_accepts_on_delta(backend: Any) -> bool:
+    """v4.0.1 (mission §5): True when the backend's chat() can stream —
+    i.e. it declares an on_delta (or **kwargs) parameter. UniversalClient
+    streams; SDK-backed clients silently degrade to whole-message mode."""
+    try:
+        import inspect
+        sig = inspect.signature(backend.chat)
+        params = sig.parameters
+        return "on_delta" in params or any(
+            p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+    except (TypeError, ValueError):
+        return False
+
+
 def _normalize_sdk_error(e: Exception) -> Exception:
     """Map provider-SDK exceptions to SHS Code's app-level exceptions.
 
@@ -944,20 +1079,22 @@ class LLM:
             return _gmr().route(task_kind)
         except Exception:
             return ("strong", self._model)
-    async def ask(self, messages: list[Message], **kwargs: Any) -> Message:
+    async def ask(self, messages: list[Message], on_delta=None, **kwargs: Any) -> Message:
         raw = [m.to_dict() for m in messages]
-        data = await self._call_with_retry(raw, tools=None)
+        data = await self._call_with_retry(raw, tools=None, on_delta=on_delta)
         self.token_budget.record(data)
         return _msg_from_openai(data["choices"][0])
 
-    async def ask_tool(self, messages: list[Message], tools: list[dict[str, Any]], **kwargs: Any) -> Message:
+    async def ask_tool(self, messages: list[Message], tools: list[dict[str, Any]],
+                       on_delta=None, **kwargs: Any) -> Message:
         raw = [m.to_dict() for m in messages]
-        data = await self._call_with_retry(raw, tools=tools)
+        data = await self._call_with_retry(raw, tools=tools, on_delta=on_delta)
         self.token_budget.record(data)
         return _msg_from_openai(data["choices"][0])
 
     async def _call_with_retry(self, messages: list[dict[str, Any]],
-                                tools: Optional[list[dict[str, Any]]]) -> dict[str, Any]:
+                                tools: Optional[list[dict[str, Any]]],
+                                on_delta=None) -> dict[str, Any]:
         """Primary + model-fallback retry loop (spec §3).
 
         Tries the configured primary model first (full retry budget via
@@ -972,7 +1109,7 @@ class LLM:
         primary = self._model
         fallbacks = self._fallback_models()
         if not fallbacks:
-            return await self._call_single_with_retry(messages, tools)
+            return await self._call_single_with_retry(messages, tools, on_delta=on_delta)
         last_err: Optional[Exception] = None
         for idx, model in enumerate([primary] + fallbacks):
             if idx > 0:
@@ -984,7 +1121,7 @@ class LLM:
                 except Exception:
                     pass
             try:
-                result = await self._call_single_with_retry(messages, tools)
+                result = await self._call_single_with_retry(messages, tools, on_delta=on_delta)
                 if idx > 0:
                     logger.info(f"[LLM] Model fallback succeeded on '{model}'")
                 return result
@@ -1025,7 +1162,8 @@ class LLM:
         raise last_err
 
     async def _call_single_with_retry(self, messages: list[dict[str, Any]],
-                                          tools: Optional[list[dict[str, Any]]]) -> dict[str, Any]:
+                                          tools: Optional[list[dict[str, Any]]],
+                                          on_delta=None) -> dict[str, Any]:
         wait = RETRY_BASE_WAIT
         rl_wait = 2.0                       # v3.0: rate-limit backoff track
         rl_attempts = 0                     # v3.0: separate 429 budget
@@ -1090,6 +1228,12 @@ class LLM:
                 # api_key override; UniversalClient always did.
                 if api_key and _backend_accepts_api_key(self._backend):
                     chat_kwargs["api_key"] = api_key
+                # v4.0.1 (mission §5): token streaming — forward the delta
+                # consumer when the backend supports it (UniversalClient
+                # streams; SDK clients fall back to whole-message delivery
+                # via **kwargs tolerance or the accepts-check below).
+                if on_delta is not None and _backend_accepts_on_delta(self._backend):
+                    chat_kwargs["on_delta"] = on_delta
 
                 # FIX: Long-wait progress heartbeat — start background monitor
                 t_start = time.monotonic()

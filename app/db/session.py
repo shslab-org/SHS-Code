@@ -185,6 +185,19 @@ class SessionDB:
                         self._conn.commit()
                 except sqlite3.OperationalError:
                     pass
+                # v4.0.1 (mission §4): message KIND migration — 'final' vs
+                # 'interim' assistant turns. Mid-run tool-loop narration
+                # ("Let me check the tests…") is interim; only real answers
+                # are 'final'. Replay uses finals only; the REST endpoint
+                # returns everything with kind visible.
+                try:
+                    mcols = [r[1] for r in self._conn.execute("PRAGMA table_info(messages)")]
+                    if "kind" not in mcols:
+                        self._conn.execute(
+                            "ALTER TABLE messages ADD COLUMN kind TEXT NOT NULL DEFAULT 'final'")
+                        self._conn.commit()
+                except sqlite3.OperationalError:
+                    pass
             return self._conn
 
     def _execute_query(self, fn, *args, **kwargs):
@@ -316,15 +329,23 @@ class SessionDB:
     # ------------------------------------------------------------------
 
     async def log_message(self, session_id: str, role: str,
-                           content: Optional[str]) -> None:
+                           content: Optional[str],
+                           kind: str = "final") -> None:
+        """Append a message row.
+
+        v4.0.1 (mission §4): ``kind`` separates real dialogue from internal
+        scaffolding — 'final' (default, backwards compatible) marks genuine
+        user-visible turns; 'interim' marks mid-run assistant narration
+        that must never be replayed as conversation continuity.
+        """
         if not content:
             return
 
         def _log():
             self._execute_query(lambda conn: (
                 conn.execute(
-                    "INSERT INTO messages (session_id, role, content, ts) VALUES (?,?,?,?)",
-                    (session_id, role, content[:4096], time.time()),
+                    "INSERT INTO messages (session_id, role, content, ts, kind) VALUES (?,?,?,?,?)",
+                    (session_id, role, content[:4096], time.time(), kind),
                 ),
                 conn.commit(),
             )[-1])
@@ -434,6 +455,7 @@ class SessionDB:
             return self._execute_query(lambda conn: conn.execute(
                 "SELECT role, content FROM messages"
                 " WHERE session_id=? AND role IN ('user','assistant')"
+                " AND (kind IS NULL OR kind != 'interim')"
                 " ORDER BY id DESC LIMIT ?",
                 (session_id, int(limit)),
             ).fetchall())
@@ -650,10 +672,11 @@ class SessionDB:
         def _get():
             def _do_query(conn):
                 rows = conn.execute(
-                    "SELECT role, content, ts FROM messages WHERE session_id=? ORDER BY id",
+                    "SELECT role, content, ts, kind FROM messages WHERE session_id=? ORDER BY id",
                     (session_id,),
                 ).fetchall()
-                return [{"role": r[0], "content": r[1], "ts": r[2]} for r in rows]
+                return [{"role": r[0], "content": r[1], "ts": r[2],
+                         "kind": r[3] or "final"} for r in rows]
             return self._execute_query(_do_query)
 
         return await _with_retry(_get)

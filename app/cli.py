@@ -206,8 +206,49 @@ def _make_activity_printer(skin: dict, enabled: bool = True):
     t = skin.get("tool", "magenta")
     e = skin.get("error", "red")
 
+    # v4.0.1 (mission §5): token-streaming render state. Deltas print as
+    # one growing line; the first delta opens the line, subsequent deltas
+    # extend it, and the next non-delta event closes it. stream_text holds
+    # the CURRENT message's accumulated text (reset per llm_start) so the
+    # final-answer printer can suppress duplicating already-streamed text.
+    state = {"stream_open": False, "stream_len": 0, "stream_text": ""}
+
     def printer(kind: str, data: dict) -> None:
         try:
+            if kind == "llm_start":
+                state["stream_text"] = ""   # new message begins
+            if kind == "llm_delta":
+                frag = data.get("text") or ""
+                if not frag:
+                    return
+                state["stream_text"] += frag
+                if console is not None:
+                    if not state["stream_open"]:
+                        console.print()
+                        state["stream_open"] = True
+                        state["stream_len"] = 0
+                    # rich console.print interprets markup — print the
+                    # fragment raw via print(..., markup=False) semantics
+                    # by escaping is avoided: use out() with soft_wrap.
+                    console.out(frag, end="", soft_wrap=True, markup=False,
+                                highlight=False)
+                    state["stream_len"] += len(frag)
+                else:
+                    if not state["stream_open"]:
+                        print()
+                        state["stream_open"] = True
+                    print(frag, end="", flush=True)
+                    state["stream_len"] += len(frag)
+                return
+            if state["stream_open"]:
+                # close the streamed line before any other activity output
+                state["stream_open"] = False
+                if state["stream_len"] > 0:
+                    if console is not None:
+                        console.print()
+                    else:
+                        print()
+                state["stream_len"] = 0
             if kind == "llm_start":
                 line = f"[dim {a}]▸ thinking ({data.get('model', '')})…[/]"
             elif kind == "tool_start":
@@ -269,6 +310,9 @@ def _make_activity_printer(skin: dict, enabled: bool = True):
         except Exception:
             pass
 
+    # expose stream state so the final-answer printer can avoid duplicating
+    # text the user already watched stream in (v4.0.1).
+    printer.stream_state = state  # type: ignore[attr-defined]
     return printer
 
 
@@ -2012,6 +2056,7 @@ async def _interactive_loop(skin_name: str = "default") -> None:
     # ── Live activity display (spec §32) ─────────────────────────────────
     activity_printer = _make_activity_printer(skin, enabled=True)
     ActivityBus.subscribe(activity_printer)
+    runtime["activity_printer"] = activity_printer   # v4.0.1: stream-aware final print
 
     # ── Graceful shutdown wiring ─────────────────────────────────────────
     shutdown_event = asyncio.Event()
@@ -2078,7 +2123,9 @@ async def _interactive_loop(skin_name: str = "default") -> None:
                 await agent.cleanup()
                 ActivityBus.unsubscribe_all()
                 agent = SHSCode()
-                ActivityBus.subscribe(_make_activity_printer(skin, enabled=True))
+                new_printer = _make_activity_printer(skin, enabled=True)
+                ActivityBus.subscribe(new_printer)
+                runtime["activity_printer"] = new_printer
                 session_id = ""
                 _print_message("system", "New session started. (Persistent memory and journal remain on disk.)", skin)
                 continue
@@ -2137,7 +2184,26 @@ async def _run_prompt(agent, prompt: str, skin: dict, runtime: dict) -> None:
     """Run one user prompt and print the result (concurrent with input loop)."""
     try:
         result = await agent.run(prompt)
-        _print_message("assistant", result or "(no output)", skin)
+        # v4.0.1 (mission §5): if the final answer was already rendered live
+        # via token streaming, do NOT print it a second time — just close
+        # the streamed block. Falls back to the formatted print whenever
+        # nothing streamed (non-streaming providers) or the answer differs
+        # (post-run synthesis, honest partial summaries).
+        streamed = ""
+        printer = runtime.get("activity_printer")
+        st = getattr(printer, "stream_state", None) if printer else None
+        if st:
+            streamed = (st.get("stream_text") or "").strip()
+            if st.get("stream_open"):
+                st["stream_open"] = False
+                try:
+                    from rich.console import Console
+                    Console().print()
+                except Exception:
+                    print()
+        answer = (result or "").strip()
+        if not (streamed and answer and answer == streamed):
+            _print_message("assistant", result or "(no output)", skin)
         try:
             info = agent.llm.backend_info()
             model_name = info.get("model", "")
