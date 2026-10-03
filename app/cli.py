@@ -73,8 +73,8 @@ SLASH_COMMANDS = [
     "/config", "/context", "/checkpoint", "/history", "/files", "/search",
     "/git", "/doctor", "/log", "/debug", "/clear", "/new", "/bg",
     "/sessions", "/compress", "/branch", "/exit",
-    # v4.0.1: Team103 production entry (was test-only wiring)
-    "/team103",
+    # v4.0.1: SHS-Code-Agent GitHub operations + Team103 production entry
+    "/github", "/team103",
     # Phase 2 (spec §40-§43, §28, §33, §36, §37)
     "/plan", "/usage", "/project", "/env", "/mode", "/profile",
     "/rollback", "/verify",
@@ -461,6 +461,7 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             "    /connectors        — platform connectors (github, gitlab, …)\n"
             "    /channels          — configured messaging channels\n"
             "    /git               — repository state (branch, changes)\n"
+            "    /github …          — SHS-Code-Agent ops: status|commit|branch|push|pull|stash|diff|log|prs|issues|pr\n"
             "    /search <query>    — search sessions + journal (FTS)\n"
             "  System\n"
             "    /config            — effective config (secrets masked)\n"
@@ -1709,6 +1710,87 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             task = await task_queue.submit(arg, priority=TaskPriority.NORMAL)
             return f"Task submitted to background queue: {task.id}\nUse /tasks to monitor progress."
         return "Task queue not initialized."
+
+    if command == "/github":
+        # v4.0.1 (mission §17): SHS-Code-Agent GitHub operations.
+        # Both the CLI and the GUI call the same GitHubProvider.
+        from app.git_providers.github_provider import GitHubProvider
+        parts = arg.strip().split(None, 1)
+        sub = parts[0].lower() if parts else ""
+        rest = parts[1] if len(parts) > 1 else ""
+        try:
+            gh = GitHubProvider()
+            if sub in ("", "status"):
+                st = gh.status()
+                ident = st.get("identity", {})
+                lines = [
+                    f"Agent identity: {ident.get('name')} ({ident.get('profile_url')})",
+                    f"Auth mode: {st.get('auth_mode')}"
+                    + (f" — authenticated as {st['account']['login']}"
+                       if st.get("account") else ""),
+                    f"Commit trailer: {ident.get('co_author_trailer')}",
+                    f"Local branch: {gh.current_branch() or '-'} "
+                    + ("(dirty)" if gh.status_porcelain() else "(clean)"),
+                    "",
+                    "Subcommands: commit <msg> | branch <name> | push [branch] |",
+                    "  pull | stash | pop | diff | log | prs <owner/name> |",
+                    "  issues <owner/name> | pr <owner/name> <title> | <head-branch>",
+                ]
+                if st.get("account_error"):
+                    lines.insert(2, f"Account check failed: {st['account_error']}")
+                return "\n".join(lines)
+            if sub == "commit":
+                if not rest:
+                    return "Usage: /github commit <message>"
+                out = gh.commit(rest)
+                return (f"✓ committed {out['sha']}\n{out['message']}")
+            if sub == "branch":
+                if not rest:
+                    return "Usage: /github branch <name>"
+                return f"✓ {gh.branch(rest.strip())}"
+            if sub == "push":
+                out = gh.push(branch=rest.strip() or None, set_upstream=True)
+                return f"✓ pushed {out.get('branch')}\n{out.get('output', '')[:200]}"
+            if sub == "pull":
+                out = gh.pull()
+                return f"✓ pulled\n{out.get('output', '')[:200]}"
+            if sub in ("stash", "pop"):
+                out = gh.stash(pop=(sub == "pop"))
+                return f"✓ {'popped stash' if sub == 'pop' else 'stashed'}"
+            if sub == "diff":
+                d = gh.diff()
+                return d[:3000] if d else "(no changes)"
+            if sub == "log":
+                commits = gh.log(10)
+                return "\n".join(f"{c['sha']} {c['author']:12s} {c['subject']}"
+                                 for c in commits) or "(no commits)"
+            if sub == "prs":
+                if not rest:
+                    return "Usage: /github prs <owner/name>"
+                prs = gh.list_prs(rest.strip())
+                if not prs:
+                    return f"No open PRs in {rest.strip()}."
+                return "\n".join(f"#{p['number']} [{p['state']}] {p['title']} — {p['author']}"
+                                 for p in prs)
+            if sub == "issues":
+                if not rest:
+                    return "Usage: /github issues <owner/name>"
+                issues = gh.list_issues(rest.strip())
+                if not issues:
+                    return f"No open issues in {rest.strip()}."
+                return "\n".join(f"#{i['number']} {i['title']}" for i in issues)
+            if sub == "pr":
+                # /github pr <owner/name> <title...> <head-branch-last-word>
+                toks = rest.strip().split()
+                if len(toks) < 3:
+                    return "Usage: /github pr <owner/name> <head> <title...>"
+                repo, head = toks[0], toks[1]
+                title = " ".join(toks[2:])
+                out = gh.create_pr(repo, title, "Created with SHS-Code", head)
+                return f"✓ PR #{out.get('number')}: {out.get('url') or out.get('title')}"
+            return f"Unknown /github subcommand: {sub}"
+        except Exception as e:
+            return f"GitHub operation failed: {e}"
 
     if command == "/team103":
         # v4.0.1 (mission §2/§13): Team103 previously had NO production entry

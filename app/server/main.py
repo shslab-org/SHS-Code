@@ -630,6 +630,141 @@ async def get_config():
     }
 
 
+# ─── GitHub / SHS-Code-Agent endpoints (mission §17) ─────────────────────
+
+def _gh() -> "GitHubProvider":
+    from app.git_providers.github_provider import GitHubProvider
+    return GitHubProvider(repo_dir=os.getcwd())
+
+
+class GitOpRequest(BaseModel):
+    message: Optional[str] = None      # commit message
+    branch: Optional[str] = None       # branch name
+    paths: Optional[list[str]] = None  # files to add
+    remote: str = "origin"
+
+
+class PROpRequest(BaseModel):
+    repo: str                          # owner/name
+    title: str
+    body: str = ""
+    head: str                          # source branch
+    base: str = "main"
+    draft: bool = False
+
+
+@app.get("/github/status", dependencies=[Depends(require_api_key)])
+async def github_status():
+    """v4.0.1 (mission §17): SHS-Code-Agent identity + auth status +
+    local repo state. Never exposes tokens."""
+    try:
+        st = _gh().status()
+        st["local"] = {
+            "branch": _gh().current_branch(),
+            "dirty": bool(_gh().status_porcelain()),
+        }
+        return st
+    except Exception as e:
+        return {"error": str(e)[:300]}
+
+
+@app.post("/github/commit", dependencies=[Depends(require_api_key)])
+async def github_commit(req: GitOpRequest):
+    """Commit local changes with SHS-Code-Agent attribution
+    (Co-Authored-By trailer)."""
+    if not req.message:
+        raise HTTPException(status_code=400, detail="message required")
+    try:
+        return _gh().commit(req.message)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)[:400])
+
+
+@app.post("/github/branch", dependencies=[Depends(require_api_key)])
+async def github_branch(req: GitOpRequest):
+    if not req.branch:
+        raise HTTPException(status_code=400, detail="branch required")
+    try:
+        return _gh().branch(req.branch)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)[:400])
+
+
+@app.post("/github/push", dependencies=[Depends(require_api_key)])
+async def github_push(req: GitOpRequest):
+    try:
+        return _gh().push(remote=req.remote, branch=req.branch,
+                          set_upstream=True)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)[:400])
+
+
+@app.post("/github/pull", dependencies=[Depends(require_api_key)])
+async def github_pull(req: GitOpRequest):
+    try:
+        return _gh().pull(remote=req.remote, branch=req.branch)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)[:400])
+
+
+@app.post("/github/stash", dependencies=[Depends(require_api_key)])
+async def github_stash(req: GitOpRequest):
+    try:
+        return _gh().stash(pop=bool(req.branch == "pop"))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)[:400])
+
+
+@app.get("/github/diff", dependencies=[Depends(require_api_key)])
+async def github_diff(staged: bool = False):
+    try:
+        return {"diff": _gh().diff(staged=staged)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)[:400])
+
+
+@app.get("/github/log", dependencies=[Depends(require_api_key)])
+async def github_log(limit: int = 10):
+    try:
+        return {"commits": _gh().log(limit=limit)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)[:400])
+
+
+@app.get("/github/prs", dependencies=[Depends(require_api_key)])
+async def github_prs(repo: str, state: str = "open"):
+    try:
+        prs = _gh().list_prs(repo, state=state)
+        for p in prs:
+            if hasattr(p.get("state"), "value"):
+                p["state"] = p["state"].value
+        return {"prs": prs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)[:400])
+
+
+@app.get("/github/issues", dependencies=[Depends(require_api_key)])
+async def github_issues(repo: str, state: str = "open"):
+    try:
+        issues = _gh().list_issues(repo, state=state)
+        for i in issues:
+            if hasattr(i.get("state"), "value"):
+                i["state"] = i["state"].value
+        return {"issues": issues}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)[:400])
+
+
+@app.post("/github/pr", dependencies=[Depends(require_api_key)])
+async def github_create_pr(req: PROpRequest):
+    try:
+        return _gh().create_pr(req.repo, req.title,
+                               req.body or "Created with SHS-Code",
+                               req.head, req.base, draft=req.draft)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)[:400])
+
+
 @app.get("/sessions/{session_id}/messages", dependencies=[Depends(require_api_key)])
 async def get_messages(session_id: str):
     msgs = await db.get_session_messages(session_id)

@@ -81,6 +81,8 @@ observability = [
 github = ["PyGithub>=2.3"]
 gitlab = ["python-gitlab>=4.6"]
 git-providers = ["shscode[github,gitlab]"]
+# v4.0.1: SHS-Code-Agent GitHub App identity (installation-token minting)
+github-app = ["PyJWT>=2.8", "cryptography>=42"]
 
 # File store (cloud backends)
 s3 = ["boto3>=1.34"]
