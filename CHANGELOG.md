@@ -8,6 +8,110 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ---
 
+## [4.3.0] — 2026-10-04
+
+### Summary
+
+v4.3.0 fixes the four problem classes found during the real
+SHS-Code + Agnes test run: the **max_steps configuration bug** (a
+user-configured 80 was silently ignored), the **background execution
+lifecycle** (background agent processes died with the surrounding
+session), a **tool-call error on resumed sessions**, and the
+**GitHub contributor attribution requirement** — now enforced
+mechanically and non-bypassably.
+
+### max_steps — user-controlled, never silently replaced
+
+- **Root cause fixed**: the shipped example `config.toml` placed
+  `max_steps` (and `workspace_dir`) inside `[logging]` — TOML section
+  placement silently swallowed them (pydantic `extra='ignore'`), so the
+  runtime kept the default 30. The example file is corrected AND the
+  loader now performs strict schema-placement validation: a top-level
+  setting found inside any section is a hard, actionable `ConfigError`
+  ("move it above the section header"). Unknown keys only warn;
+  `SHSCODE_CONFIG_PERMISSIVE=1` downgrades hard errors for legacy files.
+- **Three more silent-replacement bugs fixed**: the server
+  `RunRequest.max_steps` defaulted to a hardcoded 30 (every GUI/API run
+  stomped the configured value — now `None` = "use the configured
+  value"); `local/remote_conversation` fell back to hardcoded 30 (now
+  the shared resolution layer); mode scaling's `max(5, …)` floor turned
+  a configured 3 into 5 (mode scaling now applies only to the unset
+  default budget, never to a user-chosen value).
+- **User control surfaces**: CLI `--max-steps N`, GUI Agent-panel
+  "Steps" box (per run), GUI Settings "Agent Step Budget"
+  (`POST /config/max-steps`, persisted 0600), env `SHSCODE_MAX_STEPS`,
+  top-level `max_steps` in any config layer. Precedence:
+  explicit selection > env > profile > home > project config > default.
+- **Transparency**: the effective value + its source layer are shown at
+  every surface (CLI `/config`, run-start log line, `GET /config`,
+  GUI Settings) — the runtime can never again silently disagree with
+  what the user supplied.
+
+### GitHub attribution — mandatory, non-bypassable
+
+- Every git commit created inside SHS Code (agent bash sessions, GUI
+  terminal, GitHub panel, runtime paths) is attributed to
+  **SHS-Code-Agent** `<SHS-Code-Agent@users.noreply.github.com>` as
+  author AND committer, plus the Co-Authored-By trailer.
+- **New git shim** (`~/.shscode/shims/git`, first on the PATH of every
+  SHS-Code child process) mechanically strips `--author`/`--reset-author`
+  from `git commit` and forces the four identity env vars on
+  commit-creating commands — prompt-level, flag-level (`git -c
+  user.email=…`), and env-level (`env -u GIT_AUTHOR_…`) bypass attempts
+  are all defeated. The user's own shells outside SHS Code and their
+  git configuration are untouched.
+- **All opt-outs removed**: `SHSCODE_AGENT_IDENTITY=0` no longer exists;
+  `apply_agent_git_env` always overwrites inherited identity variables;
+  `GitHubProvider.commit(credit_agent=False)` is ignored. The system
+  prompt carries the attribution mandate and instructs the agent to
+  explain (not obey) "commit as me" requests.
+- **Contributors-system fact** (verified empirically): GitHub's
+  contributor aggregation counts USER and BOT accounts only — the
+  SHS-Code-Agent profile is currently an Organization and organizations
+  do not appear in the Contributors list (commits still link to the
+  profile everywhere). The noreply address is forward-compatible: if a
+  USER account named `SHS-Code-Agent` is ever registered, the exact
+  same attribution starts counting toward contributors with zero code
+  changes.
+
+### Detached execution lifecycle
+
+- `SHSCode --detach "<task>"`: double-fork + `setsid` daemon — survives
+  the terminal, SSH disconnect, and process-tree cleanup of the tool
+  that started it. Registry under `~/.shscode/runs/<run_id>/`
+  (`run.json` + `output.log`), live status via `SHSCode --runs`,
+  log streaming via `SHSCode --attach <run_id>`.
+- `POST /run {"detach": true}` + GUI Agent-panel "detached" checkbox:
+  long tasks run as their own OS process and survive server restarts;
+  the Sessions panel shows the detached-run registry with liveness.
+- SIGTERM/SIGHUP now cancel the run **gracefully** — the agent
+  checkpoints and closes the session as `interrupted`
+  (`--continue` / `/resume` restore it; nothing is silently lost).
+
+### Resumed-session tool-call error — root cause fixed
+
+- OpenAI-compatible providers (Agnes) reject any request whose history
+  contains an assistant `tool_calls` block without matching `tool`
+  results (HTTP 400). Two real paths produced that state: a run
+  **cancelled mid-tool** (CancelledError bypassed the result append)
+  and an **EXTERNAL_BLOCKER early return** that skipped the append.
+  Both producers now always append the tool result; in addition
+  `sanitize_tool_history()` enforces the protocol invariant at the LLM
+  request boundary regardless of how the memory was produced
+  (interruption, restore, compaction, replay).
+- Tool failures now record structured diagnostics (`tool name`,
+  `exception class`, `args preview`, `tool_call_id`) in the log and a
+  `tool_failure_diagnostic` activity event — enough to debug and
+  recover without guessing.
+
+### Preserved
+
+- The Agnes/API rate-limit retry/recovery behavior is untouched and
+  fully guarded by the existing test suite (all green).
+
+---
+---
+
 ## [4.2.0] — 2026-10-03
 
 ### Summary

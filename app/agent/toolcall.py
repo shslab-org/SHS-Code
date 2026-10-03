@@ -361,6 +361,15 @@ tool or different arguments — DO NOT repeat the same failing call.
         self._auto_compact_if_needed()
 
         schemas = self.tools.to_openai_schemas()
+        # v4.3.0 (resumed-session tool-call error — root cause fix): enforce
+        # the function-calling protocol invariant AT THE REQUEST BOUNDARY.
+        # An interrupted/cancelled run can leave an assistant message with
+        # tool_calls but no tool results — strict OpenAI-compatible providers
+        # (Agnes) reject the whole request with HTTP 400. The sanitizer
+        # synthesizes the missing results (and drops orphans) so a resumed
+        # session ALWAYS sends a valid history. Memory itself is untouched.
+        from app.schema import sanitize_tool_history
+        request_messages = sanitize_tool_history(self.memory.messages)
         # v4.0.1 (mission §5): token streaming — forward content deltas to
         # the activity bus so the CLI/GUI can render live text. Tool-call
         # fragments are NOT streamed (they are internal execution detail);
@@ -374,12 +383,13 @@ tool or different arguments — DO NOT repeat the same failing call.
 
         try:
             response = await self.llm.ask_tool(
-                self.memory.messages, tools=schemas, on_delta=_on_delta)
+                request_messages, tools=schemas, on_delta=_on_delta)
         except Exception as exc:
             if _is_context_overflow(exc) and self._auto_compact_if_needed(force=True):
                 # one retry on the compacted context
                 response = await self.llm.ask_tool(
-                    self.memory.messages, tools=schemas, on_delta=_on_delta)
+                    sanitize_tool_history(self.memory.messages),
+                    tools=schemas, on_delta=_on_delta)
             else:
                 raise
         self.memory.add(response)
@@ -666,7 +676,24 @@ tool or different arguments — DO NOT repeat the same failing call.
                     ))
                     return denied_result
 
-                result = await self.tools.execute(name, **args)
+                # v4.3.0 FIX (resumed-session tool-call error, producer
+                # side): CancelledError (server shutdown / SIGTERM / pause)
+                # is NOT an Exception — it bypassed every result-append
+                # below and left the assistant's tool_calls unanswered in
+                # memory; on resume the next LLM request was rejected by
+                # strict providers (HTTP 400). Now: append a synthetic
+                # result FIRST, then re-raise (cancellation preserved).
+                try:
+                    result = await self.tools.execute(name, **args)
+                except asyncio.CancelledError:
+                    self.memory.add(Message.tool(
+                        content="(run interrupted before this tool finished — "
+                                "no result; re-issue the tool call if it is "
+                                "still needed)",
+                        tool_call_id=tool_call_id,
+                        name=name,
+                    ))
+                    raise
                 logger.info(f"Tool result: {str(result)[:300]}")
                 emit("tool_end", tool=name, success=not bool(result.error),
                      preview=(result.output or result.error or "")[:100],
@@ -717,10 +744,26 @@ tool or different arguments — DO NOT repeat the same failing call.
                 return result
 
             except Exception as exc:
+                # v4.3.0 diagnostics (resumed-session error investigation):
+                # structured, greppable record of exactly WHICH call failed,
+                # with what args, and the exception class.
                 logger.error(
-                    f"Tool '{name}' raised exception "
-                    f"(attempt {attempt}): {exc}"
+                    f"Tool '{name}' raised {type(exc).__name__} "
+                    f"(attempt {attempt}/{MAX_TOOL_RETRIES}): {exc} | "
+                    f"args={self._fmt_args(args)[:300]} | "
+                    f"tool_call_id={tool_call_id}"
                 )
+                try:
+                    from app.activity import emit as _emit_diag
+                    _emit_diag("tool_failure_diagnostic",
+                               tool=name,
+                               exception_class=type(exc).__name__,
+                               error=str(exc)[:500],
+                               args_preview=self._fmt_args(args)[:200],
+                               attempt=attempt,
+                               session_id=self._session_id or "")
+                except Exception:
+                    pass
                 # SHS Code Phase 2 (spec §44/§45): classify the failure and
                 # stop early when retrying cannot help.
                 try:
@@ -738,6 +781,15 @@ tool or different arguments — DO NOT repeat the same failing call.
                         return ToolResult(error=f"[REQUIRES_USER] {exc}")
                     if diag.strategy == RetryStrategy.EXTERNAL_BLOCKER:
                         emit("blocked", tool=name, reason=diag.render())
+                        # v4.3.0 FIX (resumed-session tool-call error): this
+                        # path used to return WITHOUT appending the tool
+                        # result message — the assistant's tool_calls stayed
+                        # unanswered in memory, and the next LLM request was
+                        # rejected by strict providers (HTTP 400). The tool
+                        # result is now ALWAYS appended before returning.
+                        self.memory.add(Message.tool(
+                            content=(f"BLOCKED (external): {diag.render()}\n{exc}"),
+                            tool_call_id=tool_call_id, name=name))
                         return ToolResult(error=f"[EXTERNAL_BLOCKER] {exc}")
                 except Exception:
                     pass

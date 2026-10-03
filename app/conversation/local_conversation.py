@@ -388,7 +388,13 @@ class LocalConversation(BaseConversation):
         """
         result_text: str = ""
         step_count: int = 0
-        max_steps: int = kwargs.get("max_steps", 30)
+        # v4.3.0: shared max_steps resolution — never a hardcoded 30. When
+        # the caller does not pass an explicit value, the configured value
+        # (env override > config files > default) applies, so a user-set 80
+        # is actually respected on this path too.
+        from app.config import effective_max_steps
+        _configured_steps, _configured_src = effective_max_steps()
+        max_steps: int = kwargs.get("max_steps") or _configured_steps
 
         try:
             # Emit session_start hook

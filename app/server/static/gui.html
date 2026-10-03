@@ -372,6 +372,10 @@ kbd { font-family: var(--mono); background: var(--bg3); border: 1px solid var(--
         <div id="db-sessions" class="scroll-y"></div>
       </div>
     </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Detached Runs <span class="muted">(background tasks that survive server restarts — CLI: SHSCode --runs)</span></h3>
+      <div id="detached-runs" class="scroll-y"></div>
+    </div>
   </div>
 
   <!-- ══════════ AGENT ══════════ -->
@@ -381,6 +385,13 @@ kbd { font-family: var(--mono); background: var(--bg3); border: 1px solid var(--
       <input id="agent-session" style="width:280px" placeholder="(new session)">
       <button class="sm" onclick="agentNewSession()">New</button>
       <button class="sm" onclick="agentCancel()" id="agent-cancel-btn" disabled>■ Cancel run</button>
+      <span class="muted" style="margin-left:12px" title="Maximum agent steps for the next run. Leave empty to use the configured default (Settings panel shows it).">Steps:</span>
+      <input id="agent-max-steps" type="number" min="1" step="1" style="width:88px" placeholder="auto"
+             title="Maximum agent steps for the next run. Leave empty to use the configured default (Settings panel shows it).">
+      <label class="muted" style="margin-left:12px;display:flex;align-items:center;gap:4px;cursor:pointer"
+             title="Run the task as a separate background process that survives the server and this browser. Monitor it in the Sessions panel → Detached runs, or CLI: SHSCode --runs">
+        <input type="checkbox" id="agent-detach"> detached
+      </label>
       <span class="muted" id="agent-run-state" style="margin-left:auto"></span>
     </div>
     <div id="agent-layout">
@@ -658,11 +669,25 @@ kbd { font-family: var(--mono); background: var(--bg3); border: 1px solid var(--
         <div class="row" style="margin-bottom:8px">
           <input id="set-baseurl" placeholder="base_url (https://…/v1)" style="flex:1">
         </div>
-        <div class="row" style="margin-bottom:12px">
+        <div class="row" style="margin-bottom:8px">
           <input id="set-apikey" type="password" placeholder="api key (stored, never displayed)" style="flex:1">
         </div>
         <button class="primary" onclick="switchModel()">Apply</button>
         <span id="set-result" class="muted" style="margin-left:10px"></span>
+      </div>
+      <div class="card">
+        <h3>Agent Step Budget (max steps)</h3>
+        <p class="muted" style="margin-bottom:10px">
+          <b>max steps</b> is the maximum number of steps the agent may take for one task.
+          You decide it — bigger tasks need more steps. It applies to new runs
+          (Agent panel “Steps” can override it per run; leave empty there to use this default).
+        </p>
+        <div class="row" style="margin-bottom:8px">
+          <input id="set-max-steps" type="number" min="1" step="1" placeholder="e.g. 80" style="width:140px">
+          <button class="primary sm" onclick="setMaxSteps()">Set as default</button>
+          <button class="sm" onclick="clearMaxSteps()">Use config-file value</button>
+        </div>
+        <span id="set-ms-result" class="muted"></span>
       </div>
     </div>
   </div>
@@ -1035,7 +1060,7 @@ function agentNewSession() {
   agentConnect(sid);
   addMsg('system', `— new session ${sid} —`);
 }
-function agentSend() {
+async function agentSend() {
   const input = $('chat-input');
   const text = input.value.trim();
   if (!text || runActive) return;
@@ -1043,7 +1068,30 @@ function agentSend() {
   if (!ws || ws.readyState !== 1) { addMsg('system', '✗ WebSocket not connected'); return; }
   addMsg('user', text);
   input.value = '';
-  ws.send(JSON.stringify({type: 'prompt', prompt: text}));
+  // v4.3.0: the user decides the step budget. A value in the Steps box is
+  // sent with the prompt (highest priority); empty = use the configured
+  // default (Settings panel / config file) — never a hidden hardcoded 30.
+  const payload = {type: 'prompt', prompt: text};
+  const msEl = $('agent-max-steps');
+  const msVal = msEl ? parseInt(msEl.value, 10) : NaN;
+  if (!Number.isNaN(msVal) && msVal >= 1) payload.max_steps = msVal;
+  // v4.3.0: detached mode — the task runs as its own OS process and
+  // survives server/browser shutdowns; monitor in Sessions → Detached runs.
+  const detEl = $('agent-detach');
+  if (detEl && detEl.checked) {
+    const body = {prompt: text, detach: true};
+    if (!Number.isNaN(msVal) && msVal >= 1) body.max_steps = msVal;
+    const r = await apiPost('/run', body);
+    if (r.session_id) {
+      addMsg('system', `⏳ detached run started — run id ${r.run_id || '?'} · session ${r.session_id}` +
+              (r.log_path ? ` · log ${r.log_path}` : '') +
+              '. It keeps running even if this page or the server restarts. Monitor: Sessions panel → Detached runs.');
+    } else {
+      addMsg('system', '✗ detached run failed: ' + (r.detail || 'unknown error'));
+    }
+    return;
+  }
+  ws.send(JSON.stringify(payload));
 }
 async function agentCancel() {
   if (wsSession) await apiPost(`/sessions/${wsSession}/cancel`, {});
@@ -1406,13 +1454,34 @@ async function qaRun() {
 /* ═════════════════════════ SESSIONS ═════════════════════════ */
 LOADERS.sessions = async () => {
   const d = await api('/sessions?limit=30');
-  if (!d.sessions?.length) { $('sessions-list').innerHTML = '<div class="empty">No sessions yet.</div>'; return; }
+  if (!d.sessions?.length) { $('sessions-list').innerHTML = '<div class="empty">No sessions yet.</div>'; }
+  else {
   $('sessions-list').innerHTML = '<table><tr><th>ID</th><th>Goal</th><th>State</th><th>Steps</th><th>Started</th></tr>' +
     d.sessions.map(s => `<tr class="clickable" onclick="sessionDetail('${s.id}')">
       <td>${esc((s.id||'').slice(0,12))}</td>
       <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((s.goal||'').slice(0,60))}</td>
       <td>${statusBadge(s.state)}</td><td>${s.step_count ?? 0}</td>
       <td class="muted">${s.started_at ? new Date(s.started_at*1000).toLocaleString() : '—'}</td></tr>`).join('') + '</table>';
+  }
+  // v4.3.0: detached-run registry + liveness
+  try {
+    const rd = await api('/runs?limit=25');
+    const box = $('detached-runs');
+    if (box) {
+      if (!rd.runs?.length) { box.innerHTML = '<div class="empty">No detached runs yet — start one from the Agent panel (tick “detached”).</div>'; }
+      else {
+        box.innerHTML = '<table><tr><th>Run</th><th>State</th><th>Alive</th><th>Session</th><th>Prompt</th><th>Log</th></tr>' +
+          rd.runs.map(r => `<tr>
+            <td>${esc((r.run_id||'').slice(-12))}</td>
+            <td>${statusBadge(r.session_state || (r.status === 'running' ? 'running' : r.status))}</td>
+            <td>${r.alive ? '<span class="badge b-green">● alive</span>' : '<span class="badge b-gray">○ exited</span>'}</td>
+            <td class="muted">${esc((r.session_id||'—').slice(0,14))}</td>
+            <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((r.prompt||'').slice(0,60))}</td>
+            <td class="muted" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.log_path||'')}">${esc((r.log_path||'—').split('/').pop())}</td>
+          </tr>`).join('') + '</table>';
+      }
+    }
+  } catch (e) { /* runs endpoint unavailable */ }
 };
 async function sessionDetail(sid) {
   const d = await api(`/sessions/${sid}/messages`);
@@ -1465,8 +1534,28 @@ LOADERS.memory = async () => {
 LOADERS.settings = async () => {
   const cfg = await api('/config');
   $('settings-config').innerHTML = Object.entries(cfg).map(([k, v]) =>
-    `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('');
+    `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('') ||
+    '<div class="empty">config unavailable</div>';
+  // pre-fill the step-budget box with the current effective value
+  if (cfg.max_steps) { const el = $('set-max-steps'); if (el && !el.value) el.placeholder = `current: ${cfg.max_steps}`; }
 };
+async function setMaxSteps() {
+  const v = parseInt(($('set-max-steps').value || '').trim(), 10);
+  if (Number.isNaN(v) || v < 1) { $('set-ms-result').textContent = 'enter a whole number ≥ 1'; return; }
+  const r = await apiPost('/config/max-steps', {value: v});
+  $('set-ms-result').textContent = r.ok
+    ? `✓ default max steps = ${r.max_steps} (source: ${r.max_steps_source})`
+    : (r.detail || 'failed');
+  LOADERS.settings();
+}
+async function clearMaxSteps() {
+  const r = await apiPost('/config/max-steps', {value: null});
+  $('set-ms-result').textContent = r.ok
+    ? `cleared — now ${r.max_steps} (source: ${r.max_steps_source})`
+    : (r.detail || 'failed');
+  $('set-max-steps').value = '';
+  LOADERS.settings();
+}
 async function switchModel() {
   const body = {};
   ['provider', 'model', 'base_url'].forEach(k => {

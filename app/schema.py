@@ -143,6 +143,85 @@ class Message(BaseModel):
 # Memory — context-window-aware
 # ──────────────────────────────────────────────────────────────────────────────
 
+def sanitize_tool_history(messages: list[Message]) -> list[Message]:
+    """Enforce the function-calling protocol invariant on a message list.
+
+    v4.3.0 — root-cause fix for the "tool-call error during resumed
+    session" found in the real test run. OpenAI-compatible providers
+    (Agnes included) REJECT any request where an assistant message with
+    ``tool_calls`` is not immediately followed by ``tool`` messages
+    answering EVERY call id (HTTP 400). Two real paths produced that
+    state:
+
+      1. a run interrupted/cancelled mid-tool (CancelledError bypassed the
+         code that appends the tool result), and
+      2. an early-return error path that skipped the append.
+
+    This sanitizer runs at the LLM REQUEST boundary so the invariant holds
+    regardless of how the memory was produced (interruption, restore,
+    compaction, replay):
+
+      * for every assistant message with tool_calls, any call id that has
+        no following tool message gets a synthetic result:
+        "(interrupted before execution — result unavailable; re-issue the
+        tool call if it is still needed)"
+      * tool messages that answer no known preceding tool_call are dropped
+        (they are equally invalid for strict providers)
+      * empty trailing assistant tool_calls blocks are kept intact — the
+        synthesized results make them valid again.
+
+    Returns a NEW list; the input is never mutated.
+    """
+    out: list[Message] = []
+    # ids of tool_calls emitted by the most recent assistant message that
+    # are still awaiting their tool result
+    pending: dict[str, str] = {}   # tool_call_id -> tool name
+
+    for m in messages:
+        if m.role == Role.ASSISTANT and m.tool_calls:
+            # close out anything still pending from a previous block
+            for tc_id, tc_name in pending.items():
+                out.append(Message.tool(
+                    content="(interrupted before execution — result "
+                            "unavailable; re-issue the tool call if it is "
+                            "still needed)",
+                    tool_call_id=tc_id, name=tc_name))
+            pending = {}
+            for tc in m.tool_calls:
+                pending[tc.id] = (tc.function.name if tc.function else "tool")
+            out.append(m)
+        elif m.role == Role.TOOL:
+            if m.tool_call_id and m.tool_call_id in pending:
+                out.append(m)
+                pending.pop(m.tool_call_id, None)
+            else:
+                # orphan tool message — answers nothing; strict providers
+                # reject it. Drop it (its content is already journalled).
+                continue
+        else:
+            # any non-tool message between an assistant tool_calls block
+            # and its results also breaks the protocol for strict
+            # providers — flush the pending results first.
+            if pending:
+                for tc_id, tc_name in pending.items():
+                    out.append(Message.tool(
+                        content="(interrupted before execution — result "
+                                "unavailable; re-issue the tool call if it "
+                                "is still needed)",
+                        tool_call_id=tc_id, name=tc_name))
+                pending = {}
+            out.append(m)
+
+    if pending:
+        for tc_id, tc_name in pending.items():
+            out.append(Message.tool(
+                content="(interrupted before execution — result "
+                        "unavailable; re-issue the tool call if it is "
+                        "still needed)",
+                tool_call_id=tc_id, name=tc_name))
+    return out
+
+
 class Memory(BaseModel):
     messages:     list[Message] = Field(default_factory=list)
     max_messages: int           = 100

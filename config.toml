@@ -1,6 +1,16 @@
 # SHS Code Configuration
 # Copy and customize this file. Secrets should use environment variables.
 
+# ── TOP-LEVEL AGENT SETTINGS ─────────────────────────────────────────────────
+# IMPORTANT (v4.3.0): these keys are TOP-LEVEL — they MUST sit ABOVE every
+# [section] header. Placing a top-level key inside a section (the old
+# example file accidentally did exactly this with max_steps inside
+# [logging]) makes it silently ineffective; the loader now rejects such
+# files with a precise error instead of ignoring the setting.
+max_steps     = 30     # step budget per task — USER-CONTROLLED (CLI --max-steps / GUI Steps box / SHSCODE_MAX_STEPS override it)
+token_budget  = 0      # 0 = unlimited
+workspace_dir = "workspace"
+
 [llm]
 # provider options: "mock" (no API key needed), "openai", "anthropic", "ollama", "openrouter",
 # "universal" (any OpenAI-compatible endpoint: NVIDIA NIM, vLLM, Together, Groq, ...), "gguf", "huggingface"
@@ -57,10 +67,6 @@ timeout = 7200
 [logging]
 # level         = "DEBUG"     # file log detail (full diagnostics)
 console_level  = "WARNING"    # terminal verbosity — INFO/DEBUG to see more
-
-# ── Top-level agent defaults ────────────────────────────────────────────────
-workspace_dir = "workspace"
-max_steps     = 30
 
 [ssh]
 # SSH remote gateway control (requires asyncssh)

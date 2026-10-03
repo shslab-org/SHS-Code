@@ -1342,3 +1342,68 @@ operations inherit the same attribution. Opt out with
 ---
 
 <p align="center"><b>SHS-Code 4.2.0 — Persistent Autonomous AI Coding Agent · SHS Lab</b><br/>Plan · Implement · Verify — with memory, tools, skills, MCP, Team103, streaming, GUI, and the SHS-Code-Agent identity.</p>
+
+## 78. v4.3.0 — max_steps architecture, mandatory attribution, detached runs, resume fix
+
+**max_steps is user-controlled and can no longer be silently replaced.**
+The shipped example `config.toml` used to place `max_steps` inside the
+`[logging]` section — TOML section placement made the loader silently
+ignore it, so a configured `80` never took effect (the exact bug found in
+the real test run). The loader now performs **strict schema-placement
+validation**: a top-level setting found inside any section is a hard
+`ConfigError` telling you exactly where to move it; unknown keys only
+warn (`SHSCODE_CONFIG_PERMISSIVE=1` downgrades for legacy files). Three
+further silent-replacement bugs were fixed along the same line (hardcoded
+`30` in the API run request, hardcoded `30` in the conversation layer,
+and the mode-scaling `max(5,…)` floor overwriting a configured 3). You
+control the budget from the CLI (`--max-steps 150`), the GUI Agent panel
+("Steps" box, per run), the GUI Settings panel ("Agent Step Budget",
+persisted), the `SHSCODE_MAX_STEPS` env var, or `max_steps` at the top of
+any config layer — and every surface (CLI `/config`, the run-start log
+line, `GET /config`) shows the **effective value and its source**, so the
+runtime can never silently disagree with what you configured.
+
+**GitHub attribution is now mandatory and mechanically enforced.** Every
+commit created inside SHS Code — agent bash sessions, the GUI terminal,
+the GitHub panel, runtime paths — is attributed to
+`SHS-Code-Agent <SHS-Code-Agent@users.noreply.github.com>` as author and
+committer plus the Co-Authored-By trailer. A **git shim**
+(`~/.shscode/shims/git`, first on the PATH of every SHS-Code child
+process) strips `--author`/`--reset-author` from `git commit` and forces
+the identity env vars, so prompt-level, flag-level and env-level bypass
+attempts are all defeated; all opt-outs (including the old
+`SHSCODE_AGENT_IDENTITY=0`) are removed. Your own shells outside SHS Code
+and your git configuration are never touched. Note the verified platform
+fact: GitHub's *Contributors* aggregation counts user and bot accounts
+only — the SHS-Code-Agent profile is currently an **Organization** and
+organizations do not appear in a repository's Contributors list (commits
+still link to the profile everywhere else). The noreply address is
+forward-compatible: if a user account named `SHS-Code-Agent` is ever
+registered, the same attribution immediately starts counting toward
+contributors — zero code changes needed.
+
+**Long-running tasks no longer die with the session that started them.**
+`SHSCode --detach "<task>"` runs the task as a double-forked,
+`setsid`-detached daemon that survives the terminal, SSH disconnects and
+process-tree cleanup; its registry entry (`~/.shscode/runs/<id>/run.json`
++ `output.log`) is listed by `SHSCode --runs` and streamed by
+`SHSCode --attach <id>`. The GUI gets the same power: the Agent panel's
+"detached" checkbox and `POST /run {"detach": true}` spawn the detached
+process, and the Sessions panel shows the detached-run registry with live
+process liveness. `SIGTERM`/`SIGHUP` now cancel runs **gracefully** —
+state is checkpointed, the session closes as `interrupted`, and
+`SHSCode --continue` (or `/resume`) picks it up cleanly.
+
+**The resumed-session tool-call error is fixed at the root.** Strict
+OpenAI-compatible providers reject any request whose history contains an
+assistant `tool_calls` block without matching `tool` results (HTTP 400) —
+and both a cancelled-mid-tool run and one error path could produce
+exactly that. Every producer path now appends the tool result, and
+`sanitize_tool_history()` enforces the protocol invariant at the LLM
+request boundary no matter how the memory was produced. Tool failures
+record structured diagnostics (tool, exception class, args,
+`tool_call_id`) plus a `tool_failure_diagnostic` activity event, so
+failures are diagnosable and recoverable instead of just "handled".
+
+**Preserved:** the Agnes/API rate-limit retry and recovery behavior is
+untouched and guarded by the existing suites (868 tests green).

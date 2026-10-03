@@ -214,11 +214,24 @@ class BaseAgent(ABC):
         self._injected_session_id: Optional[str] = session_id
         self._session_id: Optional[str] = None
         self._step_count = 0
-        self._max_steps: int = cfg.max_steps
+        # v4.3.0: max_steps comes from the SHARED resolution layer — env
+        # override (CLI --max-steps / GUI selection / /config/max-steps)
+        # beats config files beats default. Reading it fresh at agent
+        # creation means runtime changes apply to every NEW run, and the
+        # source string lets every surface show WHERE the value came from
+        # (the [logging]-section misplacement bug must never recur).
+        from app.config import effective_max_steps
+        self._max_steps, self._max_steps_source = effective_max_steps()
+        # v4.3.0: a value the USER chose (env / config file / CLI flag / GUI)
+        # is explicit — mode scaling must NEVER silently replace it (the
+        # max(5, …) floor used to turn a configured 3 into 5). Only the
+        # built-in default budget may be scaled by the active mode.
+        self._max_steps_explicit: bool = not str(
+            self._max_steps_source).startswith("default")
         # v3.0.3: remember the config default so mode scaling never
         # overrides an EXPLICITLY assigned _max_steps (callers/tests that
         # set agent._max_steps = 2 expect that cap to hold).
-        self._default_max_steps: int = cfg.max_steps
+        self._default_max_steps: int = self._max_steps
         # v4.0.1 (mission §3 — no fake completion): WHY did the loop end?
         #   final_answer    — text answer stood (plan finished / no plan)
         #   terminate       — terminate tool accepted (plan gate passed)
@@ -492,7 +505,9 @@ class BaseAgent(ABC):
 
             logger.info(
                 f"Starting run task={self._task_history.task_id} "
-                f"session={self._session_id} mode={mode_str} max_steps={self._max_steps}"
+                f"session={self._session_id} mode={mode_str} "
+                f"max_steps={self._max_steps} "
+                f"(source: {getattr(self, '_max_steps_source', 'config')})"
             )
 
             while self.state == AgentState.RUNNING and self._step_count < self._max_steps:
@@ -798,7 +813,11 @@ class BaseAgent(ABC):
             self._mode_cfg = cfg
             # v3.0.3: only scale when _max_steps is still the config default
             # — an explicitly assigned value (agent._max_steps = N) wins.
-            if getattr(self, "_max_steps", 0) == getattr(self, "_default_max_steps", -1):
+            # v4.3.0: a USER-CONFIGURED value (env/config/CLI/GUI) is also
+            # explicit — mode scaling (and its max(5,…) floor) must never
+            # silently replace the user's chosen step budget.
+            if (not getattr(self, "_max_steps_explicit", False)
+                    and getattr(self, "_max_steps", 0) == getattr(self, "_default_max_steps", -1)):
                 self._max_steps = max(5, int(self._max_steps * cfg.get("max_steps_scale", 1.0)))
             prompt = cfg.get("prompt", "")
             if prompt:

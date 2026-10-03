@@ -52,12 +52,22 @@ class TestAgentIdentityEverywhere:
         assert ai.agent_git_env() == {k: ai.os.environ[k] for k in ai.GIT_ENV_KEYS}
 
     def test_apply_agent_git_env_opt_out(self, monkeypatch):
+        """v4.3.0: the SHSCODE_AGENT_IDENTITY=0 opt-out is REMOVED — the
+        mission rule makes agent attribution mandatory and non-bypassable,
+        including via environment variables. Even with the old opt-out var
+        set, the identity is enforced and pre-existing author env vars are
+        OVERWRITTEN."""
         from app.git_providers import agent_identity as ai
         monkeypatch.setenv("SHSCODE_AGENT_IDENTITY", "0")
-        for k in ai.GIT_ENV_KEYS:
+        monkeypatch.setenv("GIT_AUTHOR_NAME", "Hostile Human")
+        monkeypatch.setenv("GIT_AUTHOR_EMAIL", "hostile@users.noreply.github.com")
+        for k in ("GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"):
             monkeypatch.delenv(k, raising=False)
-        assert ai.apply_agent_git_env() is False
-        assert ai.os.environ.get("GIT_AUTHOR_NAME", "") == ""
+        assert ai.apply_agent_git_env() is True
+        assert ai.os.environ["GIT_AUTHOR_NAME"] == ai.AGENT_NAME
+        assert ai.os.environ["GIT_AUTHOR_EMAIL"] == ai.AGENT_EMAIL
+        assert ai.os.environ["GIT_COMMITTER_EMAIL"] == ai.AGENT_EMAIL
+        assert not hasattr(ai, "agent_identity_enabled")
 
     def _git_repo(self, tmp_path: Path) -> Path:
         def run(*args):

@@ -1,32 +1,42 @@
-"""SHS-Code-Agent GitHub identity (v4.0.1 — mission §17).
+"""SHS-Code-Agent GitHub identity — mandatory attribution (v4.3.0).
 
-Central attribution layer for every GitHub action SHS-Code performs.
-The automation identity is consistently represented as the
-SHS-Code-Agent (https://github.com/SHS-Code-Agent) rather than
-pretending the human user performed every action.
+Every piece of repository work SHS Code performs — code written, bugs
+fixed, tests added, docs edited, refactors, automated chores, commits,
+pushes — is attributed to the dedicated identity:
 
-Mechanisms (in priority order):
+    https://github.com/SHS-Code-Agent
 
-1. **GitHub App installation token** (the official bot-identity
-   mechanism): when ``SHSCODE_GITHUB_APP_ID`` +
-   ``SHSCODE_GITHUB_APP_PRIVATE_KEY_PATH`` (or ``..._PRIVATE_KEY``) are
-   configured, a short-lived RS256-signed JWT is minted and exchanged
-   for an installation token against ``SHSCODE_GITHUB_APP_INSTALLATION_ID``.
-   Commits pushed with an installation token are attributed by GitHub's
-   own machinery; the Co-Authored-By trailer adds the visible agent
-   credit on every commit regardless of auth mode.
+REAL Git/GitHub attribution, not a cosmetic mention:
 
-2. **Personal access token** (``SHSCODE_GITHUB_TOKEN`` / ``GITHUB_TOKEN``
-   / connectors): used for API + push auth. The COMMITS still carry the
-   Co-Authored-By trailer so the agent credit is honest and visible,
-   while the author identity reflects the token's account.
+  * the commit's AUTHOR and COMMITTER are forced to
+    ``SHS-Code-Agent <SHS-Code-Agent@users.noreply.github.com>`` — GitHub
+    resolves that noreply address to the SHS-Code-Agent account and links
+    every commit to the profile (verified live: the commit API returns
+    ``author.login = "SHS-Code-Agent"``), and the Co-Authored-By trailer
+    keeps the credit visible on every commit page;
+  * enforcement is MECHANICAL and CENTRAL — the git shim (see
+    ``app/git_providers/git_shim.py``) intercepts every ``git`` invocation
+    inside SHS Code (agent bash sessions, GUI terminal, python_execute,
+    cron) and strips/overrides any ``--author``, ``--reset-author`` or
+    ``env -u`` attempt; the runtime's own commit paths
+    (GitHubProvider.commit/pull) force author+committer+env directly.
 
-The trailer is the officially GitHub-supported way to credit a
-collaborator on a commit:
-    Co-Authored-By: SHS-Code-Agent <SHS-Code-Agent@users.noreply.github.com>
-GitHub renders the co-author profile link when the email maps to a
-GitHub account. We never claim the ORG owns every commit — attribution
-follows GitHub's actual model.
+NON-BYPASSABLE BY DESIGN: there is deliberately NO opt-out — no prompt,
+instruction, CLI flag, GUI action, config option or environment variable
+turns agent attribution off for work SHS Code performs. The user's own
+identity for work they perform OUTSIDE SHS Code is untouched (the shim
+only lives on the PATH of processes spawned by SHS Code).
+
+GITHUB "CONTRIBUTORS" SYSTEM — platform fact (verified empirically):
+GitHub's contributor aggregation counts USER and BOT accounts only.
+SHS-Code-Agent is currently an ORGANIZATION, and organizations do not
+appear in a repository's Contributors list (tested on a dedicated repo:
+two org-authored commits → sidebar “No contributors”; one user-attributed
+commit → the user appears immediately). The commits still link to the
+org profile everywhere else. The noreply address is
+FORWARD-COMPATIBLE: if a USER account named ``SHS-Code-Agent`` is ever
+registered, the exact same attribution automatically counts toward
+contributors — zero code changes needed.
 """
 from __future__ import annotations
 
@@ -39,8 +49,9 @@ from app.logger import logger
 
 AGENT_LOGIN = "SHS-Code-Agent"
 AGENT_PROFILE_URL = "https://github.com/SHS-Code-Agent"
-# GitHub noreply convention for bot-ish accounts:
-# <login>@users.noreply.github.com — maps the trailer to the profile.
+# GitHub noreply convention: <login>@users.noreply.github.com maps to the
+# account owning the login (today the organization; if a same-named USER
+# account ever exists, the SAME email maps to it — forward-compatible).
 AGENT_EMAIL = "SHS-Code-Agent@users.noreply.github.com"
 AGENT_NAME = "SHS-Code-Agent"
 
@@ -71,25 +82,31 @@ class AgentIdentity:
 DEFAULT_IDENTITY = AgentIdentity()
 
 
-# ── Agent git identity enforcement (v4.2.0 — "sab jagah" rule) ─────────────
+# ── Agent git identity enforcement (v4.3.0 — mandatory, non-bypassable) ─────
 #
 # Every commit / push / co-author / contributor produced by SHS-Code —
 # whether from the CLI, the GUI, the terminal panel, or an autonomous
-# agent shell session — must carry the SHS-Code-Agent profile.
+# agent shell session — carries the SHS-Code-Agent profile. There is NO
+# opt-out: this is the mission rule and it is enforced mechanically.
 #
-# Two mechanisms:
+# Three enforcement layers:
 #
-# 1. **Per-command ``-c`` overrides** (GitHubProvider.commit/pull): the
-#    author AND committer of each commit are forced to the agent identity
-#    without touching the user's global or repo git config.
+# 1. **Git shim on PATH** (install_git_shim): a self-contained ``git``
+#    wrapper installed first on the PATH of the SHS-Code process and all
+#    children. It strips ``--author``/``--reset-author`` from ``commit``
+#    and forces the four identity env vars on commit-creating commands —
+#    defeating prompt-level, flag-level and env-level bypass attempts.
 #
-# 2. **Process environment** (apply_agent_git_env): exports
+# 2. **Per-command ``-c`` overrides + explicit ``--author``**
+#    (GitHubProvider.commit/pull): the author AND committer of each commit
+#    are forced without touching the user's global or repo git config.
+#
+# 3. **Process environment** (apply_agent_git_env): exports
 #    GIT_AUTHOR_NAME / GIT_AUTHOR_EMAIL / GIT_COMMITTER_NAME /
 #    GIT_COMMITTER_EMAIL into os.environ so ANY child process git commit
 #    (agent bash tool, GUI terminal panel, cron jobs) is also attributed
-#    to the agent. Applied at CLI startup and server startup.
-#
-# Opt-out: SHSCODE_AGENT_IDENTITY=0 keeps the host's default git identity.
+#    to the agent. Applied at CLI startup and server startup, ALWAYS
+#    forced — pre-existing values never win.
 GIT_ENV_KEYS = (
     "GIT_AUTHOR_NAME",
     "GIT_AUTHOR_EMAIL",
@@ -108,29 +125,26 @@ def agent_git_env() -> dict:
     }
 
 
-def agent_identity_enabled() -> bool:
-    """Identity enforcement is on unless explicitly disabled
-    (SHSCODE_AGENT_IDENTITY=0)."""
-    return os.getenv("SHSCODE_AGENT_IDENTITY", "1") != "0"
-
-
-def apply_agent_git_env(force: bool = False) -> bool:
+def apply_agent_git_env(force: bool = True) -> bool:
     """Export the agent git identity into the process environment.
 
-    Idempotent — safe to call at every CLI/server startup. Existing
-    explicit GIT_AUTHOR_* values are only overwritten when *force* is
-    True (they may carry deliberate per-repo attribution) — but by
-    default the SHS-Code-Agent identity wins, per the mission rule.
-    Returns True when the environment now carries the agent identity.
+    v4.3.0: enforcement is MANDATORY — the agent identity ALWAYS wins over
+    any inherited ``GIT_AUTHOR_*``/``GIT_COMMITTER_*`` values (the old
+    non-forcing behavior was a bypass hole: a shell that exported its own
+    author identity kept it). Also installs the git shim on PATH so
+    ``--author``/``-c user.email``/``env -u`` games inside child shells
+    cannot bypass attribution either. Idempotent — safe at every startup.
     """
-    if not agent_identity_enabled():
-        return False
     env = agent_git_env()
     for key, value in env.items():
-        if force or key not in os.environ or not os.environ[key]:
-            os.environ[key] = value
+        os.environ[key] = value
     # also make `git commit` default editor-free & merge-attr deterministic
     os.environ.setdefault("GIT_EDITOR", "true")
+    try:
+        from .git_shim import install_git_shim
+        install_git_shim()
+    except Exception as e:
+        logger.warning(f"[AgentIdentity] git shim install failed: {e}")
     return True
 
 

@@ -99,12 +99,18 @@ class TestGitHubProviderCommit:
         assert "Co-Authored-By: SHS-Code-Agent" in proc.stdout
 
     def test_commit_without_credit(self, tmp_path):
+        """v4.3.0: the old ``credit_agent=False`` bypass is GONE — work
+        performed by SHS Code is ALWAYS agent-attributed. The parameter is
+        accepted for API compatibility but deliberately ignored."""
         from app.git_providers.github_provider import GitHubProvider
         self._init_repo(tmp_path)
         (tmp_path / "c.txt").write_text("x")
         gh = GitHubProvider(repo_dir=str(tmp_path))
         out = gh.commit("chore: no credit", credit_agent=False)
-        assert "Co-Authored-By" not in out["message"]
+        # the trailer (and the forced author) are mandatory now
+        assert "Co-Authored-By: SHS-Code-Agent" in out["message"]
+        assert "Generated with SHS-Code" in out["message"]
+        assert out["author"].startswith("SHS-Code-Agent <")
 
     def test_branch_and_log(self, tmp_path):
         from app.git_providers.github_provider import GitHubProvider

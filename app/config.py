@@ -17,7 +17,7 @@ import os
 import threading
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Optional, get_args
 
 try:
     import tomllib
@@ -36,6 +36,14 @@ except ImportError:
 from pydantic import BaseModel, Field, model_validator
 from app.exceptions import ConfigError
 from app import env
+
+import logging as _stdlib_logging
+
+# config must NOT import app.logger: app.logger's module level calls
+# Config.get() — a lazy import inside _load would deadlock on the class
+# lock (found live during v4.3.0 development). Stdlib logger only; the
+# app logger attaches its own handlers later and these records propagate.
+_logger = lambda: _stdlib_logging.getLogger("shscode.config")
 
 _HOME = env.home_dir()
 
@@ -175,6 +183,17 @@ class HooksConfig(BaseModel):
     timeout_s: int        = 30
 
 
+class SSHConfig(BaseModel):
+    """SSH remote gateway (documented in the example config.toml; v4.3.0
+    gives it a real schema so the section is first-class instead of
+    silently ignored by pydantic's extra='ignore')."""
+    enabled:            bool          = False
+    port:               int           = 2222
+    host:               str           = "0.0.0.0"
+    host_key_path:      Optional[str] = "~/.shscode/ssh/host_key"
+    authorized_keys_path: Optional[str] = "~/.shscode/ssh/authorized_keys"
+
+
 class ContextConfig(BaseModel):
     max_events:     int  = 200
     max_tokens:     int  = 80000
@@ -255,6 +274,7 @@ class AppConfig(BaseModel):
     skins:                SkinsConfig              = Field(default_factory=SkinsConfig)
     security:             SecurityConfig           = Field(default_factory=SecurityConfig)
     hooks:                HooksConfig              = Field(default_factory=HooksConfig)
+    ssh:                  SSHConfig                = Field(default_factory=SSHConfig)
     context:              ContextConfig            = Field(default_factory=ContextConfig)
     conversation:         ConversationConfig       = Field(default_factory=ConversationConfig)
     observability:        ObservabilityConfig      = Field(default_factory=ObservabilityConfig)
@@ -278,6 +298,114 @@ class AppConfig(BaseModel):
         return Config.get()._data
 
 
+# ── v4.3.0: strict configuration placement validation ──────────────────────
+#
+# ROOT CAUSE this fixes (real test-run finding): ``max_steps = 80`` was
+# written inside the TOML ``[logging]`` section. Pydantic's default
+# ``extra='ignore'`` silently dropped the unknown key, so the runtime kept
+# the default 30 while the user believed 80 was configured. A configuration
+# section must never be able to SWALLOW an unrelated top-level setting.
+#
+# Mechanism: before pydantic validation, the raw (merged) config dict is
+# walked against the real schema (derived from the pydantic models):
+#
+#   * a key that IS a valid TOP-LEVEL setting but sits inside a section
+#     (e.g. ``[logging] max_steps``) → HARD ConfigError naming both the key
+#       and the section, with the exact fix ("move it above any [section]")
+#   * keys that are unknown anywhere → warning (collected, logged)
+#   * ``SHSCODE_CONFIG_PERMISSIVE=1`` downgrades the hard error to a warning
+#     (emergency escape hatch for legacy configs — documented, not default)
+
+
+def _section_schemas() -> dict[str, set[str]]:
+    """Section name → set of valid keys, derived from the pydantic models."""
+    from pydantic import BaseModel
+    out: dict[str, set[str]] = {}
+    for fname, finfo in AppConfig.model_fields.items():
+        candidates = [finfo.annotation]
+        candidates += list(get_args(finfo.annotation))
+        for cand in candidates:
+            if isinstance(cand, type) and issubclass(cand, BaseModel):
+                out[fname] = set(cand.model_fields.keys())
+                break
+    return out
+
+
+def validate_config_placement(raw: dict) -> tuple[list[str], list[str]]:
+    """Return (hard_errors, warnings) for misplaced config keys.
+
+    A top-level setting found inside a section is a HARD error — that is
+    exactly the ``[logging] max_steps`` bug class. Unknown keys are soft
+    warnings so legacy configs keep loading.
+    """
+    top_fields = set(AppConfig.model_fields.keys())
+    sections = _section_schemas()
+    errors: list[str] = []
+    warnings: list[str] = []
+    for key, value in raw.items():
+        if isinstance(value, dict):
+            allowed = sections.get(key)
+            if allowed is None:
+                warnings.append(
+                    f"unknown config section [{key}] (ignored — not in the schema)")
+                continue
+            for sub in value:
+                if sub in top_fields and sub not in allowed:
+                    errors.append(
+                        f"'{sub}' is a TOP-LEVEL setting, but it was found inside "
+                        f"the [{key}] section. It was silently IGNORED there. Move it "
+                        f"to the top of the config file — above any [{key}] line — "
+                        f"for it to take effect.")
+                elif sub not in allowed:
+                    warnings.append(
+                        f"unknown key '{key}.{sub}' (ignored — not a [{key}] setting)")
+        elif key not in top_fields:
+            warnings.append(
+                f"unknown top-level key '{key}' (ignored — not in the schema)")
+    return errors, warnings
+
+
+def _parse_max_steps(value) -> Optional[int]:
+    """Parse + validate a max_steps value (int >= 1). None when unset/invalid."""
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    return n if n >= 1 else None
+
+
+def effective_max_steps() -> tuple[int, str]:
+    """The max_steps the runtime must ACTUALLY use right now → (value, source).
+
+    Resolution (highest first):
+      1. ``SHSCODE_MAX_STEPS`` env var          — read FRESH every call, so
+         runtime changes (CLI --max-steps, GUI run setting, /config/max-steps)
+         apply to newly created agents without a config reload
+      2. the loaded configuration value         — file layering already done
+         (profile > home yaml > home toml > project config.toml)
+      3. built-in default (30)
+
+    The returned ``source`` describes where the value came from, so every
+    surface (CLI /config, GUI Settings, run-start log) can SHOW the user
+    which layer is in effect — the effective value can never silently
+    disagree with what the user supplied again.
+    """
+    raw = env.getenv("MAX_STEPS", "")
+    if raw:
+        n = _parse_max_steps(raw)
+        if n is not None:
+            return n, "env SHSCODE_MAX_STEPS (runtime override)"
+        _logger().warning(
+            f"SHSCODE_MAX_STEPS={raw!r} is not a valid integer >= 1 — ignored")
+    try:
+        inst = Config.get()
+        cfg = inst._data
+    except Exception:
+        return 30, "default"
+    src = getattr(inst, "_max_steps_source", None) or "default (30)"
+    return cfg.max_steps, src
+
+
 def _deep_merge(base: dict, overlay: dict) -> dict:
     """Recursively merge ``overlay`` ONTO ``base`` (overlay wins per-key)."""
     out = dict(base)
@@ -295,9 +423,15 @@ class Config:
     """
 
     _instance: Optional["Config"] = None
-    _lock: threading.Lock          = threading.Lock()
+    # v4.3.0: RLock — Config.get() is re-entrant now (loading can lazily
+    # import modules whose import-time code calls Config.get() again; a
+    # plain Lock deadlocked the whole process — found live).
+    _lock: threading.RLock        = threading.RLock()
 
     def __init__(self, path: str = "config.toml") -> None:
+        # v4.3.0 provenance: which layer supplied max_steps (file path / env)
+        self._max_steps_file: Optional[str] = None
+        self._max_steps_source: Optional[str] = None
         self._data: AppConfig = self._load(path)
 
     @classmethod
@@ -371,6 +505,44 @@ class Config:
         except Exception:
             return None
 
+    def save_max_steps(self, value: Optional[int]) -> Optional[Path]:
+        """v4.3.0: persist the user's default max_steps choice.
+
+        ``value=None`` REMOVES the setting (back to file/default layers).
+        Writes the active config file (0600, atomic replace) and mirrors the
+        choice into the live process env so newly created agents pick it up
+        immediately without a config reload. Failures never raise.
+        """
+        try:
+            import yaml as __yaml
+            if value is not None and (not isinstance(value, int) or value < 1):
+                return None
+            target = self.active_config_path()
+            data: dict = {}
+            if target.exists():
+                try:
+                    data = __yaml.safe_load(target.read_text(encoding="utf-8")) or {}
+                except Exception:
+                    data = {}
+            if value is None:
+                data.pop("max_steps", None)
+                os.environ.pop("SHSCODE_MAX_STEPS", None)
+                os.environ.pop("MANUSCLAW_MAX_STEPS", None)
+            else:
+                data["max_steps"] = int(value)
+                os.environ["SHSCODE_MAX_STEPS"] = str(int(value))
+            tmp = target.with_suffix(".tmp")
+            tmp.write_text(__yaml.safe_dump(data, allow_unicode=True),
+                           encoding="utf-8")
+            try:
+                os.chmod(tmp, 0o600)
+            except OSError:
+                pass
+            os.replace(tmp, target)
+            return target
+        except Exception:
+            return None
+
     # ------------------------------------------------------------------
     # Internal loading
     # ------------------------------------------------------------------
@@ -378,6 +550,29 @@ class Config:
     def _load(self, path: str) -> AppConfig:
         self._load_dotenv_chain()
         raw = self._load_config_files(path)
+
+        # v4.3.0: strict placement validation BEFORE pydantic — a top-level
+        # setting inside a section is a hard, actionable error (this is the
+        # [logging] max_steps bug class). Warnings are logged, never fatal.
+        try:
+            hard_errors, soft_warnings = validate_config_placement(raw)
+        except Exception as e:  # never let the validator itself break loading
+            _logger().warning(f"[Config] placement validation skipped: {e}")
+            hard_errors, soft_warnings = [], []
+        for w in soft_warnings:
+            _logger().warning(f"[Config] {w}")
+        if hard_errors:
+            permissive = env.getenv("CONFIG_PERMISSIVE", "").lower() in ("1", "true", "yes")
+            detail = "\n  ".join(hard_errors)
+            if permissive:
+                for e_ in hard_errors:
+                    _logger().warning(f"[Config] (permissive) {e_}")
+            else:
+                raise ConfigError(
+                    "Configuration placement error — settings were found in the "
+                    "wrong section and would be silently ignored:\n  " + detail +
+                    "\nFix the config file, or set SHSCODE_CONFIG_PERMISSIVE=1 to "
+                    "downgrade this to a warning.")
 
         env_str = os.getenv("APP_ENV", raw.get("env", "dev")).lower()
         try:
@@ -449,10 +644,19 @@ class Config:
                 stacklevel=3,
             )
 
-        # Test environment overrides
+        # Test environment overrides — v4.3.0: max_steps is only forced to 5
+        # when the user did NOT configure it explicitly (no file layer, still
+        # the default 30). An explicit file/env value must survive the test
+        # environment; silently replacing a user-supplied value is the bug
+        # class this release fixes.
         if app_env == AppEnv.TEST:
             cfg.llm.provider = "mock"
-            cfg.max_steps = 5
+            if cfg.max_steps == 30 and not self._max_steps_file:
+                cfg.max_steps = 5
+                # v4.3.0: the test-env speedup value is NOT a user choice —
+                # label it as a default so mode scaling still applies and
+                # nothing treats 5 as an explicitly configured budget.
+                self._max_steps_source = "default (30; test env uses 5)"
             cfg.runflow.timeout = 60
 
         # Final fallback
@@ -487,6 +691,30 @@ class Config:
             cfg.file_store.s3_bucket = os.getenv("S3_BUCKET")
         if not cfg.file_store.gcs_bucket:
             cfg.file_store.gcs_bucket = os.getenv("GCS_BUCKET")
+
+        # ── v4.3.0: max_steps resolution + provenance ─────────────────────
+        # Precedence: SHSCODE_MAX_STEPS env (explicit runtime choice — CLI
+        # --max-steps, GUI run setting, /config/max-steps) > config files >
+        # default. The value the runtime uses and SHOWS is always this one.
+        env_ms = env.getenv("MAX_STEPS", "")
+        if env_ms:
+            n = _parse_max_steps(env_ms)
+            if n is None:
+                raise ConfigError(
+                    f"SHSCODE_MAX_STEPS={env_ms!r} is invalid — use an integer >= 1")
+            cfg.max_steps = n
+            self._max_steps_source = "env SHSCODE_MAX_STEPS (explicit)"
+        elif self._max_steps_source is None:
+            if self._max_steps_file:
+                self._max_steps_source = f"file {self._max_steps_file}"
+            elif cfg.max_steps != 30:
+                self._max_steps_source = "config"
+            else:
+                self._max_steps_source = "default (30)"
+        logger = _logger()
+        logger.info(
+            f"[Config] max_steps={cfg.max_steps} "
+            f"(source: {self._max_steps_source})")
 
         return cfg
 
@@ -552,6 +780,13 @@ class Config:
                     }
                     if data:
                         merged = _deep_merge(merged, data)
+                        # v4.3.0 provenance: remember the highest-priority
+                        # layer that defines top-level max_steps (later
+                        # layers win the merge, so the LAST writer is the
+                        # effective one). Shows the user where the value
+                        # came from (transparency requirement).
+                        if "max_steps" in data:
+                            self._max_steps_file = str(p)
             except Exception as e:
                 raise ConfigError(f"Failed to parse {p}: {e}") from e
         return merged
@@ -602,6 +837,8 @@ class Config:
     @property
     def hooks(self) -> HooksConfig:                return self._data.hooks
     @property
+    def ssh(self) -> "SSHConfig":                   return self._data.ssh
+    @property
     def context(self) -> ContextConfig:            return self._data.context
     @property
     def conversation(self) -> ConversationConfig:  return self._data.conversation
@@ -623,6 +860,10 @@ class Config:
     def workspace_dir(self) -> str:                return self._data.workspace_dir
     @property
     def max_steps(self) -> int:           return self._data.max_steps
+    @property
+    def max_steps_source(self) -> str:
+        """v4.3.0: provenance of the effective max_steps (for /config, GUI)."""
+        return self._max_steps_source or "default (30)"
     @property
     def token_budget(self) -> int:        return self._data.token_budget
     @property

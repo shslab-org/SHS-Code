@@ -32,9 +32,18 @@ from .agent_identity import (
 
 def _git(args: list[str], cwd: Optional[str] = None,
          timeout: int = 60, check: bool = True) -> subprocess.CompletedProcess:
-    """Run a git command, raising RuntimeError with stderr on failure."""
+    """Run a git command, raising RuntimeError with stderr on failure.
+
+    v4.3.0: EVERY provider git command runs with the SHS-Code-Agent identity
+    env forced — commits the command creates (commit, merge, stash, amend…)
+    are agent-attributed at the env layer on top of the per-command ``-c``
+    and explicit ``--author`` used by commit(). The user's git config is
+    never touched.
+    """
+    from .agent_identity import agent_git_env
     proc = subprocess.run(["git"] + args, cwd=cwd, capture_output=True,
-                          text=True, timeout=timeout)
+                          text=True, timeout=timeout,
+                          env={**os.environ, **agent_git_env()})
     if check and proc.returncode != 0:
         raise RuntimeError(
             f"git {' '.join(args[:3])} failed: {proc.stderr.strip()[:400]}")
@@ -151,22 +160,31 @@ class GitHubProvider:
                credit_agent: bool = True) -> dict:
         """Commit staged/all changes attributed to SHS-Code-Agent.
 
-        v4.2.0 ("sab jagah" rule): the commit AUTHOR and COMMITTER are
-        forced to the agent identity via per-command ``-c`` overrides
-        (the user's global git config is never touched), so the commit
-        list and contributor graph on GitHub show SHS-Code-Agent. The
-        message additionally keeps the Co-Authored-By trailer and the
-        'Generated with SHS-Code' footer for visible credit everywhere.
+        v4.3.0 (mandatory attribution): the commit AUTHOR and COMMITTER are
+        forced to the agent identity via THREE independent mechanisms —
+        (a) per-command ``-c user.name/user.email`` overrides,
+        (b) the four ``GIT_AUTHOR_*``/``GIT_COMMITTER_*`` env vars on the
+        subprocess, and (c) an explicit final ``--author=`` flag — so the
+        user's global/repo git config, inherited env, or any caller cannot
+        change the attribution of work SHS Code performs. The user's own
+        git configuration is never modified.
+
+        ``credit_agent`` is accepted for API compatibility but IGNORED:
+        there is deliberately no way to drop the agent credit/trailer from
+        work SHS Code itself performs.
         """
+        from .agent_identity import AGENT_NAME, AGENT_EMAIL
         self._ensure_repo()
         if add_all:
             _git(["add", "-A"], cwd=self.repo_dir)
         full_message = message.strip()
-        if credit_agent:
-            full_message += (
-                f"\n\nGenerated with SHS-Code\n{self.identity.co_author_trailer()}")
-        proc = _git(agent_git_args() + ["commit", "-m", full_message],
-                    cwd=self.repo_dir)
+        full_message += (
+            f"\n\nGenerated with SHS-Code\n{self.identity.co_author_trailer()}")
+        proc = _git(agent_git_args() + [
+            "commit",
+            f"--author={AGENT_NAME} <{AGENT_EMAIL}>",
+            "-m", full_message,
+        ], cwd=self.repo_dir)
         sha = ""
         try:
             sha = _git(["rev-parse", "HEAD"], cwd=self.repo_dir).stdout.strip()
@@ -213,7 +231,7 @@ class GitHubProvider:
     def pull(self, remote: str = "origin", branch: Optional[str] = None) -> dict:
         """Pull remote changes. Any merge commit the pull creates is
         attributed to SHS-Code-Agent (author + committer via -c flags
-        and the process env) — v4.2.0 "sab jagah" rule."""
+        and the forced process env) — mandatory attribution rule."""
         self._ensure_repo()
         args = agent_git_args() + ["pull", remote] + ([branch] if branch else [])
         proc = subprocess.run(

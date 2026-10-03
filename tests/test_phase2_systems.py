@@ -157,6 +157,7 @@ class TestModes:
 
     def test_modes_affect_agent(self, monkeypatch, tmp_path):
         monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "h"))
+        monkeypatch.chdir(tmp_path)      # no config.toml → default budget
         from app.modes import set_active_mode
         from app.config import Config
         Config.reset()
@@ -165,10 +166,28 @@ class TestModes:
         agent = SHSCode()
         base_steps = agent._max_steps
         agent._apply_mode_and_profile()
-        assert agent._max_steps == base_steps * 2   # autonomous scale
+        # v4.3.0: mode scaling applies ONLY to the DEFAULT (unset) budget.
+        assert agent._max_steps == max(5, base_steps * 2)   # autonomous scale
         assert agent._verification_level() == "thorough"
         assert any("MODE: autonomous" in (m.content or "")
                    for m in agent.memory.messages)
+        set_active_mode("coding")
+
+    def test_mode_never_replaces_user_configured_max_steps(self, monkeypatch, tmp_path):
+        """v4.3.0 contract: the effective max_steps must be EXACTLY the
+        value the user supplied — mode scaling (and its max(5,…) floor)
+        must not silently change a configured budget."""
+        monkeypatch.setenv("SHSCODE_HOME", str(tmp_path / "h"))
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "config.toml").write_text("max_steps = 7\n", encoding="utf-8")
+        from app.modes import set_active_mode
+        from app.config import Config
+        Config.reset()
+        set_active_mode("autonomous")          # would 2x and floor the budget
+        from app.agent.shscode import SHSCode
+        agent = SHSCode()
+        agent._apply_mode_and_profile()
+        assert agent._max_steps == 7           # exactly what the user set
         set_active_mode("coding")
 
 

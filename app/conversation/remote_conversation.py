@@ -532,11 +532,14 @@ class RemoteConversation(BaseConversation):
         self._event_buffer.append(prompt_event)
 
         # Send run command
+        # v4.3.0: shared max_steps resolution — never a hardcoded 30.
+        from app.config import effective_max_steps
+        _cfg_steps, _ = effective_max_steps()
         command = {
             "type": "run",
             "conversation_id": self._id,
             "prompt": prompt,
-            "max_steps": kwargs.get("max_steps", 30),
+            "max_steps": kwargs.get("max_steps") or _cfg_steps,
             "timestamp": time.time(),
         }
 

@@ -52,14 +52,18 @@ async def _lifespan(application: FastAPI):
             "SHSCODE_API_KEY not set — all endpoints are UNAUTHENTICATED. "
             "Set SHSCODE_API_KEY in production."
         )
-    # v4.2.0 ("sab jagah" rule): every git commit made by this server —
-    # GUI GitHub panel, terminal panel, agent bash sessions — is
-    # attributed to the SHS-Code-Agent profile.
+    # v4.3.0 (mandatory attribution): every git commit made by this server —
+    # GUI GitHub panel, terminal panel, agent bash sessions — is attributed
+    # to the SHS-Code-Agent profile (author + committer + trailer), enforced
+    # by the git shim on PATH + forced env. There is deliberately NO opt-out.
     try:
         from app.git_providers.agent_identity import apply_agent_git_env
         if apply_agent_git_env():
-            logger.info("[Server] Git identity enforced: SHS-Code-Agent "
-                        "(set SHSCODE_AGENT_IDENTITY=0 to disable)")
+            from app.git_providers.git_shim import shim_active_on_path
+            logger.info(
+                "[Server] Git identity enforced: SHS-Code-Agent "
+                f"(git shim active: {shim_active_on_path()}) — mandatory, "
+                "no opt-out")
     except Exception as e:
         logger.warning(f"[Server] Agent git-identity setup failed: {e}")
     logger.info("SHS Code Agent Server started.")
@@ -358,14 +362,24 @@ class StreamingSHSCode:
 class RunRequest(BaseModel):
     prompt: str
     mode: str = "build"
-    max_steps: int = 30
+    # v4.3.0: max_steps is USER-CONTROLLED. None (the default) means "use
+    # the configured value" (env override > config files > default 30) —
+    # the old hardcoded ``= 30`` here silently stomped any configured value
+    # on every GUI/API run, which is exactly the bug the user hit: they
+    # configured 80, the runtime used 30.
+    max_steps: Optional[int] = None
     session_id: Optional[str] = None   # v4.0.1: continue an existing session
+    # v4.3.0: run the task as a DETACHED OS process instead of an in-server
+    # asyncio task — survives server restarts and shell/session death.
+    detach: bool = False
 
 
 class RunResponse(BaseModel):
     session_id: str
     status: str
     output: Optional[str] = None
+    run_id: Optional[str] = None      # v4.3.0: detached run registry id
+    log_path: Optional[str] = None    # v4.3.0: detached run log
 
 
 @app.get("/healthz")
@@ -382,6 +396,11 @@ async def root():
 async def run_agent(req: RunRequest):
     mode = AgentMode.PLAN if req.mode.lower() == "plan" else AgentMode.BUILD
     mode_str = mode.value
+    # v4.3.0: an explicitly supplied max_steps must be a positive integer —
+    # reject with 400 instead of silently coercing/falling back.
+    if req.max_steps is not None and (not isinstance(req.max_steps, int) or req.max_steps < 1):
+        raise HTTPException(status_code=400,
+                            detail="max_steps must be an integer >= 1")
     # v4.0.1 (mission §16 — CLI/GUI shared state): an explicit session_id
     # CONTINUES that session (conversation history is re-injected by the
     # agent). Previously POST /run always created a new session — the GUI
@@ -393,6 +412,24 @@ async def run_agent(req: RunRequest):
         session_id = req.session_id
     else:
         session_id = await db.create_session(req.prompt, mode=mode_str)  # Fix: use enum value
+
+    # v4.3.0 (lifecycle): a DETACHED run is a double-forked OS process — it
+    # survives this server's restart/death, keeps checkpointing to the
+    # sessions DB, and is resumable. In-server asyncio tasks (below) die
+    # with the process; long autonomous work belongs on the detached path.
+    if req.detach:
+        from app.daemon import start_detached_run, new_run_id
+        import sys as _sys
+        run_id = new_run_id()
+        daemon_argv = ["-m", "app", req.prompt, "--session", session_id]
+        if req.max_steps is not None:
+            daemon_argv += ["--max-steps", str(req.max_steps)]
+        os.environ["SHSCODE_DETACHED_RUN_ID"] = run_id
+        info = start_detached_run(
+            daemon_argv, run_id=run_id, session_id=session_id,
+            prompt=req.prompt, detached_by="server", cwd=os.getcwd())
+        return RunResponse(session_id=session_id, status="detached",
+                           run_id=run_id, log_path=info.get("log_path"))
 
     async def _run():
         streamer = StreamingSHSCode(session_id=session_id, mode=mode, max_steps=req.max_steps)
@@ -465,6 +502,29 @@ async def run_agent_sync(req: RunRequest):
 async def list_sessions(limit: int = 20):
     sessions = await db.get_sessions(limit=limit)
     return {"sessions": sessions}
+
+
+@app.get("/runs", dependencies=[Depends(require_api_key)])
+async def list_detached_runs(limit: int = 25):
+    """v4.3.0: detached-run registry + live process liveness (GUI)."""
+    from app.daemon import list_runs
+    return {"runs": list_runs(limit=limit)}
+
+
+@app.get("/runs/{run_id}", dependencies=[Depends(require_api_key)])
+async def detached_run_detail(run_id: str):
+    """v4.3.0: one detached run — registry entry + current session state."""
+    from app.daemon import get_run
+    info = get_run(run_id)
+    if info is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    sid = info.get("session_id")
+    if sid:
+        row = await db.get_session(sid)
+        if row:
+            info["session_state"] = row.get("state")
+            info["session_steps"] = row.get("step_count")
+    return info
 
 
 @app.get("/sessions/{session_id}", dependencies=[Depends(require_api_key)])
@@ -777,7 +837,7 @@ async def workspace_diff(mode: str = "unstaged", max_bytes: int = 200000):
 async def get_config():
     """v4.0.1 (mission §14 — GUI Settings panel): effective configuration.
     Secrets are MASKED — never returned over the wire."""
-    from app.config import Config
+    from app.config import Config, effective_max_steps
     cfg = Config.get()
     llm = cfg.llm
     masked_key = ""
@@ -791,7 +851,10 @@ async def get_config():
         "api_key": masked_key,
         "max_tokens": llm.max_tokens,
         "temperature": llm.temperature,
-        "max_steps": cfg.max_steps,
+        # v4.3.0: the EFFECTIVE max_steps + where it came from, so the GUI
+        # shows exactly what the runtime will use (transparency requirement).
+        "max_steps": effective_max_steps()[0],
+        "max_steps_source": effective_max_steps()[1],
         "token_budget": cfg.token_budget,
         "version": __import__("app").__version__,
         "server_api_key_enabled": bool(_API_KEY),
@@ -810,6 +873,30 @@ class GitOpRequest(BaseModel):
     branch: Optional[str] = None       # branch name
     paths: Optional[list[str]] = None  # files to add
     remote: str = "origin"
+
+
+class MaxStepsRequest(BaseModel):
+    """v4.3.0: user-controlled max_steps default (GUI Settings panel)."""
+    value: Optional[int] = None        # None = remove override (config/default)
+
+
+@app.post("/config/max-steps", dependencies=[Depends(require_api_key)])
+async def set_max_steps(req: MaxStepsRequest):
+    """Set (or clear) the default max_steps for FUTURE runs.
+
+    Persists to the active config file (survives restarts) and applies to
+    the live server process immediately (new agents read it at creation).
+    The user decides the step budget — the runtime must respect it.
+    """
+    from app.config import Config, effective_max_steps
+    if req.value is not None and req.value < 1:
+        raise HTTPException(status_code=400,
+                            detail="max_steps must be an integer >= 1")
+    written = Config.get().save_max_steps(req.value)
+    value, source = effective_max_steps()
+    return {"max_steps": value, "max_steps_source": source,
+            "persisted_to": str(written) if written else None,
+            "ok": True}
 
 
 class PROpRequest(BaseModel):

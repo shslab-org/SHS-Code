@@ -1144,9 +1144,12 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
 
     # ------------------------------------------------------------------ config
     if command in ("/config", "/settings"):
-        from app.config import Config
+        from app.config import Config, effective_max_steps
         c = Config.get()
         llm = c.llm
+        # v4.3.0: show the EFFECTIVE max_steps and its source layer — the
+        # user must always see which value the runtime will actually use.
+        ms, ms_src = effective_max_steps()
         return (
             "Effective configuration (secrets masked):\n"
             f"  provider:    {llm.provider}\n"
@@ -1156,7 +1159,8 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             f"  max_tokens:  {llm.max_tokens}  temperature: {llm.temperature}\n"
             f"  timeout:     {llm.timeout if llm.timeout else 'adaptive (default)'}  retries: {llm.max_retries}\n"
             f"  rate_limit:  enabled={llm.rate_limit.enabled} rpm={llm.rate_limit.rpm or 'auto (NIM=40)'}\n"
-            f"  max_steps:   {c.max_steps}  token_budget: {c.token_budget or 'unlimited'}\n"
+            f"  max_steps:   {ms}  (source: {ms_src})\n"
+            f"  token_budget: {c.token_budget or 'unlimited'}\n"
             f"  workspace:   {c.workspace_dir}\n"
             f"  streaming:   {llm.streaming.enabled}\n"
             f"  mcp servers: {len(c.mcp_servers)}\n"
@@ -2323,8 +2327,27 @@ def main() -> None:
     parser.add_argument("--continue", dest="continue_last", action="store_true",
                         help="Continue the most recent session in this workspace")
     parser.add_argument("--no-color", action="store_true", help="Disable colors (forces plain text)")
+    parser.add_argument("--max-steps", dest="max_steps", type=int, metavar="N",
+                        help="Max agent steps for this run (user-controlled; overrides config. "
+                             "Default: the configured max_steps — env SHSCODE_MAX_STEPS > config file > 30)")
+    parser.add_argument("--detach", action="store_true",
+                        help="Run the task as a DETACHED daemon (double-fork, own session). "
+                             "Survives the terminal/tool/session that started it; log + registry under "
+                             "~/.shscode/runs/. Monitor with --runs / --attach <run_id>.")
+    parser.add_argument("--runs", action="store_true", help="List detached runs (registry + liveness)")
+    parser.add_argument("--attach", dest="attach_run", metavar="RUN_ID",
+                        help="Follow a detached run's log live (Ctrl+C detaches, run continues)")
     parser.add_argument("--version", action="version", version=f"SHS Code v{VERSION}")
     args = parser.parse_args()
+
+    # v4.3.0: detached-run management commands never start an agent.
+    if args.runs:
+        from app.daemon import list_runs, format_runs_table
+        print(format_runs_table(list_runs(limit=40)))
+        return
+    if args.attach_run:
+        from app.daemon import follow_log
+        raise SystemExit(follow_log(args.attach_run))
 
     # v4.2.0 ("sab jagah" rule): commits made anywhere in this process —
     # /github commands or agent bash sessions — carry the SHS-Code-Agent
@@ -2334,6 +2357,14 @@ def main() -> None:
         apply_agent_git_env()
     except Exception:
         pass
+
+    # v4.3.0: the user decides the step budget. An explicit --max-steps is
+    # the highest-priority layer (beats config files AND their env vars)
+    # and flows through the SAME shared resolution every entry point uses.
+    if args.max_steps is not None:
+        if args.max_steps < 1:
+            parser.error("--max-steps must be an integer >= 1")
+        os.environ["SHSCODE_MAX_STEPS"] = str(args.max_steps)
 
     if args.profile:
         os.environ["SHSCODE_PROFILE"] = args.profile
@@ -2352,6 +2383,41 @@ def main() -> None:
             # Mirror argparse --help: print usage without starting an agent.
             # Detected anywhere ("SHSCode deploy --help", "SHSCode --help deploy").
             parser.print_help()
+            return
+
+        # v4.3.0: detached daemon run — the task must NOT die with this shell.
+        # Double-fork + setsid + fresh exec; survives terminal close, SSH
+        # disconnect, and the process-tree cleanup of the tool that started
+        # it. The daemon registers itself in ~/.shscode/runs/<run_id>/.
+        if args.detach:
+            from app.daemon import start_detached_run, new_run_id
+            run_id = new_run_id()
+            session_id = "detached-" + run_id.split("-")[-1]
+            daemon_argv = ["-m", "app"]
+            daemon_argv += args.prompt
+            if args.model:
+                daemon_argv += ["--model", args.model]
+            if args.profile:
+                daemon_argv += ["--profile", args.profile]
+            if args.max_steps is not None:
+                daemon_argv += ["--max-steps", str(args.max_steps)]
+            if args.no_color:
+                daemon_argv += ["--no-color"]
+            daemon_argv += ["--session", session_id]
+            # the daemon inherits env (incl. this var) across exec — it lets
+            # the one-shot path keep its registry entry's status truthful
+            os.environ["SHSCODE_DETACHED_RUN_ID"] = run_id
+            info = start_detached_run(
+                daemon_argv, run_id=run_id, session_id=session_id,
+                prompt=prompt_text, detached_by="cli", cwd=os.getcwd())
+            print(f"Detached run started:  {info['run_id']}")
+            print(f"  session:   {session_id}")
+            print(f"  log:       {info['log_path']}")
+            print(f"  registry:  {info['registry']}")
+            print("Monitor:   SHSCode --runs   ·   attach:   SHSCode --attach "
+                  f"{info['run_id']}")
+            print("The task survives this terminal closing. If it is interrupted, "
+                  "state is checkpointed and resumable (SHSCode --continue).")
             return
 
         async def _run_once():
@@ -2415,14 +2481,50 @@ def main() -> None:
                 _print_message("system", f"Resumed {resumed} background task(s).", skin)
 
             try:
+                # v4.3.0 (lifecycle): SIGTERM cancels the run GRACEFULLY —
+                # the agent checkpoints and closes the session as
+                # 'interrupted', so a killed long-running task is never
+                # silently lost and stays resumable (--continue / /resume).
+                import signal as _signal
+                loop = asyncio.get_running_loop()
+                run_task = asyncio.create_task(agent.run(prompt_text))
+
+                def _graceful_term():
+                    print("\nSIGTERM received — checkpointing and interrupting "
+                          "(resumable via --continue)…", flush=True)
+                    run_task.cancel()
+
+                for _sig in (_signal.SIGTERM, _signal.SIGHUP):
+                    try:
+                        loop.add_signal_handler(_sig, _graceful_term)
+                    except (NotImplementedError, RuntimeError, ValueError):
+                        pass
+
                 with Spinner(verb="thinking", skin=skin):
-                    result = await agent.run(prompt_text)
-                _print_message("assistant", result or "(no output)", skin)
+                    try:
+                        result = await run_task
+                    except asyncio.CancelledError:
+                        result = None
+                        print("\nRun interrupted — state checkpointed. "
+                              "Resume with:  SHSCode --continue", flush=True)
+                if result:
+                    _print_message("assistant", result or "(no output)", skin)
                 # v3.0: surface the session id so the next one-shot can
                 # continue this conversation (SHSCode --session <id> ...).
                 sid = getattr(agent, "_session_id", None)
                 if sid:
                     _print_message("system", f"session: {sid}", skin)
+                    # v4.3.0: keep the detached-run registry truthful
+                    det_id = os.environ.get("SHSCODE_DETACHED_RUN_ID", "")
+                    if det_id:
+                        try:
+                            from app.daemon import update_run
+                            update_run(det_id, status="finished",
+                                       session_id=sid,
+                                       steps=agent._step_count,
+                                       finish_reason=getattr(agent, "_finish_reason", ""))
+                        except Exception:
+                            pass
             finally:
                 # SHS Code FIX (one-shot leak regression): complete async
                 # resource lifecycle — agent (LLM aiohttp session, tools,
