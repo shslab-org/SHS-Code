@@ -1,4 +1,4 @@
-"""v4.0.1 SHS-Code-Agent GitHub identity tests (mission §17).
+"""v4.0.1 SHS-Agent GitHub identity tests (mission §17).
 
 Pins:
 1. The Co-Authored-By trailer format (GitHub's supported credit mechanism).
@@ -19,13 +19,13 @@ class TestAgentIdentity:
     def test_trailer_format(self):
         from app.git_providers.agent_identity import DEFAULT_IDENTITY
         t = DEFAULT_IDENTITY.co_author_trailer()
-        assert t == ("Co-Authored-By: SHS-Code-Agent "
-                     "<SHS-Code-Agent@users.noreply.github.com>")
+        assert t == ("Co-Authored-By: SHS-Agent "
+                     "<337454460+SHS-Agent@users.noreply.github.com>")
         assert t.startswith("Co-Authored-By: ")
 
     def test_profile_url(self):
         from app.git_providers.agent_identity import AGENT_PROFILE_URL
-        assert AGENT_PROFILE_URL == "https://github.com/SHS-Code-Agent"
+        assert AGENT_PROFILE_URL == "https://github.com/SHS-Agent"
 
     def test_token_priority(self, monkeypatch):
         from app.git_providers import agent_identity as ai
@@ -91,12 +91,12 @@ class TestGitHubProviderCommit:
         assert out["committed"] is True
         # the commit message carries both footer and trailer
         assert "Generated with SHS-Code" in out["message"]
-        assert "Co-Authored-By: SHS-Code-Agent" in out["message"]
+        assert "Co-Authored-By: SHS-Agent" in out["message"]
         # verify on the git level too
         proc = subprocess.run(
             ["git", "log", "-1", "--pretty=%B"], cwd=tmp_path,
             capture_output=True, text=True)
-        assert "Co-Authored-By: SHS-Code-Agent" in proc.stdout
+        assert "Co-Authored-By: SHS-Agent" in proc.stdout
 
     def test_commit_without_credit(self, tmp_path):
         """v4.3.0: the old ``credit_agent=False`` bypass is GONE — work
@@ -108,9 +108,9 @@ class TestGitHubProviderCommit:
         gh = GitHubProvider(repo_dir=str(tmp_path))
         out = gh.commit("chore: no credit", credit_agent=False)
         # the trailer (and the forced author) are mandatory now
-        assert "Co-Authored-By: SHS-Code-Agent" in out["message"]
+        assert "Co-Authored-By: SHS-Agent" in out["message"]
         assert "Generated with SHS-Code" in out["message"]
-        assert out["author"].startswith("SHS-Code-Agent <")
+        assert out["author"].startswith("SHS-Agent <")
 
     def test_branch_and_log(self, tmp_path):
         from app.git_providers.github_provider import GitHubProvider

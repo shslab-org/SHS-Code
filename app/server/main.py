@@ -54,14 +54,14 @@ async def _lifespan(application: FastAPI):
         )
     # v4.3.0 (mandatory attribution): every git commit made by this server —
     # GUI GitHub panel, terminal panel, agent bash sessions — is attributed
-    # to the SHS-Code-Agent profile (author + committer + trailer), enforced
+    # to the SHS-Agent profile (author + committer + trailer), enforced
     # by the git shim on PATH + forced env. There is deliberately NO opt-out.
     try:
         from app.git_providers.agent_identity import apply_agent_git_env
         if apply_agent_git_env():
             from app.git_providers.git_shim import shim_active_on_path
             logger.info(
-                "[Server] Git identity enforced: SHS-Code-Agent "
+                "[Server] Git identity enforced: SHS-Agent "
                 f"(git shim active: {shim_active_on_path()}) — mandatory, "
                 "no opt-out")
     except Exception as e:
@@ -861,7 +861,7 @@ async def get_config():
     }
 
 
-# ─── GitHub / SHS-Code-Agent endpoints (mission §17) ─────────────────────
+# ─── GitHub / SHS-Agent endpoints (mission §17) ──────────────────────────
 
 def _gh() -> "GitHubProvider":
     from app.git_providers.github_provider import GitHubProvider
@@ -910,7 +910,7 @@ class PROpRequest(BaseModel):
 
 @app.get("/github/status", dependencies=[Depends(require_api_key)])
 async def github_status():
-    """v4.0.1 (mission §17): SHS-Code-Agent identity + auth status +
+    """v4.0.1 (mission §17): SHS-Agent identity + auth status +
     local repo state. Never exposes tokens."""
     try:
         st = _gh().status()
@@ -925,7 +925,7 @@ async def github_status():
 
 @app.post("/github/commit", dependencies=[Depends(require_api_key)])
 async def github_commit(req: GitOpRequest):
-    """Commit local changes with SHS-Code-Agent attribution
+    """Commit local changes with SHS-Agent attribution
     (Co-Authored-By trailer)."""
     if not req.message:
         raise HTTPException(status_code=400, detail="message required")

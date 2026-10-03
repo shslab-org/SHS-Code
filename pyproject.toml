@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shscode"
-version = "4.3.0"
+version = "4.4.0"
 description = "SHS Code: persistent autonomous AI coding agent by SHS Lab (Sazzad Hussain Shobuj)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -85,7 +85,7 @@ observability = [
 github = ["PyGithub>=2.3"]
 gitlab = ["python-gitlab>=4.6"]
 git-providers = ["shscode[github,gitlab]"]
-# v4.0.1: SHS-Code-Agent GitHub App identity (installation-token minting)
+# v4.0.1: SHS-Agent GitHub App identity (installation-token minting)
 github-app = ["PyJWT>=2.8", "cryptography>=42"]
 
 # File store (cloud backends)

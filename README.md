@@ -100,7 +100,7 @@
 - [70. Contact](#70-contact)
 - [71. GUI (v4.0.1)](#71-gui-v401)
 - [72. Task lifecycle integrity (v4.0.1)](#72-task-lifecycle-integrity-v401)
-- [73. SHS-Code-Agent GitHub identity (v4.0.1)](#73-shs-code-agent-github-identity-v401)
+- [73. SHS-Agent GitHub identity (v4.0.1, updated v4.4.0)](#73-shs-agent-github-identity-v401-updated-v440)
 - [74. Token streaming (v4.0.1)](#74-token-streaming-v401)
 - [75. Agnes API testing (v4.0.1)](#75-agnes-api-testing-v401)
 - [76. GUI guide & collapsible navigation (v4.1.0)](#76-gui-guide--collapsible-navigation-v410)
@@ -130,7 +130,7 @@ SHS-Code is a **tool-using coding agent** with:
 - 18 agent tools, 29 built-in skills, 4 skill levels, MCP client + server,
 - code/project intelligence over a persistent incremental index,
 - browser + web search + URL extraction,
-- Git + GitHub/GitLab/Azure DevOps/Bitbucket/Forgejo integrations with the dedicated **SHS-Code-Agent** automation identity (§73),
+- Git + GitHub/GitLab/Azure DevOps/Bitbucket/Forgejo integrations with the dedicated **SHS-Agent** automation identity (§73, §79),
 - messaging channels, cron scheduling, and webhooks,
 - single-agent, autonomous, and multi-agent (Team103) execution.
 
@@ -559,7 +559,7 @@ To work with GitHub (and other forges), SHS-Code provides `app/git_providers/`:
 
 Base features (`base.py`): repos, single repo, issues, PRs, rate-limit handling, retry with backoff, sync + async APIs. `suggested_tasks.py` proposes work from forge state. Tokens come from env vars or `~/.shscode/connectors` — never hardcoded. Requires optional `github`/`gitlab` extras (`PyGithub`, `python-gitlab`).
 
-**v4.0.1 — GitHubProvider + SHS-Code-Agent identity (§73):** the centralized facade `app/git_providers/github_provider.py` adds local git operations (clone / branch / commit / push / pull / stash / diff / log) alongside the API operations, with agent-attributed commits and one-shot authenticated push URLs (tokens are never stored in remote URLs). Reachable from the CLI (`/github status|commit|branch|push|pull|stash|diff|log|prs|issues|pr`) and the GUI GitHub panel.
+**v4.0.1 — GitHubProvider + SHS-Agent identity (§73):** the centralized facade `app/git_providers/github_provider.py` adds local git operations (clone / branch / commit / push / pull / stash / diff / log) alongside the API operations, with agent-attributed commits and one-shot authenticated push URLs (tokens are never stored in remote URLs). Reachable from the CLI (`/github status|commit|branch|push|pull|stash|diff|log|prs|issues|pr`) and the GUI GitHub panel.
 
 ---
 
@@ -1194,7 +1194,7 @@ Panels (full CLI parity):
 | **Team103** | goal runner via `POST /team103` with the honest architecture description |
 | **Workspace** | expandable file tree + file viewer (path-confined to the server workspace) |
 | **Terminal** | command execution in the server workspace |
-| **Git** | status / branch / commit / push / pull / stash / diff / log — commits carry the SHS-Code-Agent trailer |
+| **Git** | status / branch / commit / push / pull / stash / diff / log — commits carry the SHS-Agent trailer |
 | **GitHub** | agent identity card, PR creation, PR/issue lists |
 | **QA** | VerificationEngine runner (the same engine the agent uses) |
 | **Sessions** | list + message browser with final/interim separation + one-click continue |
@@ -1249,9 +1249,9 @@ The user-facing response channel carries **only the final answer** — raw tool 
 
 ---
 
-## 73. SHS-Code-Agent GitHub identity (v4.0.1)
+## 73. SHS-Agent GitHub identity (v4.0.1, updated v4.4.0)
 
-GitHub work performed by SHS-Code is attributed to the dedicated automation identity **[SHS-Code-Agent](https://github.com/SHS-Code-Agent)** rather than pretending the human user did everything.
+GitHub work performed by SHS-Code is attributed to the dedicated automation identity **[SHS-Agent](https://github.com/SHS-Agent)** — a personal user account created specifically for SHS Code — rather than pretending the human user did everything.
 
 Mechanisms (priority order):
 
@@ -1263,10 +1263,10 @@ Every commit made through the GitHubProvider (CLI `/github commit`, GUI Git pane
 ```
 Generated with SHS-Code
 
-Co-Authored-By: SHS-Code-Agent <SHS-Code-Agent@users.noreply.github.com>
+Co-Authored-By: SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>
 ```
 
-Attribution follows GitHub's actual model: the commit author reflects the authenticated account; the agent is credited as co-author (GitHub renders the profile link). The system never claims the organization owns every commit. Pushes authenticate via one-shot URLs — tokens are never stored in remote URLs. **Update (v4.2.0):** commits the agent makes directly via `bash git commit` are now attributed too — CLI and server startup export `GIT_AUTHOR_*`/`GIT_COMMITTER_*` for the SHS-Code-Agent profile (see section 77).
+Attribution follows GitHub's actual model: since v4.3.0 the commit's **author and committer themselves** are the SHS-Agent identity (not just a trailer), so GitHub resolves every commit to https://github.com/SHS-Agent and — because the account is a *user* account — credits it in the repository's **Contributors** section. Pushes authenticate via one-shot URLs — tokens are never stored in remote URLs. **Update (v4.2.0):** commits the agent makes directly via `bash git commit` are attributed too — CLI and server startup export `GIT_AUTHOR_*`/`GIT_COMMITTER_*` for the SHS-Agent profile (see section 77).
 
 ---
 
@@ -1327,21 +1327,22 @@ unread messages (UNSEEN → RFC822 → parse → dispatch → mark seen). New
 inbound webhook routes: `/messaging/webhooks/{whatsapp,teams,google-chat}`
 plus `GET /messaging/channels` for configuration status.
 
-**SHS-Code-Agent identity everywhere ("sab jagah" rule).** Every commit
+**SHS-Agent identity everywhere ("sab jagah" rule).** Every commit
 made by SHS-Code — CLI or GUI, `/github commit`, the GUI GitHub panel,
 the terminal panel, or an autonomous agent's `git commit` in bash — is
-now attributed to the agent profile
-`SHS-Code-Agent <SHS-Code-Agent@users.noreply.github.com>` as **author,
+attributed to the agent profile
+`SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>` as **author,
 committer, and co-author**, with the `Generated with SHS-Code` footer.
 `GitHubProvider.commit()` forces the identity via per-command `-c`
 overrides (your global git config is never touched), and CLI/server
 startup export `GIT_AUTHOR_*`/`GIT_COMMITTER_*` so child-process git
-operations inherit the same attribution. Opt out with
-`SHSCODE_AGENT_IDENTITY=0`.
+operations inherit the same attribution. (The old
+`SHSCODE_AGENT_IDENTITY=0` opt-out was removed in v4.3.0 — attribution
+for SHS-Code's own work is mandatory.)
 
 ---
 
-<p align="center"><b>SHS-Code 4.2.0 — Persistent Autonomous AI Coding Agent · SHS Lab</b><br/>Plan · Implement · Verify — with memory, tools, skills, MCP, Team103, streaming, GUI, and the SHS-Code-Agent identity.</p>
+<p align="center"><b>SHS-Code 4.4.0 — Persistent Autonomous AI Coding Agent · SHS Lab</b><br/>Plan · Implement · Verify — with memory, tools, skills, MCP, Team103, streaming, GUI, and the SHS-Agent identity.</p>
 
 ## 78. v4.3.0 — max_steps architecture, mandatory attribution, detached runs, resume fix
 
@@ -1366,21 +1367,17 @@ runtime can never silently disagree with what you configured.
 **GitHub attribution is now mandatory and mechanically enforced.** Every
 commit created inside SHS Code — agent bash sessions, the GUI terminal,
 the GitHub panel, runtime paths — is attributed to
-`SHS-Code-Agent <SHS-Code-Agent@users.noreply.github.com>` as author and
+`SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>` as author and
 committer plus the Co-Authored-By trailer. A **git shim**
 (`~/.shscode/shims/git`, first on the PATH of every SHS-Code child
 process) strips `--author`/`--reset-author` from `git commit` and forces
 the identity env vars, so prompt-level, flag-level and env-level bypass
 attempts are all defeated; all opt-outs (including the old
 `SHSCODE_AGENT_IDENTITY=0`) are removed. Your own shells outside SHS Code
-and your git configuration are never touched. Note the verified platform
-fact: GitHub's *Contributors* aggregation counts user and bot accounts
-only — the SHS-Code-Agent profile is currently an **Organization** and
-organizations do not appear in a repository's Contributors list (commits
-still link to the profile everywhere else). The noreply address is
-forward-compatible: if a user account named `SHS-Code-Agent` is ever
-registered, the same attribution immediately starts counting toward
-contributors — zero code changes needed.
+and your git configuration are never touched. The platform limitation
+documented at v4.3.0 (the then-identity was an Organization, excluded
+from GitHub's *Contributors* aggregation) is **resolved in v4.4.0** —
+see section 79.
 
 **Long-running tasks no longer die with the session that started them.**
 `SHSCode --detach "<task>"` runs the task as a double-forked,
@@ -1407,3 +1404,34 @@ failures are diagnosable and recoverable instead of just "handled".
 
 **Preserved:** the Agnes/API rate-limit retry and recovery behavior is
 untouched and guarded by the existing suites (868 tests green).
+
+---
+
+## 79. v4.4.0 — SHS-Agent identity migration (real GitHub contributor)
+
+The dedicated GitHub identity for SHS-Code's own work moved to the
+personal user account **[SHS-Agent](https://github.com/SHS-Agent)**
+(id `337454460`). Every active code path — `agent_identity.py`
+constants, the git shim, `GitHubProvider.commit/pull`, CLI help, server
+startup, the agent system prompt, the shipped GUI — now uses:
+
+```
+SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>
+```
+
+The email is GitHub's reserved, unspoofable `<id>+<login>` noreply form
+for that exact account, so every commit SHS Code creates resolves to
+the profile AND — because **SHS-Agent is a user account** — is credited
+in the repository's **Contributors** section once the commits land on
+the default branch (verified end-to-end on a live repository: the
+commit API reports `author.login = "SHS-Agent"`, and the repository's
+contributors list shows `SHS-Agent`). The previous organization-based
+identity is fully retired: repository-wide scans assert no trace of it
+remains in any active code path (`tests/test_v440_identity.py`). The
+rule is unchanged and still non-bypassable: human work keeps the
+human's identity (their shells outside SHS-Code are never touched);
+work performed by SHS-Code is attributed to SHS-Agent as author,
+committer, pusher-of-record for its changes, branch creator, and PR
+author, on every surface (CLI, GUI, terminal panel, autonomous agent
+sessions, cron).
+

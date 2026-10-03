@@ -9,7 +9,7 @@
                 │
                 ├── GitHubService   (API: PRs, issues, reviews, repos)
                 │
-                └── SHS-Code-Agent identity
+                └── SHS-Agent identity
                         (GitHub App token when configured, else PAT;
                          Co-Authored-By trailer on every commit)
 
@@ -34,7 +34,7 @@ def _git(args: list[str], cwd: Optional[str] = None,
          timeout: int = 60, check: bool = True) -> subprocess.CompletedProcess:
     """Run a git command, raising RuntimeError with stderr on failure.
 
-    v4.3.0: EVERY provider git command runs with the SHS-Code-Agent identity
+    v4.3.0: EVERY provider git command runs with the SHS-Agent identity
     env forced — commits the command creates (commit, merge, stash, amend…)
     are agent-attributed at the env layer on top of the per-command ``-c``
     and explicit ``--author`` used by commit(). The user's git config is
@@ -51,7 +51,7 @@ def _git(args: list[str], cwd: Optional[str] = None,
 
 
 class GitHubProvider:
-    """Unified GitHub operations with SHS-Code-Agent attribution."""
+    """Unified GitHub operations with SHS-Agent attribution."""
 
     def __init__(self, identity: Optional[AgentIdentity] = None,
                  repo_dir: Optional[str] = None):
@@ -158,7 +158,7 @@ class GitHubProvider:
 
     def commit(self, message: str, add_all: bool = True,
                credit_agent: bool = True) -> dict:
-        """Commit staged/all changes attributed to SHS-Code-Agent.
+        """Commit staged/all changes attributed to SHS-Agent.
 
         v4.3.0 (mandatory attribution): the commit AUTHOR and COMMITTER are
         forced to the agent identity via THREE independent mechanisms —
@@ -230,7 +230,7 @@ class GitHubProvider:
 
     def pull(self, remote: str = "origin", branch: Optional[str] = None) -> dict:
         """Pull remote changes. Any merge commit the pull creates is
-        attributed to SHS-Code-Agent (author + committer via -c flags
+        attributed to SHS-Agent (author + committer via -c flags
         and the forced process env) — mandatory attribution rule."""
         self._ensure_repo()
         args = agent_git_args() + ["pull", remote] + ([branch] if branch else [])

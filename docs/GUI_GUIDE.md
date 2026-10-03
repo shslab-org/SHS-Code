@@ -169,7 +169,7 @@ it uses, each step it takes. The agent's answer **streams in live** in the chat.
 
 **Step 7 — save your work.** If you like the result, use the **Git** panel to
 commit (and push). Commits are properly credited to you and to
-**SHS-Code-Agent** (the agent's GitHub identity).
+**SHS-Agent** (the agent's GitHub identity).
 
 ## 7. The 14 panels explained, one by one
 
@@ -234,7 +234,7 @@ Local version control: current branch and changes, create branches, commit
 pop stash, and view **diffs** (unstaged or staged) plus recent commits.
 
 ### ◉ GitHub
-The agent's GitHub identity card (SHS-Code-Agent, auth mode, account, profile
+The agent's GitHub identity card (SHS-Agent, auth mode, account, profile
 link) plus remote operations: **create pull requests** (with title, body,
 head/base branch, draft flag) and **list PRs / issues** for any repo you can
 access. This uses the shared GitHubProvider — the same one the CLI uses.
@@ -325,7 +325,7 @@ pull, stash, diff, log. One special behavior: commits made through SHS Code
 carry the trailer
 
 ```
-Co-Authored-By: SHS-Code-Agent <SHS-Code-Agent@users.noreply.github.com>
+Co-Authored-By: SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>
 ```
 
 so history stays honest about what the agent did, while **you remain the
@@ -334,7 +334,7 @@ author**.
 **Remote GitHub (GitHub panel):** create PRs and list PRs/issues through the
 same GitHubProvider abstraction the CLI and the agent runtime use — one
 credential path, one place to audit. The **Dashboard** and **GitHub** panels
-show which identity is active (personal account vs the SHS-Code-Agent
+show which identity is active (personal account vs the SHS-Agent
 installation identity).
 
 **Safety rails built in:**

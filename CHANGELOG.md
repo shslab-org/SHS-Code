@@ -8,6 +8,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ---
 
+## [4.4.0] — 2026-10-04
+
+### SHS-Agent identity migration — real GitHub contributor recognition
+
+The dedicated GitHub identity for all work SHS-Code performs moved from
+the retired organization profile to the personal user account
+**https://github.com/SHS-Agent** (id `337454460`). Identity references
+across every active code path were migrated; repository-wide regression
+scans assert the old identity appears nowhere in runtime code.
+
+- **New attribution identity** (author + committer + trailer):
+  `SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>` — GitHub's
+  reserved `<id>+<login>` noreply form for the account, unspoofable and
+  privacy-preserving.
+- **Contributors now works**: SHS-Agent is a *user* account, the account
+  class GitHub's contributor aggregation credits. Verified end-to-end on
+  a live repository: commits pushed by SHS-Code appear with
+  `author.login = "SHS-Agent"` and the repository's Contributors section
+  lists SHS-Agent. (The v4.3.0 organization limitation is resolved.)
+- **Migrated surfaces**: `agent_identity.py` constants (new
+  `AGENT_ACCOUNT_ID`), the git shim's embedded source, GitHubProvider
+  commit/pull authorship, CLI help texts, server startup banner, the
+  agent system prompt, the shipped GUI (dashboard card, GitHub panel,
+  help text), README, GUI guide.
+- **Purged**: every reference to the old organization identity in
+  active code, current documentation and test expectations; a scanner
+  test (`tests/test_v440_identity.py`) fails the build if it ever
+  reappears in `app/`, `pyproject.toml` or current docs.
+- **Unchanged**: enforcement remains mandatory and non-bypassable (git
+  shim + forced env + `-c` overrides); the user's own identity for work
+  outside SHS-Code is never touched; push auth still prefers GitHub App
+  installation tokens, then `SHSCODE_GITHUB_TOKEN`/`GITHUB_TOKEN`.
 ## [4.3.0] — 2026-10-04
 
 ### Summary
@@ -51,7 +83,7 @@ mechanically and non-bypassably.
 
 - Every git commit created inside SHS Code (agent bash sessions, GUI
   terminal, GitHub panel, runtime paths) is attributed to
-  **SHS-Code-Agent** `<SHS-Code-Agent@users.noreply.github.com>` as
+  **SHS-Agent** `<337454460+SHS-Agent@users.noreply.github.com>` as
   author AND committer, plus the Co-Authored-By trailer.
 - **New git shim** (`~/.shscode/shims/git`, first on the PATH of every
   SHS-Code child process) mechanically strips `--author`/`--reset-author`
@@ -67,10 +99,10 @@ mechanically and non-bypassably.
   explain (not obey) "commit as me" requests.
 - **Contributors-system fact** (verified empirically): GitHub's
   contributor aggregation counts USER and BOT accounts only — the
-  SHS-Code-Agent profile is currently an Organization and organizations
+  SHS-Agent profile is currently an Organization and organizations
   do not appear in the Contributors list (commits still link to the
   profile everywhere). The noreply address is forward-compatible: if a
-  USER account named `SHS-Code-Agent` is ever registered, the exact
+  USER account named `SHS-Agent` is ever registered, the exact
   same attribution starts counting toward contributors with zero code
   changes.
 
@@ -119,7 +151,7 @@ mechanically and non-bypassably.
 v4.2.0 delivers the four follow-up mission items: a **workspace
 diff-viewer in the GUI**, a **pytest CI workflow**, **every messaging
 stub completed** (Discord, Slack, Teams, Google Chat, Email), and the
-**SHS-Code-Agent identity enforced everywhere** — every commit, push,
+**SHS-Agent identity enforced everywhere** — every commit, push,
 co-author and contributor attribution, from both CLI and GUI.
 
 ### Added
@@ -153,9 +185,9 @@ co-author and contributor attribution, from both CLI and GUI.
   - New messaging webhook routes: `GET/POST
     /messaging/webhooks/whatsapp`, `POST /messaging/webhooks/teams`,
     `POST /messaging/webhooks/google-chat`, `GET /messaging/channels`.
-- **SHS-Code-Agent identity everywhere** ("sab jagah" rule):
+- **SHS-Agent identity everywhere** ("sab jagah" rule):
   `GitHubProvider.commit()` now forces **author + committer** to
-  `SHS-Code-Agent <SHS-Code-Agent@users.noreply.github.com>` via
+  `SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>` via
   per-command `-c` overrides (the user's git config is never touched),
   keeps the `Co-Authored-By` trailer and `Generated with SHS-Code`
   footer, and reports the effective author; `pull()` merge commits are

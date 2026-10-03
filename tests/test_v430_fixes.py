@@ -2,7 +2,7 @@
 
 1. max_steps configuration architecture (user-controlled, no silent
    swallowing, precedence, runtime respect, GUI/CLI selection).
-2. Mandatory SHS-Code-Agent GitHub attribution (git shim, no opt-out,
+2. Mandatory SHS-Agent GitHub attribution (git shim, no opt-out,
    --author/-c/env bypass defeated, user's own config untouched).
 3. Detached execution lifecycle (double-fork survival, registry,
    liveness, graceful interruption path).
@@ -285,7 +285,7 @@ class TestMaxStepsConfig:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 2. Mandatory SHS-Code-Agent attribution
+# 2. Mandatory SHS-Agent attribution
 # ═══════════════════════════════════════════════════════════════════════════
 
 class TestMandatoryAttribution:
@@ -323,7 +323,7 @@ class TestMandatoryAttribution:
         run("add", "-A")
         run("commit", "-q", "-m", "plain")
         ident = self._last_identity(run)
-        assert ident.count("SHS-Code-Agent") == 4
+        assert ident.count("SHS-Agent") == 4
 
     def test_author_flag_bypass_defeated(self, tmp_path):
         run = self._repo(tmp_path)
@@ -331,7 +331,7 @@ class TestMandatoryAttribution:
         run("add", "-A")
         run("commit", "-q", "-m", "bypass",
             "--author=Evil Hacker <evil@x.com>")
-        assert self._last_identity(run).startswith("SHS-Code-Agent|")
+        assert self._last_identity(run).startswith("SHS-Agent|")
 
     def test_split_author_flag_bypass_defeated(self, tmp_path):
         run = self._repo(tmp_path)
@@ -339,7 +339,7 @@ class TestMandatoryAttribution:
         run("add", "-A")
         run("commit", "-q", "-m", "bypass2", "--author",
             "Split Evil <se@x.com>")
-        assert self._last_identity(run).startswith("SHS-Code-Agent|")
+        assert self._last_identity(run).startswith("SHS-Agent|")
 
     def test_config_flag_bypass_defeated(self, tmp_path):
         run = self._repo(tmp_path)
@@ -347,7 +347,7 @@ class TestMandatoryAttribution:
         run("add", "-A")
         run("-c", "user.email=evil2@x.com", "-c", "user.name=Evil2",
             "commit", "-q", "-m", "cfg bypass")
-        assert self._last_identity(run).startswith("SHS-Code-Agent|")
+        assert self._last_identity(run).startswith("SHS-Agent|")
 
     def test_env_unset_bypass_defeated(self, tmp_path):
         run = self._repo(tmp_path)
@@ -358,21 +358,21 @@ class TestMandatoryAttribution:
              "git", "commit", "-q", "-m", "env bypass"],
             cwd=tmp_path, capture_output=True, text=True)
         assert run_env.returncode == 0
-        assert self._last_identity(run).startswith("SHS-Code-Agent|")
+        assert self._last_identity(run).startswith("SHS-Agent|")
 
     def test_reset_author_bypass_defeated(self, tmp_path):
         run = self._repo(tmp_path)
         (tmp_path / "e.txt").write_text("e\n")
         run("add", "-A")
         run("commit", "-q", "--reset-author", "-m", "reset bypass")
-        assert self._last_identity(run).startswith("SHS-Code-Agent|")
+        assert self._last_identity(run).startswith("SHS-Agent|")
 
     def test_global_c_flag_parsed(self, tmp_path):
         run = self._repo(tmp_path)
         (tmp_path / "f.txt").write_text("f\n")
         run("-C", str(tmp_path), "add", "-A")
         run("-C", str(tmp_path), "commit", "-q", "-m", "via -C")
-        assert self._last_identity(run).startswith("SHS-Code-Agent|")
+        assert self._last_identity(run).startswith("SHS-Agent|")
 
     def test_passthrough_commands_unaffected(self, tmp_path):
         run = self._repo(tmp_path)
@@ -393,7 +393,7 @@ class TestMandatoryAttribution:
         run("add", "-A")
         run("commit", "-q", "-m", "main work")
         run("merge", "-q", "--no-edit", "feature")
-        assert self._last_identity(run).startswith("SHS-Code-Agent|")
+        assert self._last_identity(run).startswith("SHS-Agent|")
 
     def test_user_own_config_untouched(self, tmp_path):
         run = self._repo(tmp_path)
@@ -406,17 +406,17 @@ class TestMandatoryAttribution:
         (tmp_path / "p.txt").write_text("p\n")
         gh = GitHubProvider(repo_dir=str(tmp_path))
         out = gh.commit("provider commit")
-        assert out["author"].startswith("SHS-Code-Agent <")
+        assert out["author"].startswith("SHS-Agent <")
         r = subprocess.run(
             ["git", "log", "-1", "--pretty=format:%an|%ae|%cn|%ce"],
             cwd=tmp_path, capture_output=True, text=True)
-        assert r.stdout.count("SHS-Code-Agent") == 4
-        assert "Co-Authored-By: SHS-Code-Agent" in out["message"]
+        assert r.stdout.count("SHS-Agent") == 4
+        assert "Co-Authored-By: SHS-Agent" in out["message"]
 
     def test_system_prompt_carries_attribution_mandate(self):
         from app.agent.shscode import SHS_SYSTEM_PROMPT
         assert "GIT ATTRIBUTION" in SHS_SYSTEM_PROMPT
-        assert "SHS-Code-Agent" in SHS_SYSTEM_PROMPT
+        assert "SHS-Agent" in SHS_SYSTEM_PROMPT
         assert "must not try to change it" in SHS_SYSTEM_PROMPT
 
 

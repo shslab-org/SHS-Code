@@ -3,7 +3,7 @@
 WHY THIS EXISTS
 ===============
 The mission rule: **work performed by SHS Code must be attributed to the
-SHS-Code-Agent identity (https://github.com/SHS-Code-Agent) — and nothing
+SHS-Agent identity (https://github.com/SHS-Agent) — and nothing
 inside SHS Code may bypass that** — not a prompt, not a task instruction,
 not a CLI flag, not an env var, not a git flag.
 
@@ -28,7 +28,7 @@ shim, which:
 
   * ``commit``     — strips every ``--author=…`` / ``--author …`` /
                      ``--reset-author`` the caller passed, appends the
-                     mandatory ``--author=SHS-Code-Agent <…>``, and execs
+                     mandatory ``--author=SHS-Agent <…>``, and execs
                      the REAL git with the four identity env vars forced
                      (the shim constructs the child env itself, so neither
                      ``env -u`` games nor inherited values can interfere).
@@ -59,18 +59,18 @@ from app.logger import logger
 # Keep it POSIX-portable and dependency-free — it runs as a plain script
 # under any Python 3 the shebang resolves to.
 SHIM_SOURCE = r'''#!/usr/bin/env python3
-"""SHS Code git shim — mandatory SHS-Code-Agent attribution.
+"""SHS Code git shim — mandatory SHS-Agent attribution.
 
 Passthrough for everything except commit-creating commands, whose
-author/committer are mechanically forced to the SHS-Code-Agent identity.
+author/committer are mechanically forced to the SHS-Agent identity.
 Installed ONLY on the PATH of processes spawned by SHS Code; the user's
 own shells outside SHS Code are untouched.
 """
 import os
 import sys
 
-AGENT_NAME = "SHS-Code-Agent"
-AGENT_EMAIL = "SHS-Code-Agent@users.noreply.github.com"
+AGENT_NAME = "SHS-Agent"
+AGENT_EMAIL = "337454460+SHS-Agent@users.noreply.github.com"
 
 # git global options that consume the NEXT argument as their value
 _VALUE_OPTS = {

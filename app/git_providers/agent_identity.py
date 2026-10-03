@@ -1,19 +1,20 @@
-"""SHS-Code-Agent GitHub identity — mandatory attribution (v4.3.0).
+"""SHS-Agent GitHub identity — mandatory attribution (v4.4.0).
 
 Every piece of repository work SHS Code performs — code written, bugs
 fixed, tests added, docs edited, refactors, automated chores, commits,
 pushes — is attributed to the dedicated identity:
 
-    https://github.com/SHS-Code-Agent
+    https://github.com/SHS-Agent
 
 REAL Git/GitHub attribution, not a cosmetic mention:
 
   * the commit's AUTHOR and COMMITTER are forced to
-    ``SHS-Code-Agent <SHS-Code-Agent@users.noreply.github.com>`` — GitHub
-    resolves that noreply address to the SHS-Code-Agent account and links
-    every commit to the profile (verified live: the commit API returns
-    ``author.login = "SHS-Code-Agent"``), and the Co-Authored-By trailer
-    keeps the credit visible on every commit page;
+    ``SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>`` — the
+    GitHub-reserved noreply address of the SHS-Agent USER account
+    (id 337454460), so GitHub resolves every commit to that profile
+    (verified live: the commit API returns ``author.login = "SHS-Agent"``),
+    and the Co-Authored-By trailer keeps the credit visible on every
+    commit page;
   * enforcement is MECHANICAL and CENTRAL — the git shim (see
     ``app/git_providers/git_shim.py``) intercepts every ``git`` invocation
     inside SHS Code (agent bash sessions, GUI terminal, python_execute,
@@ -27,16 +28,14 @@ turns agent attribution off for work SHS Code performs. The user's own
 identity for work they perform OUTSIDE SHS Code is untouched (the shim
 only lives on the PATH of processes spawned by SHS Code).
 
-GITHUB "CONTRIBUTORS" SYSTEM — platform fact (verified empirically):
-GitHub's contributor aggregation counts USER and BOT accounts only.
-SHS-Code-Agent is currently an ORGANIZATION, and organizations do not
-appear in a repository's Contributors list (tested on a dedicated repo:
-two org-authored commits → sidebar “No contributors”; one user-attributed
-commit → the user appears immediately). The commits still link to the
-org profile everywhere else. The noreply address is
-FORWARD-COMPATIBLE: if a USER account named ``SHS-Code-Agent`` is ever
-registered, the exact same attribution automatically counts toward
-contributors — zero code changes needed.
+GITHUB "CONTRIBUTORS" SYSTEM — v4.4.0: the dedicated identity is a USER
+account (``SHS-Agent``, type ``User``, id 337454460), which is exactly the
+account class GitHub's contributor aggregation counts. Commits pushed to
+a repository's default branch with the noreply email above are credited
+to SHS-Agent in the repository's Contributors section (verified live on
+a dedicated E2E test repository). The ID-prefixed noreply form
+(``<id>+<login>@users.noreply.github.com``) is reserved by GitHub for
+the account, so the mapping cannot be claimed by anyone else.
 """
 from __future__ import annotations
 
@@ -47,13 +46,14 @@ from typing import Optional
 
 from app.logger import logger
 
-AGENT_LOGIN = "SHS-Code-Agent"
-AGENT_PROFILE_URL = "https://github.com/SHS-Code-Agent"
-# GitHub noreply convention: <login>@users.noreply.github.com maps to the
-# account owning the login (today the organization; if a same-named USER
-# account ever exists, the SAME email maps to it — forward-compatible).
-AGENT_EMAIL = "SHS-Code-Agent@users.noreply.github.com"
-AGENT_NAME = "SHS-Code-Agent"
+AGENT_LOGIN = "SHS-Agent"
+AGENT_PROFILE_URL = "https://github.com/SHS-Agent"
+# GitHub noreply convention: <id>+<login>@users.noreply.github.com is
+# RESERVED for the account with that numeric id — commits authored with it
+# resolve to https://github.com/SHS-Agent and count in Contributors.
+AGENT_ACCOUNT_ID = "337454460"
+AGENT_EMAIL = "337454460+SHS-Agent@users.noreply.github.com"
+AGENT_NAME = "SHS-Agent"
 
 
 @dataclass
@@ -63,6 +63,7 @@ class AgentIdentity:
     name: str = AGENT_NAME
     login: str = AGENT_LOGIN
     email: str = AGENT_EMAIL
+    account_id: str = AGENT_ACCOUNT_ID
     profile_url: str = AGENT_PROFILE_URL
 
     def co_author_trailer(self) -> str:
@@ -74,6 +75,7 @@ class AgentIdentity:
             "name": self.name,
             "login": self.login,
             "email": self.email,
+            "account_id": self.account_id,
             "profile_url": self.profile_url,
             "co_author_trailer": self.co_author_trailer(),
         }
@@ -86,7 +88,7 @@ DEFAULT_IDENTITY = AgentIdentity()
 #
 # Every commit / push / co-author / contributor produced by SHS-Code —
 # whether from the CLI, the GUI, the terminal panel, or an autonomous
-# agent shell session — carries the SHS-Code-Agent profile. There is NO
+# agent shell session — carries the SHS-Agent profile. There is NO
 # opt-out: this is the mission rule and it is enforced mechanically.
 #
 # Three enforcement layers:
@@ -116,7 +118,7 @@ GIT_ENV_KEYS = (
 
 
 def agent_git_env() -> dict:
-    """Env-var dict attributing any git commit to SHS-Code-Agent."""
+    """Env-var dict attributing any git commit to SHS-Agent."""
     return {
         "GIT_AUTHOR_NAME": AGENT_NAME,
         "GIT_AUTHOR_EMAIL": AGENT_EMAIL,

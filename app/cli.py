@@ -73,7 +73,7 @@ SLASH_COMMANDS = [
     "/config", "/context", "/checkpoint", "/history", "/files", "/search",
     "/git", "/doctor", "/log", "/debug", "/clear", "/new", "/bg",
     "/sessions", "/compress", "/branch", "/exit",
-    # v4.0.1: SHS-Code-Agent GitHub operations + Team103 production entry
+    # v4.0.1: SHS-Agent GitHub operations + Team103 production entry
     "/github", "/team103",
     # Phase 2 (spec §40-§43, §28, §33, §36, §37)
     "/plan", "/usage", "/project", "/env", "/mode", "/profile",
@@ -461,7 +461,7 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             "    /connectors        — platform connectors (github, gitlab, …)\n"
             "    /channels          — configured messaging channels\n"
             "    /git               — repository state (branch, changes)\n"
-            "    /github …          — SHS-Code-Agent ops: status|commit|branch|push|pull|stash|diff|log|prs|issues|pr\n"
+            "    /github …          — SHS-Agent ops: status|commit|branch|push|pull|stash|diff|log|prs|issues|pr\n"
             "    /search <query>    — search sessions + journal (FTS)\n"
             "  System\n"
             "    /config            — effective config (secrets masked)\n"
@@ -1716,7 +1716,7 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
         return "Task queue not initialized."
 
     if command == "/github":
-        # v4.0.1 (mission §17): SHS-Code-Agent GitHub operations.
+        # v4.0.1 (mission §17): SHS-Agent GitHub operations.
         # Both the CLI and the GUI call the same GitHubProvider.
         from app.git_providers.github_provider import GitHubProvider
         parts = arg.strip().split(None, 1)
@@ -2350,7 +2350,7 @@ def main() -> None:
         raise SystemExit(follow_log(args.attach_run))
 
     # v4.2.0 ("sab jagah" rule): commits made anywhere in this process —
-    # /github commands or agent bash sessions — carry the SHS-Code-Agent
+    # /github commands or agent bash sessions — carry the SHS-Agent
     # identity (author, committer, Co-Authored-By trailer).
     try:
         from app.git_providers.agent_identity import apply_agent_git_env

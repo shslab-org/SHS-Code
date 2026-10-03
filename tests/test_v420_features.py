@@ -6,7 +6,7 @@
                                 Teams Bot Framework OAuth, Google Chat
                                 service-account JWT, Email IMAP polling,
                                 + messaging webhook routes)
-4. SHS-Code-Agent identity EVERYWHERE (commit author + committer +
+4. SHS-Agent identity EVERYWHERE (commit author + committer +
    Co-Authored-By + contributor, CLI and GUI alike)
 """
 from __future__ import annotations
@@ -25,23 +25,23 @@ _GUI = ROOT / "app" / "server" / "static" / "gui.html"
 
 
 # ═════════════════════════════════════════════════════════════════════════
-# 4. SHS-Code-Agent identity — "sab jagah"
+# 4. SHS-Agent identity — "sab jagah"
 # ═════════════════════════════════════════════════════════════════════════
 
 class TestAgentIdentityEverywhere:
     def test_agent_git_env_keys(self):
         from app.git_providers.agent_identity import agent_git_env
         env = agent_git_env()
-        assert env["GIT_AUTHOR_NAME"] == "SHS-Code-Agent"
-        assert env["GIT_AUTHOR_EMAIL"] == "SHS-Code-Agent@users.noreply.github.com"
-        assert env["GIT_COMMITTER_NAME"] == "SHS-Code-Agent"
-        assert env["GIT_COMMITTER_EMAIL"] == "SHS-Code-Agent@users.noreply.github.com"
+        assert env["GIT_AUTHOR_NAME"] == "SHS-Agent"
+        assert env["GIT_AUTHOR_EMAIL"] == "337454460+SHS-Agent@users.noreply.github.com"
+        assert env["GIT_COMMITTER_NAME"] == "SHS-Agent"
+        assert env["GIT_COMMITTER_EMAIL"] == "337454460+SHS-Agent@users.noreply.github.com"
 
     def test_agent_git_args(self):
         from app.git_providers.agent_identity import agent_git_args
         args = agent_git_args()
-        assert "user.name=SHS-Code-Agent" in args
-        assert "user.email=SHS-Code-Agent@users.noreply.github.com" in args
+        assert "user.name=SHS-Agent" in args
+        assert "user.email=337454460+SHS-Agent@users.noreply.github.com" in args
 
     def test_apply_agent_git_env(self, monkeypatch):
         from app.git_providers import agent_identity as ai
@@ -92,19 +92,19 @@ class TestAgentIdentityEverywhere:
         (repo / "change.txt").write_text("new content\n")
         result = provider.commit("test: agent attribution")
         assert result["committed"] is True
-        assert result["author"] == ("SHS-Code-Agent "
-                                    "<SHS-Code-Agent@users.noreply.github.com>")
+        assert result["author"] == ("SHS-Agent "
+                                    "<337454460+SHS-Agent@users.noreply.github.com>")
 
         out = subprocess.run(
             ["git", "log", "-1",
              "--pretty=format:%an¦%ae¦%cn¦%ce¦%b"],
             cwd=repo, capture_output=True, text=True, check=True).stdout
         name, email, cname, cemail, body = out.split("¦")
-        assert name == "SHS-Code-Agent"
-        assert email == "SHS-Code-Agent@users.noreply.github.com"
-        assert cname == "SHS-Code-Agent"          # committer too
-        assert cemail == "SHS-Code-Agent@users.noreply.github.com"
-        assert "Co-Authored-By: SHS-Code-Agent" in body
+        assert name == "SHS-Agent"
+        assert email == "337454460+SHS-Agent@users.noreply.github.com"
+        assert cname == "SHS-Agent"          # committer too
+        assert cemail == "337454460+SHS-Agent@users.noreply.github.com"
+        assert "Co-Authored-By: SHS-Agent" in body
         assert "Generated with SHS-Code" in body
 
     def test_server_lifespan_applies_identity(self, monkeypatch):
@@ -114,7 +114,7 @@ class TestAgentIdentityEverywhere:
             monkeypatch.delenv(k, raising=False)
         monkeypatch.delenv("SHSCODE_AGENT_IDENTITY", raising=False)
         ai.apply_agent_git_env()
-        assert ai.os.environ["GIT_AUTHOR_NAME"] == "SHS-Code-Agent"
+        assert ai.os.environ["GIT_AUTHOR_NAME"] == "SHS-Agent"
 
 
 # ═════════════════════════════════════════════════════════════════════════
