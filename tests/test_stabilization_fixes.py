@@ -760,18 +760,59 @@ class TestFinalAnswerSemantics:
 
     @pytest.mark.asyncio
     async def test_tool_call_then_text_answer(self):
-        """Normal coding flow: tool call → observation → text summary = final."""
+        """Normal coding flow: tool call → observation → text summary = final.
+
+        v4.0.1: the user-facing result is the model's FINAL ANSWER ONLY —
+        raw tool outputs / '[system: terminate]' markers must NOT leak into
+        the assistant channel. The script repeats the text answer so the
+        plan gate's bounded nudges (3) are consumed and the answer stands.
+        """
         from app.agent.shscode import SHSCode
         from tests.test_integration_e2e import ScriptedLLM
         agent = SHSCode()
         agent.llm = ScriptedLLM([
             ("tool", ("bash", {"command": "echo stable3"})),
             ("text", "The command printed stable3. Done."),
+            ("text", "The command printed stable3. Done."),
+            ("text", "The command printed stable3. Done."),
+            ("text", "The command printed stable3. Done."),
         ])
         agent._max_steps = 10
         result = await agent.run("run echo and report output")
         assert "stable3" in (result or ""), result
         assert agent.state.name == "FINISHED"
+        # v4.0.1 (mission §4): internal execution details must not appear
+        # in the user-facing response channel.
+        assert "[system: terminate]" not in result
+        assert "Tool call (" not in result
+        assert "Agent terminated" not in result
+
+    @pytest.mark.asyncio
+    async def test_max_steps_is_partial_not_completed(self):
+        """v4.0.1 (mission §3 — no fake completion): when the step budget is
+        exhausted mid-work the journal records status='partial', NOT
+        'completed', and the user-facing response honestly states the task
+        did not finish."""
+        from app.agent.shscode import SHSCode
+        from app.state import Journal
+        from tests.test_integration_e2e import ScriptedLLM
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as td:
+            j = Journal(db_path=os.path.join(td, "journal.db"))
+            agent = SHSCode()
+            agent.journal = j
+            agent.llm = ScriptedLLM([
+                ("tool", ("bash", {"command": "echo working"})),
+            ] * 10)
+            agent._max_steps = 3
+            result = await agent.run("keep working on a big task")
+            assert agent._step_count >= 3
+            task = await j.get_task(agent._journal_task_id)
+            assert task is not None
+            assert task["status"] == "partial", (
+                f"budget exhaustion must be 'partial', got {task['status']}")
+            assert "did not finish" in result
+            j.close()
 
 
 class TestConfigLayerDeepMerge:

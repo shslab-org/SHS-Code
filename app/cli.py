@@ -20,6 +20,7 @@ Slash commands — all backed by real functionality:
   /model /models /providers /provider /skills /skill /mcp /tools
   /channels /connectors /config /context /checkpoint /history /files
   /search /git /doctor /log /debug /clear /new /bg /sessions /compress
+  /team103
   /branch /exit
 
 Plain `exit` also exits. Ctrl+C during a run interrupts the task (state is
@@ -72,6 +73,8 @@ SLASH_COMMANDS = [
     "/config", "/context", "/checkpoint", "/history", "/files", "/search",
     "/git", "/doctor", "/log", "/debug", "/clear", "/new", "/bg",
     "/sessions", "/compress", "/branch", "/exit",
+    # v4.0.1: Team103 production entry (was test-only wiring)
+    "/team103",
     # Phase 2 (spec §40-§43, §28, §33, §36, §37)
     "/plan", "/usage", "/project", "/env", "/mode", "/profile",
     "/rollback", "/verify",
@@ -425,6 +428,7 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             "    /clear             — clear screen\n"
             "    /new               — fresh session (memory persists on disk)\n"
             "    /bg <task>         — background queue   · /tasks to monitor\n"
+            "    /team103 <goal>   — 103-worker execution layer (PM→Architect→engineers→QA)\n"
             "    /sessions …        — list|history|send|spawn|switch|rename|archive|delete\n"
             "    /compress          — structured context compaction (state-preserving)\n"
             "    /branch            — branch current session\n"
@@ -1662,6 +1666,45 @@ async def _handle_slash(cmd: str, agent=None, session_id: str = "",
             return f"Task submitted to background queue: {task.id}\nUse /tasks to monitor progress."
         return "Task queue not initialized."
 
+    if command == "/team103":
+        # v4.0.1 (mission §2/§13): Team103 previously had NO production entry
+        # point — tests-only wiring. It is now reachable from the CLI.
+        if not arg:
+            return ("Usage: /team103 <goal>\n"
+                    "Runs the 103-worker execution layer: 1 PM + 1 Architect "
+                    "+ up to 100 coroutine engineers + 1 QA gate.\n"
+                    "Workers are lightweight coroutines sharing one LLM engine, "
+                    "NOT 103 independent model instances.")
+        from rich.console import Console
+        console = Console()
+        console.print(f"[cyan]● Team103[/cyan] decomposing goal with PM → "
+                      "Architect → engineers → QA…")
+        try:
+            from app.v4.wiring import run_team103
+            report = await run_team103(arg)
+        except Exception as e:
+            return f"Team103 run failed: {e}"
+        # TeamResult: team_id, worker_results, merged_files, conflicts,
+        # qa_passed, qa_detail, duration_s, peak_concurrency, stats
+        stats = getattr(report, "stats", {}) or {}
+        lines = [f"Team103[{report.team_id}] finished in {report.duration_s:.1f}s — "
+                 f"{len(report.worker_results)} worker result(s), "
+                 f"{len(report.merged_files)} file(s) touched, "
+                 f"peak concurrency {report.peak_concurrency}, "
+                 f"avg confidence {stats.get('avg_confidence', 0):.2f}."]
+        if report.merged_files:
+            lines.append("Changed: " + ", ".join(report.merged_files[:12]))
+        if report.conflicts:
+            lines.append(f"⚠ Conflicts: {list(report.conflicts)[:5]}")
+        unresolved = [u for w in report.worker_results for u in w.unresolved]
+        if unresolved:
+            lines.append("Unresolved: " + "; ".join(unresolved[:5]))
+        if report.qa_passed:
+            lines.append("✓ QA gate passed. " + report.qa_detail)
+        else:
+            lines.append(f"✗ QA gate FAILED: {report.qa_detail}")
+        return "\n".join(lines)
+
     return f"Unknown command: {command}. Type /help for help."
 
 
@@ -1869,7 +1912,13 @@ def _get_session():
 # ──────────────────────────────────────────────────────────────────────────────
 
 async def _execute_background_task(task_entry) -> str:
-    """Execute a task from the background queue."""
+    """Execute a task from the background queue.
+
+    v4.0.1 (mission §3 — no fake completion): a failed agent run must RAISE
+    so the TaskQueue records status=FAILED. The old version swallowed every
+    exception into the string "Task failed: {e}" — a non-raising return made
+    TaskQueue mark the task COMPLETED with a failure message as its result.
+    """
     from app.agent.shscode import SHSCode
     agent = SHSCode()
     try:
@@ -1882,11 +1931,21 @@ async def _execute_background_task(task_entry) -> str:
             _logger.info(f"[BG Task {task_entry.id}] Restored from checkpoint at step {task_entry.checkpoint.step_count}")
 
         result = await agent.run(task_entry.prompt)
+        # v4.0.1: agent.run() returns honest text instead of raising — check
+        # the agent state to propagate failure to the queue.
+        from app.schema import AgentState
+        if agent.state == AgentState.ERROR:
+            raise RuntimeError(result or "agent run failed")
         return result or "Task completed (no output)"
     except Exception as e:
-        return f"Task failed: {e}"
+        from app.logger import logger
+        logger.error(f"[BG Task {getattr(task_entry, 'id', '?')}] failed: {e}")
+        raise   # v4.0.1: NEVER swallow — TaskQueue must record FAILED
     finally:
-        await agent.cleanup()
+        try:
+            await agent.cleanup()
+        except Exception:
+            pass
 
 
 # ──────────────────────────────────────────────────────────────────────────────

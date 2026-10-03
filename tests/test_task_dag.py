@@ -29,8 +29,10 @@ class TestDependencyRules:
             b = await g.add_node("implement api", depends_on=[a.node_id])
             ok, msg = await g.complete_node(b.node_id)
             assert ok is False
-            # v3.0.3: READY (never-started) deps still block completion
-            assert "dependencies not started yet" in msg
+            # v4.0.1: ANY non-terminal dependency (pending/ready/active/
+            # retryable/blocked/failed) blocks completion — the old code
+            # only blocked pending/ready and silently auto-completed active.
+            assert "dependencies not finished" in msg
             assert b.status != "completed"
             # now complete dep, then dependent succeeds
             ok, _ = await g.complete_node(a.node_id)
@@ -39,11 +41,12 @@ class TestDependencyRules:
             assert ok and "completed" in msg
         asyncio.run(run())
 
-    def test_active_dep_auto_completes_with_successor(self, journal):
-        """v3.0.3: an ACTIVE dependency (work started) auto-completes when
-        its successor completes — the model was mid-step and moved on; the
-        old hard block leaked 'ERROR: cannot complete …' noise into final
-        answers even though the real work was done."""
+    def test_active_dep_no_longer_auto_completes(self, journal):
+        """v4.0.1 (no fake completion — mission §3): an ACTIVE dependency
+        (work started but never finished) must NOT silently flip to
+        'completed' when its successor completes. That auto-complete lied
+        about plan state. The successor is refused until the dependency is
+        genuinely completed or explicitly skipped."""
         async def run():
             tid = await journal.task_start("build api")
             g = await TaskGraph(journal, tid).load()
@@ -53,9 +56,15 @@ class TestDependencyRules:
             ok, _ = await g.start_node(a.node_id)
             assert a.status == "active"
             ok, msg = await g.complete_node(b.node_id)
+            assert ok is False
+            assert "dependencies not finished" in msg
+            assert a.status == "active"      # NOT silently completed
+            assert b.status != "completed"
+            # explicit skip is the honest escape hatch
+            ok, _ = await g.skip_node(a.node_id)
+            assert ok
+            ok, msg = await g.complete_node(b.node_id)
             assert ok, msg
-            assert "auto-completed active deps" in msg
-            assert a.status == "completed"
             assert b.status == "completed"
         asyncio.run(run())
 

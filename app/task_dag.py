@@ -137,31 +137,29 @@ class TaskGraph:
         node = self._nodes.get(node_id)
         if not node:
             return False, f"node {node_id} not found"
-        # v3.0.3: dependencies that are ACTIVE (work demonstrably started —
-        # files written, commands run) auto-complete when their successor is
-        # completed: the model proves completion through real work, and the
-        # old hard block leaked "ERROR: cannot complete … dependencies not
-        # completed" noise into final answers. PENDING/READY dependencies
-        # (work never started) still hard-block — skipping them would lie
-        # about the plan state.
-        unmet = [d for d in node.depends_on
-                 if self._nodes.get(d) and self._nodes[d].status in ("pending", "ready")]
-        auto = [d for d in node.depends_on
-                if self._nodes.get(d) and self._nodes[d].status in ("active", "retryable")]
-        for d in auto:
-            dep = self._nodes[d]
-            dep.status = "completed"
-            await self._persist(dep)
+        # v4.0.1 (mission §3 — strict dependency semantics): a node may only
+        # be marked completed when EVERY dependency reached a terminal,
+        # successful-or-explicitly-skipped state (completed | skipped).
+        # The old code silently auto-completed ACTIVE/RETRYABLE dependencies
+        # when their successor completed — a dependency whose work never
+        # finished was reported as done. That is exactly the fake-completion
+        # pathology this version removes: finish, recover, or explicitly
+        # skip the dependency first.
+        unmet = [
+            d for d in node.depends_on
+            if self._nodes.get(d)
+            and self._nodes[d].status not in ("completed", "skipped")
+        ]
         if unmet:
-            return False, (f"cannot complete '{node.title}': dependencies not"
-                           f" started yet: {', '.join(unmet)}")
+            unfinished = ", ".join(
+                f"{d} ({self._nodes[d].status})" for d in unmet)
+            return False, (
+                f"cannot complete '{node.title}': dependencies not finished: "
+                f"{unfinished}. Complete them (or mark them skipped if truly "
+                f"not needed) before completing this step.")
         node.status = "completed"
         self._recompute_statuses()
         await self._persist(node)
-        if auto:
-            await self.sync_to_task()
-            return True, (f"completed: {node.title} "
-                          f"(auto-completed active deps: {', '.join(auto)})")
         return True, f"completed: {node.title}"
 
     async def start_node(self, node_id: str) -> Tuple[bool, str]:

@@ -205,10 +205,40 @@ def get_team103(engine_fn=None, **cfg_kw):
             async def _default_engine(spec, wid):
                 from app.agent.shscode import SHSCode
                 from app.v4.merger import WorkerResult
+                from app.schema import AgentState
                 try:
                     agent = SHSCode()
-                    out = await agent.run(f"{spec.title}\nContext: {spec.context_slice[:2000]}\nFiles: {','.join(spec.files[:5])}")
-                    return WorkerResult(wid, list(spec.files), [], out[:3000], [], [], 0.75)
+                    out = await agent.run(
+                        f"{spec.title}\nContext: {spec.context_slice[:2000]}"
+                        f"\nFiles: {','.join(spec.files[:5])}")
+                    # v4.0.1 (mission §3): honest confidence keyed off the
+                    # agent's ACTUAL finish reason — previously a hardcoded
+                    # 0.75 regardless of whether the work really finished.
+                    reason = getattr(agent, "_finish_reason", "unknown")
+                    if agent.state == AgentState.FINISHED and reason in (
+                            "final_answer", "terminate", "done_pattern"):
+                        conf, unresolved = 0.9, []
+                    elif agent.state == AgentState.FINISHED:
+                        conf = 0.4   # partial (budget exhausted mid-work)
+                        unresolved = [f"{spec.title} (stopped: {reason})"]
+                    else:
+                        conf = 0.2   # error
+                        unresolved = [f"{spec.title} (failed: {reason})"]
+                    # real changed files from this run's journal (not the
+                    # spec's wishlist)
+                    files = []
+                    try:
+                        if agent.journal and getattr(agent, "_journal_task_id", None):
+                            task = await agent.journal.get_task(agent._journal_task_id)
+                            files = sorted({
+                                f.get("path", "") for f in (task or {}).get("files_changed", [])
+                                if f.get("path")
+                            }) if task else []
+                    except Exception:
+                        files = []
+                    return WorkerResult(
+                        wid, files or list(spec.files), [], out[:3000], [],
+                        unresolved, conf)
                 except Exception as e:
                     from app.v4.merger import WorkerResult as _WR
                     return _WR(wid, [], [], f"error: {e}", [], [spec.title], 0.2)

@@ -86,7 +86,11 @@ CREATE INDEX IF NOT EXISTS idx_journal_task ON journal(task_id, ts);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 """
 
-# statuses: queued | in_progress | paused | completed | failed | interrupted
+# statuses: queued | in_progress | paused | completed | partial | failed | interrupted
+# (+'blocked' via set_blocked, +'verified' via record_verification)
+# 'partial' (v4.0.1 integrity fix): the run STOPPED before verified completion —
+# step/token budget exhausted, or the model claimed "done" while plan steps
+# were still unfinished. The task is NOT completed; /resume can continue it.
 
 # ── Phase 2 (spec §6-§9): Task DAG table + Work State 2.0 columns ──
 _DAG_SCHEMA = """
@@ -260,6 +264,25 @@ class Journal:
 
     async def task_pause(self, task_id: str) -> None:
         await self.task_update(task_id, status="paused")
+
+    async def task_partial(self, task_id: str, reason: str,
+                           completed: str = "", needed: str = "") -> None:
+        """v4.0.1 (mission §3 — no fake completion): mark a task PARTIAL.
+
+        Used when the agent loop stopped without a verified final answer:
+        max-step/token-budget exhaustion, or a "done" claim with unfinished
+        plan steps. The task is explicitly NOT completed — this is the honest
+        middle state between completed and failed. ``blocked_reason`` carries
+        the human-readable explanation so /resume and the GUI can show it.
+        """
+        await self.task_update(
+            task_id, status="partial", blocked_reason=reason[:1000],
+            next_action="/resume to continue this task from its checkpoint",
+            current_step=(completed or None),
+        )
+        await self._log(task_id, "task_partial", None, {"reason": reason[:500]})
+        from app.activity import emit
+        emit("task_partial", task_id=task_id, reason=reason[:80])
 
     async def mark_interrupted_running_tasks(self) -> int:
         """On startup: any 'in_progress' task from a dead process becomes

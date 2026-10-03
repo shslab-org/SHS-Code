@@ -455,6 +455,7 @@ tool or different arguments — DO NOT repeat the same failing call.
                     and self._tool_call_count == 0
                 ):
                     self._final_answer = content
+                    self._finish_reason = "final_answer"
                     self.state = AgentState.FINISHED
                     return content
                 # NARRATION GUARD (live NIM finding #2): mid-tier models
@@ -518,6 +519,7 @@ tool or different arguments — DO NOT repeat the same failing call.
                 # answer so run()'s finally-block persists it to the session
                 # DB for the next turn / model switch.
                 self._final_answer = content
+                self._finish_reason = "final_answer"
                 return last_msg.content
             return thought or None
 
@@ -587,6 +589,7 @@ tool or different arguments — DO NOT repeat the same failing call.
                                        "still has unfinished steps. Continue "
                                        "executing them, or mark them skipped.")
                     else:
+                        self._finish_reason = "terminate"
                         self.state = AgentState.FINISHED
             return "\n".join(outputs) if outputs else None
 
@@ -610,6 +613,7 @@ tool or different arguments — DO NOT repeat the same failing call.
                                    "still has unfinished steps. Continue "
                                    "executing them, or mark them skipped.")
                 else:
+                    self._finish_reason = "terminate"
                     self.state = AgentState.FINISHED
 
         return "\n".join(outputs) if outputs else None
@@ -768,7 +772,15 @@ tool or different arguments — DO NOT repeat the same failing call.
             if m.role == Role.ASSISTANT and m.content:
                 last_content = m.content.lower()
                 break
-        if any(re.search(p, last_content) for p in _DONE_PATTERNS):
+        # v4.0.1 (mission §3 — no fake completion): a keyword "done" match
+        # is only honored when the persisted plan has NO unfinished steps.
+        # Previously ANY assistant text containing "task complete" ended the
+        # run — a claim, not a verified state. With unfinished work the loop
+        # continues; the next text-only response hits the plan gate in act()
+        # which nudges the model to finish or explicitly skip the remainder.
+        if (any(re.search(p, last_content) for p in _DONE_PATTERNS)
+                and not await self._plan_has_unfinished_work()):
+            self._finish_reason = "done_pattern"
             self.state = AgentState.FINISHED
 
         return result
@@ -804,30 +816,8 @@ tool or different arguments — DO NOT repeat the same failing call.
         except Exception:
             return False
 
-    async def _plan_has_unfinished_work(self) -> bool:
-        """Goal-completion gate helper (spec §34). Reload the persisted
-        DAG from the journal (NOT the in-memory copy — the model may have
-        added/completed nodes via the task_dag tool, which writes to the
-        journal) and report whether any step is still
-        pending/ready/active/retryable/blocked. No plan or no journal
-        means we cannot judge goal completion — the answer stands."""
-        if self.journal is None or not getattr(self, "_journal_task_id", None):
-            return False
-        try:
-            from app.task_dag import TaskGraph
-            g = await TaskGraph(self.journal, self._journal_task_id).load()
-            unfinished = [
-                n for n in g.nodes()
-                if n.status in ("pending", "ready", "active", "retryable", "blocked")
-            ]
-            if unfinished:
-                logger.debug(
-                    f"[PlanGate] {len(unfinished)} unfinished plan step(s): "
-                    + ", ".join(n.title[:40] for n in unfinished[:4]))
-            return bool(unfinished)
-        except Exception as e:
-            logger.debug(f"[PlanGate] check skipped: {e}")
-            return False
+    # v4.0.1: _plan_has_unfinished_work() moved to BaseAgent so the bare
+    # ReActAgent gates keyword "done" claims through the same plan check.
 
     def _extract_current_goal(self) -> str:
         for m in reversed(self.memory.messages):

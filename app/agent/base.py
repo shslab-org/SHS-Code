@@ -219,6 +219,21 @@ class BaseAgent(ABC):
         # overrides an EXPLICITLY assigned _max_steps (callers/tests that
         # set agent._max_steps = 2 expect that cap to hold).
         self._default_max_steps: int = cfg.max_steps
+        # v4.0.1 (mission §3 — no fake completion): WHY did the loop end?
+        #   final_answer    — text answer stood (plan finished / no plan)
+        #   terminate       — terminate tool accepted (plan gate passed)
+        #   done_pattern    — keyword "done" match (plan gate passed)
+        #   max_steps       — step budget exhausted mid-work
+        #   token_budget    — token budget + grace exhausted
+        #   error           — unhandled exception
+        #   permission_denied — user/tool permission rejection
+        # Only final_answer / terminate / done_pattern may ever be journaled
+        # as 'completed'; budget exhaustion is journaled 'partial'.
+        self._finish_reason: str = "unknown"
+        self._final_answer: Optional[str] = None
+        # v4.0.1: raw per-step outputs (tool results etc.) — kept OUT of the
+        # user-facing return value, available to the GUI/debug consumers.
+        self.last_run_step_outputs: list[str] = []
         self._duplicate_threshold = 3
         self._task_history: Optional[TaskHistory] = None
         self._pending_db_tasks: list[asyncio.Task] = []
@@ -281,6 +296,10 @@ class BaseAgent(ABC):
         self.state = AgentState.RUNNING
         self._step_count = 0
         self._tool_call_count = 0
+        # v4.0.1: per-run finish tracking reset
+        self._finish_reason = "unknown"
+        self._final_answer = None
+        self.last_run_step_outputs = []
         self._task_history = TaskHistory(
             task_id=str(uuid.uuid4())[:8],
             original_goal=prompt,
@@ -465,6 +484,7 @@ class BaseAgent(ABC):
                 if budget.is_exhausted:
                     if budget.grace_used:
                         logger.warning("[BaseAgent] Token budget + grace exhausted. Stopping.")
+                        self._finish_reason = "token_budget"
                         self.state = AgentState.FINISHED
                         break
                     else:
@@ -542,14 +562,20 @@ class BaseAgent(ABC):
 
             if self._step_count >= self._max_steps and self.state == AgentState.RUNNING:
                 logger.warning(f"Max steps reached ({self._max_steps}).")
+                # v4.0.1 (mission §3): step-budget exhaustion is NOT a
+                # successful completion. FINISHED here only means "the loop
+                # stopped" — the journal verdict below records 'partial'.
+                self._finish_reason = "max_steps"
                 self.state = AgentState.FINISHED
 
         except PermissionDenied as e:
             logger.error(f"Permission denied: {e}")
+            self._finish_reason = "permission_denied"
             self.state = AgentState.ERROR
             results.append(f"Permission denied: {e}")
         except Exception as e:
             logger.exception(f"Unhandled error: {e}")
+            self._finish_reason = "error"
             self.state = AgentState.ERROR
             results.append(f"Agent error: {e}")
         finally:
@@ -584,12 +610,36 @@ class BaseAgent(ABC):
             except Exception:
                 pass
             # SHS Code (spec §7/§8/§34): final journal verdict + persistent memory.
-            # Completion is recorded ONLY when the loop actually finished — never
-            # marked complete merely because the model believed it (spec §34).
+            # v4.0.1 (mission §3 — no fake completion): the verdict now keys
+            # off _finish_reason, not just AgentState. Budget exhaustion is
+            # 'partial' (explicitly unfinished), never 'completed'.
             if self.journal is not None and self._journal_task_id:
                 try:
-                    if self.state == AgentState.FINISHED:
+                    if self.state == AgentState.FINISHED and self._finish_reason in (
+                            "final_answer", "terminate", "done_pattern"):
                         await self.journal.task_complete(self._journal_task_id)
+                    elif self.state == AgentState.FINISHED:
+                        # Budget exhaustion (max_steps / token_budget) or an
+                        # unset reason — work stopped WITHOUT verified
+                        # completion. Record the honest partial state.
+                        reason = {
+                            "max_steps": (f"step budget exhausted after "
+                                          f"{self._step_count} steps "
+                                          f"({self._tool_call_count} tool calls) "
+                                          f"before the plan was finished"),
+                            "token_budget": ("token budget + grace call exhausted "
+                                             "before the task finished"),
+                        }.get(self._finish_reason, "run stopped before completion")
+                        try:
+                            unfinished = await self._plan_unfinished_summary()
+                        except Exception:
+                            unfinished = ""
+                        await self.journal.task_partial(
+                            self._journal_task_id, reason=reason,
+                            completed=(f"{self._step_count} steps, "
+                                       f"{self._tool_call_count} tool calls"),
+                            needed=unfinished[:300],
+                        )
                     elif self.state == AgentState.ERROR:
                         # SHS Code Phase 2 (spec §44/§47): classify the final
                         # error — REQUIRES_USER marks the task BLOCKED (never lost)
@@ -633,15 +683,84 @@ class BaseAgent(ABC):
 
         budget = self._effective_budget
         logger.info(
-            f"Finished. state={self.state} steps={self._step_count} "
-            f"tokens={budget.summary()}"
+            f"Finished. state={self.state} reason={self._finish_reason} "
+            f"steps={self._step_count} tokens={budget.summary()}"
         )
-        return "\n".join(results) if results else "(Agent completed with no text output.)"
+        # v4.0.1 (mission §4 — separate internal events from user messages):
+        # the user-facing return value is the FINAL ANSWER ONLY. Raw tool
+        # outputs / retry diagnostics / "Agent terminated" strings live in
+        # self.last_run_step_outputs for debug/GUI consumers, never in the
+        # assistant channel. Fallbacks are honest about incompleteness.
+        self.last_run_step_outputs = list(results)
+        final = (getattr(self, "_final_answer", None) or "").strip()
+        if self.state == AgentState.ERROR:
+            return (final or (results[-1] if results else "The task failed."))
+        if final:
+            return final
+        if self._finish_reason in ("max_steps", "token_budget"):
+            return ("The task did not finish: "
+                    + ("the step budget" if self._finish_reason == "max_steps"
+                       else "the token budget")
+                    + f" was exhausted after {self._step_count} steps and "
+                      f"{self._tool_call_count} tool calls. Progress so far is "
+                      "checkpointed — run /resume to continue it.")
+        # No explicit final answer and no budget exhaustion (e.g. immediate
+        # terminate): surface the last meaningful assistant text if any.
+        for m in reversed(self.memory.messages):
+            if m.role.value == "assistant" and (m.content or "").strip():
+                return m.content.strip()
+        return "(Agent completed with no text output.)"
+
+    async def _plan_unfinished_summary(self) -> str:
+        """v4.0.1: human-readable list of unfinished plan steps for the
+        honest 'partial' journal verdict. Empty when no plan/unfinished work."""
+        if self.journal is None or not getattr(self, "_journal_task_id", None):
+            return ""
+        try:
+            from app.task_dag import TaskGraph
+            g = await TaskGraph(self.journal, self._journal_task_id).load()
+            unfinished = [
+                n for n in g.nodes()
+                if n.status in ("pending", "ready", "active", "retryable", "blocked")
+            ]
+            if not unfinished:
+                return ""
+            titles = ", ".join(n.title[:60] for n in unfinished[:6])
+            more = f" (+{len(unfinished) - 6} more)" if len(unfinished) > 6 else ""
+            return f"unfinished plan steps: {titles}{more}"
+        except Exception:
+            return ""
+
+    async def _plan_has_unfinished_work(self) -> bool:
+        """Goal-completion gate helper (spec §34). Reload the persisted
+        DAG from the journal (NOT the in-memory copy — the model may have
+        added/completed nodes via the task_dag tool, which writes to the
+        journal) and report whether any step is still
+        pending/ready/active/retryable/blocked. No plan or no journal
+        means we cannot judge goal completion — the answer stands.
+        v4.0.1: lives on BaseAgent so every agent type (ReAct, ToolCall)
+        gates keyword "done" claims identically."""
+        if self.journal is None or not getattr(self, "_journal_task_id", None):
+            return False
+        try:
+            from app.task_dag import TaskGraph
+            g = await TaskGraph(self.journal, self._journal_task_id).load()
+            unfinished = [
+                n for n in g.nodes()
+                if n.status in ("pending", "ready", "active", "retryable", "blocked")
+            ]
+            if unfinished:
+                logger.debug(
+                    f"[PlanGate] {len(unfinished)} unfinished plan step(s): "
+                    + ", ".join(n.title[:40] for n in unfinished[:4]))
+            return bool(unfinished)
+        except Exception as e:
+            logger.debug(f"[PlanGate] check skipped: {e}")
+            return False
 
     # ------------------------------------------------------------------
     # Mode + profile (Phase 2, spec §36/§37)
     # ------------------------------------------------------------------
-
     def _replace_tagged_system(self, tag: str, new_msg) -> None:
         """v3.1: replace a tagged system message in place (by content prefix)
         instead of appending a duplicate copy on every run."""

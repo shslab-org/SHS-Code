@@ -155,10 +155,15 @@ execute step-by-step with progress tracking.
 
             lower = (thought + (result or "")).lower()
             if any(kw in lower for kw in ["task complete", "task is complete", "all done", "finished"]):
-                self.state = AgentState.FINISHED
-                if current_step:
+                # v4.0.1: keyword claims alone do not verify completion —
+                # gate on the persisted plan like ToolCallAgent does.
+                if not await self._plan_has_unfinished_work():
+                    self._finish_reason = "done_pattern"
+                    self.state = AgentState.FINISHED
+                if self.state == AgentState.FINISHED and current_step:
                     current_step.resolved = True
-                return result
+                if self.state == AgentState.FINISHED:
+                    return result
 
             if attempt < self.MAX_REFLECT_RETRIES:
                 reflection = await self.reflect(goal, obs)
@@ -169,6 +174,7 @@ execute step-by-step with progress tracking.
                 if reflection.solved:
                     if current_step:
                         current_step.resolved = True
+                    self._finish_reason = "final_answer"
                     self.state = AgentState.FINISHED
                     return result
 
@@ -184,6 +190,7 @@ execute step-by-step with progress tracking.
                 if current_step:
                     current_step.resolved = bool(result)
                 if result:
+                    self._finish_reason = "final_answer"
                     self.state = AgentState.FINISHED
                 return result
 

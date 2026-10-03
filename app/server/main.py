@@ -490,6 +490,40 @@ async def run_multi_agent(req: MultiAgentRequest):
     return {"result": result}
 
 
+class Team103Request(BaseModel):
+    goal: str
+    max_workers: int = 100
+
+
+@app.post("/team103", dependencies=[Depends(require_api_key)])
+async def run_team103(req: Team103Request):
+    """v4.0.1: Team103 production entry over HTTP (was test-only wiring).
+
+    Runs the 103-worker execution layer: 1 PM + 1 Architect + up to 100
+    coroutine engineers + 1 QA gate. Workers share one LLM engine — they
+    are NOT 103 independent model instances.
+    """
+    from app.v4.wiring import run_team103 as _run
+    try:
+        report = await _run(req.goal, max_workers=req.max_workers)
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:500]}
+    stats = getattr(report, "stats", {}) or {}
+    return {
+        "ok": True,
+        "team_id": report.team_id,
+        "merged_files": list(report.merged_files),
+        "conflicts": dict(report.conflicts),
+        "unresolved": [u for w in report.worker_results for u in w.unresolved],
+        "avg_confidence": float(stats.get("avg_confidence", 0.0) or 0.0),
+        "qa_passed": bool(report.qa_passed),
+        "qa_detail": report.qa_detail,
+        "duration_s": report.duration_s,
+        "peak_concurrency": report.peak_concurrency,
+        "pm_tasks": stats.get("pm_tasks"),
+    }
+
+
 # ─── Static file serving & HTML pages ─────────────────────────────────────
 
 # Mount static files (must come before catch-all routes)
