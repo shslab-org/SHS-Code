@@ -40,6 +40,40 @@ class ToolCall(BaseModel):
     function: Function
 
 
+def _safe_tool_args(raw: Optional[str]) -> str:
+    """v4.0.1 (live Agnes finding — mission §11): guarantee tool-call
+    arguments serialize as VALID JSON.
+
+    Strict OpenAI-compatible providers validate the ECHOED conversation
+    history: an assistant tool_call whose ``arguments`` is empty ("") or
+    malformed gets the whole next request rejected with
+    ``400 … arguments must be valid JSON`` — killing the run. Models DO
+    emit such calls (empty args for no-parameter tools; sloppy JSON from
+    mid-tier models). This normalizes: empty → "{}", repairable JSON is
+    passed through, irreparable → "{}" (the tool layer already handles
+    missing params gracefully).
+    """
+    if raw is None:
+        return "{}"
+    s = raw.strip()
+    if not s:
+        return "{}"
+    import json as _json
+    try:
+        _json.loads(s)
+        return s
+    except _json.JSONDecodeError:
+        # try the v4 OPT-14 repair hook (json_repair) if available
+        try:
+            from app.v4.wiring import repair_tool_args as _repair
+            fixed = _repair(s)
+            if isinstance(fixed, dict):
+                return _json.dumps(fixed)
+        except Exception:
+            pass
+        return "{}"
+
+
 class Message(BaseModel):
     role:         Role
     content:      Optional[str]           = None
@@ -89,7 +123,11 @@ class Message(BaseModel):
                     "type": tc.type,
                     "function": {
                         "name": tc.function.name,
-                        "arguments": tc.function.arguments,
+                        # v4.0.1 (live Agnes finding — Test A): empty or
+                        # malformed arguments are INVALID JSON and strict
+                        # providers 400 the whole request when the history
+                        # is echoed back. Always send a JSON object.
+                        "arguments": _safe_tool_args(tc.function.arguments),
                     },
                 }
                 for tc in self.tool_calls

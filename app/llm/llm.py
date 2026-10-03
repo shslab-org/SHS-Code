@@ -381,6 +381,12 @@ class UniversalClient:
             "content": "".join(content_parts) if content_parts else None,
         }
         if tool_acc:
+            # v4.0.1 (live Agnes finding): empty accumulated arguments ("")
+            # are INVALID JSON — strict providers 400 the next request when
+            # this message is echoed back in history. Default to "{}".
+            for acc in tool_acc.values():
+                if not (acc["function"]["arguments"] or "").strip():
+                    acc["function"]["arguments"] = "{}"
             message["tool_calls"] = [tool_acc[i] for i in sorted(tool_acc)]
         if not finish_reason:
             finish_reason = "tool_calls" if tool_acc else "stop"
