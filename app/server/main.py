@@ -722,6 +722,8 @@ async def workspace_diff(mode: str = "unstaged", max_bytes: int = 200000):
             if st != "??":
                 continue
             try:
+                if _os.path.isdir(path):
+                    continue           # untracked directories: not diffable
                 if not _os.path.isfile(path) or _os.path.getsize(path) > 100_000:
                     parsed[path] = {"diff": f"diff --git a/{path} b/{path}\n"
                                     f"new file mode 100644\n--- /dev/null\n"

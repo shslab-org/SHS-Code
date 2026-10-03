@@ -892,3 +892,19 @@ class TestMessagingModulesImport:
                      "MatrixAdapter", "IRCAdapter", "GoogleChatAdapter",
                      "WebChatAdapter", "EmailAdapter", "TwitchAdapter"):
             assert hasattr(m, name), f"{name} missing"
+
+
+class TestUntrackedDirSkip:
+    def test_untracked_dirs_not_synthesized(self, git_repo, monkeypatch):
+        """Server-owned untracked dirs (logs/, workspace/) must not appear."""
+        monkeypatch.chdir(git_repo)
+        (git_repo / "logs").mkdir()
+        (git_repo / "workspace").mkdir()
+        from fastapi.testclient import TestClient
+        from app.server import main as srv
+        with TestClient(srv.app) as tc:
+            body = tc.get("/workspace/diff?mode=head").json()
+            paths = {f["path"] for f in body["files"]}
+            assert "logs/" not in paths
+            assert "workspace/" not in paths
+            assert "untracked.txt" in paths   # real files still shown
