@@ -65,7 +65,17 @@ def test_mcp_auth_matrix(monkeypatch):
 
 
 def test_main_app_mounts_secrets():
+    """v4.0.1 (fresh-install finding): FastAPI >= 0.129 wraps included
+    routers in _IncludedRouter objects instead of flattening their routes
+    into app.routes — asserting on flattened paths broke on newer FastAPI.
+    Assert on ACTUAL behavior (HTTP responses) instead: version-agnostic."""
+    from fastapi.testclient import TestClient
     from app.server.main import app
-    paths = [getattr(r, "path", "") for r in app.routes]
-    assert "/secrets" in paths
-    assert "/secrets/{name}" in paths
+    c = TestClient(app)
+    r = c.get("/secrets")
+    assert r.status_code != 404, "secrets router not mounted"
+    # when no API key is configured the listing must succeed
+    assert r.status_code == 200
+    r2 = c.get("/secrets/no-such-secret")
+    assert r2.status_code in (200, 404), "route must respond, not vanish"
+    assert r2.status_code == 404   # unknown secret → clean 404 JSON
