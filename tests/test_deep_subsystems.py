@@ -177,16 +177,24 @@ class TestFilesystemDeep:
         assert "x * 3" in (res.output or "")
 
         # run tests -> observe FAILURE (bug: triple instead of double)
+        # PYTHONDONTWRITEBYTECODE: pyc validation uses SECOND-granularity
+        # mtime + size — 'x * 3' -> 'x * 2' is same-size, so a fast
+        # edit+rerun (CI runners) would reuse a stale __pycache__ entry
+        # and keep showing the OLD bug. This is exactly the rapid
+        # edit->rerun loop an agent performs, so the test pins the
+        # honest behavior by disabling bytecode caching here.
         (tmp_path / "test_lib.py").write_text(
             "from lib import double\nassert double(2) == 4\nprint('OK')\n")
-        res = await bash.execute(f"cd {tmp_path} && python test_lib.py")
+        res = await bash.execute(
+            f"cd {tmp_path} && PYTHONDONTWRITEBYTECODE=1 python test_lib.py")
         assert res.error or "AssertionError" in ((res.output or "") + (res.error or "")), \
             "the buggy lib must fail the test — agent must SEE the failure"
 
         # diagnose -> fix -> rerun -> verify
         await editor.execute(command="str_replace", path=str(tmp_path / "lib.py"),
                              old_str="x * 3", new_str="x * 2")
-        res = await bash.execute(f"cd {tmp_path} && python test_lib.py")
+        res = await bash.execute(
+            f"cd {tmp_path} && PYTHONDONTWRITEBYTECODE=1 python test_lib.py")
         assert "OK" in (res.output or ""), "after the fix the test must pass"
         assert (tmp_path / "lib.py").read_text() == "def double(x):\n    return x * 2\n"
 
@@ -352,6 +360,22 @@ class TestSkillsRuntime:
 class TestSandboxLocal:
     @pytest.mark.asyncio
     async def test_openshell_executes_real_command(self):
+        # Environmental guard: OpenShell uses unprivileged user namespaces
+        # (unshare), which GitHub-Actions runners and many container CI
+        # environments forbid (EACCES writing /proc/self/uid_map). The
+        # sandbox itself is fine — the runner just cannot create the
+        # namespace, so this test is skipped there (documented skip #4).
+        import shutil
+        import subprocess
+        if shutil.which("unshare") is None:
+            pytest.skip("unshare not installed — cannot test OpenShell sandbox")
+        probe = subprocess.run(
+            ["unshare", "--user", "--map-root-user", "true"],
+            capture_output=True)
+        if probe.returncode != 0:
+            pytest.skip("this environment forbids unprivileged user namespaces "
+                        f"({probe.stderr.decode(errors='replace')[:80].strip()}) — "
+                        "OpenShell sandbox untestable here")
         from app.sandbox.openshell import OpenShellSandbox
         sb = OpenShellSandbox()
         await sb.start()
