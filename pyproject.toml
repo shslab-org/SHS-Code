@@ -20,6 +20,13 @@ dependencies = [
     "aiohttp>=3.9",
     "rich>=13.0",
     "prompt_toolkit>=3.0",
+    # v4.0.1: the server + GUI are core SHS-Code surfaces now — the
+    # shscode-server entrypoint previously crashed on a default install
+    # because fastapi/uvicorn were optional extras while the console
+    # script was always installed.
+    "fastapi>=0.111",
+    "uvicorn>=0.30",
+    "websockets>=12.0",
 ]
 
 [project.optional-dependencies]
@@ -34,8 +41,9 @@ litellm = ["litellm>=1.40"]
 browser = ["playwright>=1.44", "crawl4ai>=0.3"]
 search = ["duckduckgo-search>=6.2"]
 
-# Server
-server = ["fastapi>=0.111", "uvicorn[standard]>=0.30"]
+# Server extras now core (see dependencies) — extra kept for heavyweight
+# serving additions
+server = ["uvicorn[standard]>=0.30"]
 
 # CLI
 cli = ["rich>=13.0", "prompt_toolkit>=3.0"]
