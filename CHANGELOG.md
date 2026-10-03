@@ -8,6 +8,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ---
 
+## [4.1.0] — 2026-10-03
+
+### Summary
+
+v4.1.0 is a **GUI usability release**: the requested collapsible navigation
+(slide/hide sidebar), a beginner-friendly GUI guide (in-app Help panel +
+`docs/GUI_GUIDE.md`), and one real bug found in the QA panel.
+
+### Added
+
+- **Collapsible sidebar (slide/hide navigation)** — the whole nav slides
+  off-canvas with an animated transition. Three toggle paths: the ☰ top-bar
+  button, the `☰ MENU` edge tab (visible while hidden), and
+  `Ctrl`/`Cmd`+`B`. Preference persists via `localStorage`
+  (`shs-gui-nav-hidden`). Below 820px the sidebar becomes an overlay drawer:
+  closed by default, backdrop + `Esc` close, auto-close after picking a panel.
+- **Help / Guide panel (14th GUI panel)** — plain-language quick-start
+  (first task in 3 steps), one-line panel reference for all 14 panels,
+  navigation help, chat-vs-activity explanation, task status legend,
+  keyboard shortcuts, troubleshooting, and CLI↔GUI relationship. No
+  programming knowledge assumed.
+- **`docs/GUI_GUIDE.md`** — 15-chapter complete guide for normal users:
+  layout, nav slide, first task walkthrough, every panel explained, honest
+  finish reasons, statuses, Git/GitHub safety, data locations,
+  troubleshooting, FAQ, CLI↔GUI cheat sheet. Mirrored to shs-code-docs.
+- **`tests/test_gui_nav_v410.py`** — 19 regression tests pinning the toggle
+  button, edge tab, transition CSS, keyboard binding, persistence key,
+  mobile drawer mode, backdrop/Esc close, drawer auto-close, Help panel
+  content, and the QA-badge boolean fix.
+
+### Fixed
+
+- **QA panel status badge always rendered `unknown`** — the JS compared
+  `rep.ok === True` (a Python literal leaked into browser JavaScript, where
+  `True` is undefined). Now a real boolean comparison. Found during the
+  v4.1.0 GUI audit.
+
+### Version
+
+- 4.0.1 → 4.1.0 (`app/__init__.py`, `pyproject.toml`, README, CHANGELOG).
+- Test suite: 776 collected, all green.
+
+---
+
 ## [4.0.0] — 2026-09-10
 
 ### Summary

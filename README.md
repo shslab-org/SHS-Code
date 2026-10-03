@@ -103,6 +103,7 @@
 - [73. SHS-Code-Agent GitHub identity (v4.0.1)](#73-shs-code-agent-github-identity-v401)
 - [74. Token streaming (v4.0.1)](#74-token-streaming-v401)
 - [75. Agnes API testing (v4.0.1)](#75-agnes-api-testing-v401)
+- [76. GUI guide & collapsible navigation (v4.1.0)](#76-gui-guide--collapsible-navigation-v410)
 
 ---
 
@@ -1199,8 +1200,30 @@ Panels (full CLI parity):
 | **Logs** | live tail (auto-refresh) — separate from the conversation |
 | **Memory** | MEMORY.md / USER.md / long-term memory entries |
 | **Settings** | effective config (secrets masked) + model/provider switch |
+| **Help / Guide** | plain-language quick-start, panel reference, status legend, shortcuts, troubleshooting — a condensed `docs/GUI_GUIDE.md` inside the GUI |
+
+**Collapsible navigation (v4.1.0):** the sidebar slides out of the way for full-width content — toggle with the ☰ top-bar button, the `☰ MENU` edge tab that appears while hidden, or `Ctrl`/`Cmd`+`B`. The preference persists (`localStorage`); on small screens (≤820px) the sidebar becomes an overlay drawer (closed by default, Esc/backdrop closes, auto-closes after picking a panel).
 
 CLI and GUI share the same state: a session started from the CLI can be continued in the GUI (Sessions → Continue), and both read the same journal, session DB, memory, and git state.
+
+---
+
+## 76. GUI guide & collapsible navigation (v4.1.0)
+
+Two user-facing additions:
+
+1. **Collapsible sidebar (slide/hide navigation)** — requested UX feature. The whole
+   navigation slides off-canvas with an animated transition; three ways to toggle
+   (☰ button / edge tab / `Ctrl`+`B`), state persisted in `localStorage`, and a
+   mobile drawer mode (`position: fixed` overlay + backdrop + Esc/backdrop close +
+   auto-close after panel pick) below 820px. Pinned by `tests/test_gui_nav_v410.py`.
+2. **Beginner-friendly GUI guide** — `docs/GUI_GUIDE.md` (15 chapters, plain language,
+   zero programming knowledge assumed) plus an in-app **Help / Guide** panel
+   (14th panel) with quick-start, panel reference, status legend, shortcuts and
+   troubleshooting. Mirrored to shs-code-docs.
+
+Also fixed in passing: the QA panel badge compared against Python `True`
+(`rep.ok === True` — always `unknown` in JS); now a real boolean comparison.
 
 ---
 

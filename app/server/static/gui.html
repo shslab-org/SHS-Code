@@ -23,6 +23,34 @@ body {
 #sidebar {
   width: 220px; min-width: 220px; background: var(--bg2);
   border-right: 1px solid var(--border); display: flex; flex-direction: column;
+  transition: margin-left .28s cubic-bezier(.4,0,.2,1), transform .28s cubic-bezier(.4,0,.2,1);
+}
+/* nav slide/hide: collapse the whole sidebar off-canvas (toggle: ☰ / edge tab / Ctrl+B) */
+body.nav-hidden #sidebar { margin-left: -221px; }
+#nav-toggle {
+  font-size: 15px; line-height: 1; padding: 6px 11px; flex-shrink: 0;
+  border-radius: 6px; margin-left: -6px;
+}
+#nav-show-handle {
+  position: fixed; left: 0; top: 50%; transform: translateY(-50%);
+  z-index: 60; border-radius: 0 8px 8px 0; padding: 16px 7px;
+  background: var(--bg3); border: 1px solid var(--border); border-left: none;
+  cursor: pointer; display: none; writing-mode: vertical-rl; font-size: 10.5px;
+  letter-spacing: 1.5px; color: var(--fg-dim); user-select: none;
+  transition: background .12s, color .12s; font-family: var(--sans); font-weight: 600;
+}
+#nav-show-handle:hover { background: var(--border); color: var(--fg); }
+body.nav-hidden #nav-show-handle { display: block; }
+#nav-backdrop { display: none; position: fixed; inset: 0; background: rgba(1,4,9,.55); z-index: 40; }
+@media (max-width: 820px) {
+  /* small screens: the sidebar becomes an overlay drawer */
+  #sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; z-index: 50;
+    box-shadow: 8px 0 24px rgba(1,4,9,.5);
+  }
+  body.nav-hidden #sidebar { margin-left: 0; transform: translateX(-100%); }
+  body:not(.nav-hidden) #nav-backdrop { display: block; }
+  body.nav-hidden #nav-show-handle { display: none; }
 }
 #logo {
   padding: 18px 16px; border-bottom: 1px solid var(--border);
@@ -199,6 +227,26 @@ pre.code { background: #010409; border: 1px solid var(--border); border-radius: 
 ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border); }
 ::-webkit-scrollbar-track { background: transparent; }
+/* ── Help / Guide panel ── */
+details.g { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 16px; margin-bottom: 10px; }
+details.g summary { cursor: pointer; font-weight: 600; font-size: 13.5px; color: var(--accent);
+  user-select: none; list-style: none; display: flex; align-items: center; gap: 8px; }
+details.g summary::before { content: '▸'; color: var(--fg-dim); transition: transform .15s; }
+details.g[open] summary::before { transform: rotate(90deg); }
+details.g[open] summary { margin-bottom: 8px; }
+details.g p { font-size: 13px; line-height: 1.65; margin: 6px 0; }
+details.g ul, details.g ol { margin: 6px 0 6px 22px; font-size: 13px; line-height: 1.7; }
+details.g li { margin: 3px 0; }
+details.g code, .g code { font-family: var(--mono); background: var(--bg3);
+  padding: 1px 5px; border-radius: 4px; font-size: 11.5px; }
+details.g b { color: var(--fg); }
+kbd { font-family: var(--mono); background: var(--bg3); border: 1px solid var(--border);
+  border-bottom-width: 2px; border-radius: 4px; padding: 1px 6px; font-size: 11.5px; }
+.g-step { display: flex; gap: 12px; margin: 10px 0; align-items: flex-start; }
+.g-step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--accent2); color: #fff; display: flex; align-items: center;
+  justify-content: center; font-weight: 700; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -219,12 +267,18 @@ pre.code { background: #010409; border: 1px solid var(--border); border-radius: 
     <div class="nav-item" data-panel="logs"><span class="ic">≣</span>Logs</div>
     <div class="nav-item" data-panel="memory"><span class="ic">◈</span>Memory</div>
     <div class="nav-item" data-panel="settings"><span class="ic">⚙</span>Settings</div>
+    <div class="nav-item" data-panel="help"><span class="ic">?</span>Help / Guide</div>
   </div>
   <div id="conn-status"><span class="dot off" id="ws-dot"></span><span id="ws-label">WebSocket idle</span></div>
 </div>
 
+<div id="nav-backdrop" onclick="toggleNav()" title="Close navigation"></div>
+<div id="nav-show-handle" onclick="toggleNav()" title="Show navigation (Ctrl+B)">☰ MENU</div>
+
 <div id="main">
   <div id="topbar">
+    <button id="nav-toggle" onclick="toggleNav()" title="Hide navigation (Ctrl+B)"
+            aria-label="Toggle navigation" aria-expanded="true">☰</button>
     <h2 id="topbar-title">Dashboard</h2>
     <div class="meta">
       <span id="top-model"></span>
@@ -541,6 +595,132 @@ pre.code { background: #010409; border: 1px solid var(--border); border-radius: 
     </div>
   </div>
 
+  <!-- ══════════ HELP / GUIDE ══════════ -->
+  <div class="panel" id="panel-help">
+    <div class="card" style="margin-bottom:14px">
+      <h3>SHS Code GUI — Plain-Language Guide</h3>
+      <p style="font-size:13px;line-height:1.65">
+        SHS Code is an <b>AI coding agent</b>: you describe what you want in normal language,
+        and it plans, writes and verifies code for you — while showing every step it takes.
+        This guide explains the GUI in plain words. No programming knowledge needed.
+        Full documentation lives at
+        <a href="https://github.com/shslab-org/shs-code-docs" target="_blank" style="color:var(--accent)">shs-code-docs</a>.
+      </p>
+    </div>
+
+    <details class="g" open>
+      <summary>🚀 Start here — your first task in 3 steps</summary>
+      <div class="g-step"><div class="n">1</div><div>
+        Open the <b>Agent</b> panel (left menu). If the sidebar is hidden, click
+        <b>☰</b> in the top bar or press <kbd>Ctrl</kbd>+<kbd>B</kbd>.
+      </div></div>
+      <div class="g-step"><div class="n">2</div><div>
+        Type what you want in plain language, e.g.
+        <i>"create a Python script that renames all files in a folder to lowercase"</i>,
+        then press <kbd>Enter</kbd>. <kbd>Shift</kbd>+<kbd>Enter</kbd> adds a new line instead of sending.
+      </div></div>
+      <div class="g-step"><div class="n">3</div><div>
+        Watch the <b>Activity</b> column on the right — every file the agent reads or writes,
+        every command it runs, appears there live. The final answer appears in the chat bubble.
+        Nothing is reported "done" unless it actually ran and was verified.
+      </div></div>
+      <p>That's it. Everything else in this GUI is for looking at what the agent did.</p>
+    </details>
+
+    <details class="g">
+      <summary>◧ What each panel does (one line each)</summary>
+      <ul>
+        <li><b>Dashboard</b> — the overview page: model, GitHub identity, recent tasks &amp; sessions.</li>
+        <li><b>Agent</b> — where you talk to the AI and watch it work (chat + live activity).</li>
+        <li><b>Tasks</b> — the history of jobs with their real status; click one to see its plan as a diagram.</li>
+        <li><b>Team103</b> — for very large goals: the work is split across many workers and checked by QA.</li>
+        <li><b>Workspace</b> — a file browser: click a file to view its contents.</li>
+        <li><b>Terminal</b> — run shell commands in the server's folder, from the browser.</li>
+        <li><b>Git</b> — commit, branch, push, pull, see differences — with the agent properly credited.</li>
+        <li><b>GitHub</b> — the agent's GitHub identity, plus creating/listing pull requests and issues.</li>
+        <li><b>QA</b> — run the same verification the agent uses (build, tests, lint) yourself.</li>
+        <li><b>Sessions</b> — past conversations; open one to read it or continue where you left off.</li>
+        <li><b>Logs</b> — technical system messages (diagnostics; separate from your chat by design).</li>
+        <li><b>Memory</b> — what the agent remembers about your project and about you.</li>
+        <li><b>Settings</b> — which AI model/provider to use; keys are stored, never displayed.</li>
+        <li><b>Help / Guide</b> — this page.</li>
+      </ul>
+    </details>
+
+    <details class="g">
+      <summary>↔ Showing and hiding the left menu (navigation)</summary>
+      <ul>
+        <li>Click the <b>☰</b> button at the very left of the top bar to slide the menu in/out.</li>
+        <li>When the menu is hidden, a small <b>☰ MENU</b> tab appears at the left edge — click it to bring the menu back.</li>
+        <li>Keyboard shortcut: <kbd>Ctrl</kbd>+<kbd>B</kbd> (Windows/Linux) or <kbd>Cmd</kbd>+<kbd>B</kbd> (Mac).</li>
+        <li>Your choice is remembered — the menu stays hidden (or visible) next time you open the GUI.</li>
+        <li>On a phone, the menu opens as an overlay; tap the darkened area or press <kbd>Esc</kbd> to close it.</li>
+      </ul>
+    </details>
+
+    <details class="g">
+      <summary>💬 Understanding the Agent panel (chat vs activity)</summary>
+      <p><b>Chat bubbles</b> (left) are the conversation: your messages and the agent's final answers.
+      <b>Activity feed</b> (right) is the agent's internal work log — files touched, tools used,
+      steps counted. The activity feed is <i>internal events</i>, never mixed into your conversation.</p>
+      <ul>
+        <li><b>Run Progress</b> card: current status, step number, finish reason and tool-call count.</li>
+        <li>While the agent works, its answer streams in live, word by word.</li>
+        <li><b>■ Cancel run</b> stops a run — the session and everything done so far is kept.</li>
+        <li>A run ends with an honest <b>finish reason</b> (e.g. <code>final_answer</code>, <code>max_steps</code>).
+        If something failed, you will see that it failed — the GUI never fakes success.</li>
+      </ul>
+    </details>
+
+    <details class="g">
+      <summary>🏷 What the task statuses mean</summary>
+      <ul>
+        <li><span class="badge b-gray">pending</span> — waiting; its dependencies aren't finished yet.</li>
+        <li><span class="badge b-cyan">ready</span> — all dependencies done, about to start.</li>
+        <li><span class="badge b-blue">running</span> — being worked on right now.</li>
+        <li><span class="badge b-yellow">partial</span> — stopped midway (interrupted/timeout); can be recovered.</li>
+        <li><span class="badge b-yellow">retryable</span> — failed once, will be retried.</li>
+        <li><span class="badge b-red">failed</span> / <span class="badge b-red">blocked</span> — failed / waiting on something that failed.</li>
+        <li><span class="badge b-green">completed</span> — ran and passed its checks. <b>A failed task can never become completed.</b></li>
+      </ul>
+    </details>
+
+    <details class="g">
+      <summary>⌨ Keyboard shortcuts</summary>
+      <ul>
+        <li><kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>Cmd</kbd>+<kbd>B</kbd> — hide or show the left navigation.</li>
+        <li><kbd>Enter</kbd> — send the message you typed in the Agent panel.</li>
+        <li><kbd>Shift</kbd>+<kbd>Enter</kbd> — new line inside the message box.</li>
+        <li><kbd>Esc</kbd> — close the navigation overlay on small screens.</li>
+      </ul>
+    </details>
+
+    <details class="g">
+      <summary>🔧 Troubleshooting (common questions)</summary>
+      <ul>
+        <li><b>"WebSocket disconnected"</b> at the bottom-left — the connection dropped; the GUI retries
+            automatically every 3 seconds. If it stays red, check that the server is still running.</li>
+        <li><b>"unauthorized — set ?api_key="</b> — the server started with an API key. Open the GUI as
+            <code>http://localhost:8000/gui?api_key=YOUR_KEY</code>.</li>
+        <li><b>Nothing happens when I send a message</b> — check <b>Settings</b>: a model and API key must be
+            configured first.</li>
+        <li><b>Where is my conversation saved?</b> — every session is stored on the server; find and resume it
+            in the <b>Sessions</b> panel.</li>
+        <li><b>Is my API key visible anywhere?</b> — no. Keys are stored with 0600 permissions and masked in
+            every settings view.</li>
+      </ul>
+    </details>
+
+    <details class="g">
+      <summary>🧭 How the GUI relates to the CLI</summary>
+      <p>The GUI and the command line are two windows into the <b>same running system</b> — same Python
+      runtime, same sessions, same tasks, same memory. Anything you start in the GUI is visible to the CLI
+      and vice-versa. The GUI never guesses what the agent is doing: it is driven by structured events
+      sent by the runtime, so what you see is what actually happened.</p>
+    </details>
+
+  </div>
+
   </div>
 </div>
 
@@ -585,7 +765,45 @@ function statusBadge(st) {
 /* ── Navigation ── */
 const PANELS = {dashboard:'Dashboard', agent:'Agent', tasks:'Tasks', team103:'Team103',
   workspace:'Workspace', terminal:'Terminal', git:'Git', github:'GitHub', qa:'QA',
-  sessions:'Sessions', logs:'Logs', memory:'Memory', settings:'Settings'};
+  sessions:'Sessions', logs:'Logs', memory:'Memory', settings:'Settings', help:'Help / Guide'};
+
+/* ── Navigation slide/hide (user-requested) ──
+   Toggle via the ☰ top-bar button, the edge tab, or Ctrl/Cmd+B.
+   Preference persists in localStorage; on small screens the sidebar
+   behaves as an overlay drawer (closed by default, Esc/backdrop closes). */
+const NAV_KEY = 'shs-gui-nav-hidden';
+const mqMobile = window.matchMedia('(max-width: 820px)');
+function navApply(hidden) {
+  document.body.classList.toggle('nav-hidden', hidden);
+  const btn = document.getElementById('nav-toggle');
+  if (btn) {
+    btn.title = hidden ? 'Show navigation (Ctrl+B)' : 'Hide navigation (Ctrl+B)';
+    btn.setAttribute('aria-expanded', String(!hidden));
+  }
+  try { localStorage.setItem(NAV_KEY, hidden ? '1' : '0'); } catch (e) { /* private mode */ }
+}
+function toggleNav(force) {
+  const hidden = (typeof force === 'boolean')
+    ? force : !document.body.classList.contains('nav-hidden');
+  navApply(hidden);
+}
+(function navBoot() {                     // restore persisted state (default: hidden on phones)
+  let saved = null;
+  try { saved = localStorage.getItem(NAV_KEY); } catch (e) {}
+  navApply(saved !== null ? saved === '1' : mqMobile.matches);
+})();
+if (mqMobile.addEventListener) {
+  mqMobile.addEventListener('change', e => navApply(e.matches ? true
+    : (localStorage.getItem(NAV_KEY) !== '1')));
+}
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
+    e.preventDefault(); toggleNav();
+  }
+  if (e.key === 'Escape' && mqMobile.matches
+      && !document.body.classList.contains('nav-hidden')) navApply(true);
+});
+
 const LOADERS = {};
 document.querySelectorAll('.nav-item').forEach(el => {
   el.onclick = () => {
@@ -596,6 +814,7 @@ document.querySelectorAll('.nav-item').forEach(el => {
     $('panel-' + id).classList.add('active');
     $('topbar-title').textContent = PANELS[id];
     if (LOADERS[id]) LOADERS[id]();
+    if (mqMobile.matches) navApply(true);   // drawer: close after picking a panel
   };
 });
 function refreshCurrent() {
@@ -976,7 +1195,7 @@ async function qaRun() {
   const rep = r.report;
   if (!rep) { $('qa-result').innerHTML = `<div class="badge b-red">error</div> ${esc(r.error||'')}`; return; }
   let html = `<div class="row" style="margin-bottom:10px">
-    ${statusBadge(rep.ok === True ? 'completed' : rep.ok === false ? 'failed' : 'unknown')}
+    ${statusBadge(rep.ok === true ? 'completed' : rep.ok === false ? 'failed' : 'unknown')}
     <span class="badge b-gray">${rep.project_type || '?'}</span></div>`;
   (rep.checks || []).forEach(c => {
     html += `<div class="kv"><span class="k">${esc(c.kind || c.label || 'check')}</span>
