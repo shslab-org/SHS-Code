@@ -2326,6 +2326,15 @@ def main() -> None:
     parser.add_argument("--version", action="version", version=f"SHS Code v{VERSION}")
     args = parser.parse_args()
 
+    # v4.2.0 ("sab jagah" rule): commits made anywhere in this process —
+    # /github commands or agent bash sessions — carry the SHS-Code-Agent
+    # identity (author, committer, Co-Authored-By trailer).
+    try:
+        from app.git_providers.agent_identity import apply_agent_git_env
+        apply_agent_git_env()
+    except Exception:
+        pass
+
     if args.profile:
         os.environ["SHSCODE_PROFILE"] = args.profile
 

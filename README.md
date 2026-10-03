@@ -104,6 +104,7 @@
 - [74. Token streaming (v4.0.1)](#74-token-streaming-v401)
 - [75. Agnes API testing (v4.0.1)](#75-agnes-api-testing-v401)
 - [76. GUI guide & collapsible navigation (v4.1.0)](#76-gui-guide--collapsible-navigation-v410)
+- [77. Workspace diff-viewer, CI, messaging & agent identity everywhere (v4.2.0)](#77-workspace-diff-viewer-ci-messaging--agent-identity-everywhere-v420)
 
 ---
 
@@ -1265,7 +1266,7 @@ Generated with SHS-Code
 Co-Authored-By: SHS-Code-Agent <SHS-Code-Agent@users.noreply.github.com>
 ```
 
-Attribution follows GitHub's actual model: the commit author reflects the authenticated account; the agent is credited as co-author (GitHub renders the profile link). The system never claims the organization owns every commit. Pushes authenticate via one-shot URLs — tokens are never stored in remote URLs. **Known limitation (honest):** commits the AGENT makes directly via `bash git commit` carry the trailer only when the model includes it; use `/github commit` for guaranteed attribution.
+Attribution follows GitHub's actual model: the commit author reflects the authenticated account; the agent is credited as co-author (GitHub renders the profile link). The system never claims the organization owns every commit. Pushes authenticate via one-shot URLs — tokens are never stored in remote URLs. **Update (v4.2.0):** commits the agent makes directly via `bash git commit` are now attributed too — CLI and server startup export `GIT_AUTHOR_*`/`GIT_COMMITTER_*` for the SHS-Code-Agent profile (see section 77).
 
 ---
 
@@ -1294,4 +1295,50 @@ Verified live (fresh `pip install`, run from outside the repo): token streaming 
 
 ---
 
-<p align="center"><b>SHS-Code 4.0.1 — Persistent Autonomous AI Coding Agent · SHS Lab</b><br/>Plan · Implement · Verify — with memory, tools, skills, MCP, Team103, streaming, GUI, and the SHS-Code-Agent identity.</p>
+## 77. Workspace diff-viewer, CI, messaging & agent identity everywhere (v4.2.0)
+
+Four follow-up mission items shipped together:
+
+**Workspace diff-viewer (GUI).** The Workspace panel gains a *Changes* tab
+next to *Files*. It lists every changed file with a status badge
+(M modified, A added, D deleted, N new/untracked) and per-file
++adds/−dels; clicking a file renders a line-numbered, colorized unified
+diff (green = added, red = removed, blue = hunk header). Three modes
+compare different snapshots: *Working tree* (unstaged), *Staged*, and
+*vs HEAD* (everything). The tab badge shows the number of changed
+files. Served by `GET /workspace/diff` — untracked files are
+synthesized as new-file diffs, and non-repo folders degrade gracefully.
+
+**CI.** `.github/workflows/tests.yml` runs the full pytest suite on
+Python 3.11 + 3.12 for every push/PR to `main`. The Pylint workflow
+matrix was fixed in passing — it still targeted 3.8–3.10 while the
+package requires ≥3.11, so it could never even install.
+
+**Messaging stubs completed (no stubs remain).** Discord speaks the real
+Gateway websocket protocol (HELLO → heartbeat → IDENTIFY →
+MESSAGE_CREATE, RESUME across reconnects); Slack runs real Socket Mode
+(`apps.connections.open`, envelope ACKs, bot/subtype filtering); Teams
+implements the Bot Framework OAuth2 client-credentials flow with a
+cached access token and activity send; Google Chat signs a proper RS256
+service-account JWT via `cryptography` and — bug fix — now actually
+interpolates the space into the send URL (the old code POSTed to the
+literal `{space}` placeholder and always 404'd); Email polls IMAP for
+unread messages (UNSEEN → RFC822 → parse → dispatch → mark seen). New
+inbound webhook routes: `/messaging/webhooks/{whatsapp,teams,google-chat}`
+plus `GET /messaging/channels` for configuration status.
+
+**SHS-Code-Agent identity everywhere ("sab jagah" rule).** Every commit
+made by SHS-Code — CLI or GUI, `/github commit`, the GUI GitHub panel,
+the terminal panel, or an autonomous agent's `git commit` in bash — is
+now attributed to the agent profile
+`SHS-Code-Agent <SHS-Code-Agent@users.noreply.github.com>` as **author,
+committer, and co-author**, with the `Generated with SHS-Code` footer.
+`GitHubProvider.commit()` forces the identity via per-command `-c`
+overrides (your global git config is never touched), and CLI/server
+startup export `GIT_AUTHOR_*`/`GIT_COMMITTER_*` so child-process git
+operations inherit the same attribution. Opt out with
+`SHSCODE_AGENT_IDENTITY=0`.
+
+---
+
+<p align="center"><b>SHS-Code 4.2.0 — Persistent Autonomous AI Coding Agent · SHS Lab</b><br/>Plan · Implement · Verify — with memory, tools, skills, MCP, Team103, streaming, GUI, and the SHS-Code-Agent identity.</p>

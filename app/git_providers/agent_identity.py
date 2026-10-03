@@ -71,6 +71,77 @@ class AgentIdentity:
 DEFAULT_IDENTITY = AgentIdentity()
 
 
+# ── Agent git identity enforcement (v4.2.0 — "sab jagah" rule) ─────────────
+#
+# Every commit / push / co-author / contributor produced by SHS-Code —
+# whether from the CLI, the GUI, the terminal panel, or an autonomous
+# agent shell session — must carry the SHS-Code-Agent profile.
+#
+# Two mechanisms:
+#
+# 1. **Per-command ``-c`` overrides** (GitHubProvider.commit/pull): the
+#    author AND committer of each commit are forced to the agent identity
+#    without touching the user's global or repo git config.
+#
+# 2. **Process environment** (apply_agent_git_env): exports
+#    GIT_AUTHOR_NAME / GIT_AUTHOR_EMAIL / GIT_COMMITTER_NAME /
+#    GIT_COMMITTER_EMAIL into os.environ so ANY child process git commit
+#    (agent bash tool, GUI terminal panel, cron jobs) is also attributed
+#    to the agent. Applied at CLI startup and server startup.
+#
+# Opt-out: SHSCODE_AGENT_IDENTITY=0 keeps the host's default git identity.
+GIT_ENV_KEYS = (
+    "GIT_AUTHOR_NAME",
+    "GIT_AUTHOR_EMAIL",
+    "GIT_COMMITTER_NAME",
+    "GIT_COMMITTER_EMAIL",
+)
+
+
+def agent_git_env() -> dict:
+    """Env-var dict attributing any git commit to SHS-Code-Agent."""
+    return {
+        "GIT_AUTHOR_NAME": AGENT_NAME,
+        "GIT_AUTHOR_EMAIL": AGENT_EMAIL,
+        "GIT_COMMITTER_NAME": AGENT_NAME,
+        "GIT_COMMITTER_EMAIL": AGENT_EMAIL,
+    }
+
+
+def agent_identity_enabled() -> bool:
+    """Identity enforcement is on unless explicitly disabled
+    (SHSCODE_AGENT_IDENTITY=0)."""
+    return os.getenv("SHSCODE_AGENT_IDENTITY", "1") != "0"
+
+
+def apply_agent_git_env(force: bool = False) -> bool:
+    """Export the agent git identity into the process environment.
+
+    Idempotent — safe to call at every CLI/server startup. Existing
+    explicit GIT_AUTHOR_* values are only overwritten when *force* is
+    True (they may carry deliberate per-repo attribution) — but by
+    default the SHS-Code-Agent identity wins, per the mission rule.
+    Returns True when the environment now carries the agent identity.
+    """
+    if not agent_identity_enabled():
+        return False
+    env = agent_git_env()
+    for key, value in env.items():
+        if force or key not in os.environ or not os.environ[key]:
+            os.environ[key] = value
+    # also make `git commit` default editor-free & merge-attr deterministic
+    os.environ.setdefault("GIT_EDITOR", "true")
+    return True
+
+
+def agent_git_args() -> list:
+    """``-c`` flag list forcing author+committer for one git command."""
+    return [
+        "-c", f"user.name={AGENT_NAME}",
+        "-c", f"user.email={AGENT_EMAIL}",
+    ]
+
+
 # ── GitHub App token minting (official bot identity) ──────────────────────
 
 def _b64url(data: bytes) -> str:

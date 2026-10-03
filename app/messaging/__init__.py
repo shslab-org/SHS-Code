@@ -1,5 +1,17 @@
 """Messaging gateway — Telegram, Discord, Slack, WhatsApp, Signal, Teams,
-Matrix, IRC, Google Chat, WebChat, Email, Twitch adapters."""
+Matrix, IRC, Google Chat, WebChat, Email, Twitch adapters.
+
+v4.2.0: ALL adapters are fully implemented (no stubs remain):
+  - Discord: real Gateway websocket (HELLO/IDENTIFY/heartbeat/RESUME)
+  - Slack: real Socket Mode websocket (envelope acks + reconnect)
+  - Teams: Bot Framework OAuth2 client-credentials + activity send +
+    inbound webhook (POST /messaging/webhooks/teams)
+  - Google Chat: service-account RS256 JWT → access token + fixed
+    space URL + inbound webhook (POST /messaging/webhooks/google-chat)
+  - Email: SMTP send + IMAP polling loop
+  - WhatsApp/Telegram/Matrix/IRC/Twitch/Signal: already functional
+Unset credentials still degrade safely to stub mode (log-only).
+"""
 from app.messaging.base import BaseMessagingAdapter, IncomingMessage
 from app.messaging.telegram import TelegramAdapter
 from app.messaging.discord import DiscordAdapter

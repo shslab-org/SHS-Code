@@ -180,6 +180,9 @@ tr.clickable { cursor: pointer; }
 .dag-arrow { text-align: center; color: var(--fg-dim); font-size: 16px; margin: 4px 0 12px; }
 /* ── File tree ── */
 #ws-layout { display: flex; gap: 14px; height: calc(100vh - 46px - 40px); }
+#panel-workspace.active { display: flex; flex-direction: column;
+  height: calc(100vh - 46px - 40px); }
+#panel-workspace.active #ws-layout { flex: 1; min-height: 0; height: auto; }
 #file-tree { width: 300px; min-width: 260px; background: var(--bg2);
   border: 1px solid var(--border); border-radius: 8px; overflow-y: auto; padding: 10px; }
 .ft-item { padding: 4px 8px; cursor: pointer; border-radius: 4px; font-size: 13px;
@@ -194,6 +197,53 @@ tr.clickable { cursor: pointer; }
   display: flex; justify-content: space-between; }
 #file-content { flex: 1; overflow: auto; padding: 14px; font-family: var(--mono);
   font-size: 12px; white-space: pre; line-height: 1.55; }
+/* ── Workspace tabs + diff-viewer (v4.2.0) ── */
+#ws-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  flex-wrap: wrap; }
+.ws-tab { padding: 7px 16px; border-radius: 6px; background: var(--bg3);
+  border: 1px solid var(--border); color: var(--fg-dim); cursor: pointer;
+  font-size: 13px; font-weight: 600; transition: all .12s; }
+.ws-tab:hover { color: var(--fg); border-color: var(--fg-dim); }
+.ws-tab.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+#ws-diff-modes { display: flex; gap: 6px; margin-left: auto; align-items: center; }
+.ws-mode { padding: 5px 11px; border-radius: 5px; font-size: 11.5px; cursor: pointer;
+  background: transparent; border: 1px solid var(--border); color: var(--fg-dim); }
+.ws-mode:hover { color: var(--fg); }
+.ws-mode.active { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,.08); }
+#ws-diff-layout { display: flex; gap: 14px; flex: 1; min-height: 0; }
+#diff-file-list { width: 320px; min-width: 260px; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 8px; overflow-y: auto; padding: 10px; }
+.df-item { padding: 7px 9px; cursor: pointer; border-radius: 5px; font-size: 12px;
+  font-family: var(--mono); display: flex; align-items: center; gap: 8px; margin-bottom: 2px;
+  word-break: break-all; }
+.df-item:hover { background: var(--bg3); }
+.df-item.active { background: rgba(31,111,235,.25); }
+.df-item .st { flex-shrink: 0; font-weight: 700; width: 22px; text-align: center;
+  border-radius: 4px; font-size: 10.5px; padding: 1px 0; }
+.st-M { color: var(--yellow); } .st-A { color: var(--green); }
+.st-D { color: var(--red); } .st-U { color: var(--green); }
+.df-stats { margin-left: auto; flex-shrink: 0; font-size: 10.5px; }
+.df-stats .plus { color: var(--green); } .df-stats .minus { color: var(--red); }
+#diff-view { flex: 1; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+#diff-view-head { padding: 10px 14px; border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 12px; color: var(--fg-dim);
+  display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+#diff-summary { display: flex; gap: 8px; align-items: center; font-family: var(--sans); }
+.sum-chip { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px;
+  padding: 2px 10px; font-size: 11px; }
+.sum-chip.p { color: var(--green); } .sum-chip.m { color: var(--red); }
+#diff-content { flex: 1; overflow: auto; font-family: var(--mono);
+  font-size: 12px; line-height: 1.5; padding: 0; }
+.dl { padding: 0 12px 0 0; white-space: pre; display: flex; }
+.dl .ln { flex-shrink: 0; width: 46px; text-align: right; padding-right: 10px;
+  color: var(--fg-dim); opacity: .55; user-select: none; font-size: 11px; }
+.dl-hdr { color: var(--fg-dim); background: var(--bg3); padding: 3px 12px;
+  font-size: 11.5px; margin-top: 6px; }
+.dl-hunk { color: var(--accent); background: rgba(88,166,255,.10); padding: 2px 12px; }
+.dl-add { background: rgba(63,185,80,.13); color: #c6f6d5; }
+.dl-del { background: rgba(248,81,73,.13); color: #ffd7d4; }
+.dl-ctx { color: var(--fg); }
 /* ── Terminal ── */
 #term-box { background: #010409; border: 1px solid var(--border); border-radius: 8px;
   height: calc(100vh - 46px - 40px); display: flex; flex-direction: column; }
@@ -402,11 +452,33 @@ kbd { font-family: var(--mono); background: var(--bg3); border: 1px solid var(--
 
   <!-- ══════════ WORKSPACE ══════════ -->
   <div class="panel" id="panel-workspace">
+    <div id="ws-toolbar">
+      <button class="ws-tab active" id="ws-tab-files" onclick="wsShowTab('files')">Files</button>
+      <button class="ws-tab" id="ws-tab-changes" onclick="wsShowTab('changes')">
+        Changes <span id="ws-changes-badge" style="display:none" title="changed files"></span>
+      </button>
+      <div id="ws-diff-modes" style="display:none">
+        <button class="ws-mode active" id="wsm-unstaged" onclick="wsDiffMode('unstaged')">Working tree</button>
+        <button class="ws-mode" id="wsm-staged" onclick="wsDiffMode('staged')">Staged</button>
+        <button class="ws-mode" id="wsm-head" onclick="wsDiffMode('head')">vs HEAD</button>
+        <button class="ws-mode" onclick="wsLoadDiff()">⟳ Refresh</button>
+      </div>
+    </div>
     <div id="ws-layout">
       <div id="file-tree"></div>
       <div id="file-view">
         <div id="file-view-head"><span id="fv-path">(no file selected)</span><span id="fv-size"></span></div>
         <div id="file-content" class="empty">Select a file to view it.</div>
+      </div>
+    </div>
+    <div id="ws-diff-layout" style="display:none">
+      <div id="diff-file-list"></div>
+      <div id="diff-view">
+        <div id="diff-view-head">
+          <span id="dv-path">(no file selected)</span>
+          <span id="diff-summary"></span>
+        </div>
+        <div id="diff-content" class="empty">No changes.</div>
       </div>
     </div>
   </div>
@@ -634,7 +706,7 @@ kbd { font-family: var(--mono); background: var(--bg3); border: 1px solid var(--
         <li><b>Agent</b> — where you talk to the AI and watch it work (chat + live activity).</li>
         <li><b>Tasks</b> — the history of jobs with their real status; click one to see its plan as a diagram.</li>
         <li><b>Team103</b> — for very large goals: the work is split across many workers and checked by QA.</li>
-        <li><b>Workspace</b> — a file browser: click a file to view its contents.</li>
+        <li><b>Workspace</b> — two tabs. <i>Files</i>: browse your project and click a file to view it. <i>Changes</i>: a diff-viewer that shows exactly what changed — green lines were added, red lines were removed; pick <i>Working tree</i> / <i>Staged</i> / <i>vs HEAD</i> to compare different snapshots. The number on the tab shows how many files changed.</li>
         <li><b>Terminal</b> — run shell commands in the server's folder, from the browser.</li>
         <li><b>Git</b> — commit, branch, push, pull, see differences — with the agent properly credited.</li>
         <li><b>GitHub</b> — the agent's GitHub identity, plus creating/listing pull requests and issues.</li>
@@ -1057,7 +1129,134 @@ async function team103Run() {
 }
 
 /* ═════════════════════════ WORKSPACE ═════════════════════════ */
-LOADERS.workspace = async () => { await loadDir('', $('file-tree')); };
+LOADERS.workspace = async () => {
+  await loadDir('', $('file-tree'));
+  wsUpdateChangesBadge();   // silent count for the Changes tab badge
+};
+
+/* ── Workspace tabs + diff-viewer (v4.2.0) ── */
+let WS_DIFF = { mode: 'unstaged', files: [], loaded: false };
+function wsShowTab(tab) {
+  const files = tab === 'files';
+  $('ws-tab-files').classList.toggle('active', files);
+  $('ws-tab-changes').classList.toggle('active', !files);
+  $('ws-layout').style.display = files ? 'flex' : 'none';
+  $('ws-diff-layout').style.display = files ? 'none' : 'flex';
+  $('ws-diff-modes').style.display = files ? 'none' : 'flex';
+  if (!files && !WS_DIFF.loaded) wsLoadDiff();
+}
+function wsDiffMode(mode) {
+  WS_DIFF.mode = mode;
+  ['unstaged', 'staged', 'head'].forEach(m =>
+    $('wsm-' + m).classList.toggle('active', m === mode));
+  wsLoadDiff();
+}
+async function wsUpdateChangesBadge() {
+  try {
+    const d = await api(`/workspace/diff?mode=unstaged`);
+    if (!d.is_repo) { $('ws-changes-badge').style.display = 'none'; return; }
+    const n = d.summary ? d.summary.files : 0;
+    const b = $('ws-changes-badge');
+    b.textContent = n;
+    b.style.display = n ? 'inline-block' : 'none';
+    b.style.cssText += ';background:var(--accent2);color:#fff;border-radius:9px;padding:1px 8px;font-size:10.5px;margin-left:4px';
+  } catch (e) { /* badge is best-effort */ }
+}
+async function wsLoadDiff() {
+  $('diff-content').classList.add('empty');
+  $('diff-content').textContent = 'Loading diff…';
+  const d = await api(`/workspace/diff?mode=${WS_DIFF.mode}`);
+  WS_DIFF.loaded = true;
+  if (d.error) { $('diff-content').textContent = d.error; return; }
+  if (!d.is_repo) {
+    $('diff-file-list').innerHTML = '<div class="empty">(not a git repository)</div>';
+    $('diff-content').textContent = 'This folder is not a git repository — nothing to compare.';
+    $('dv-path').textContent = '(no repository)';
+    $('diff-summary').innerHTML = '';
+    return;
+  }
+  const files = d.files || [];
+  WS_DIFF.files = files;
+  const s = d.summary || { files: 0, additions: 0, deletions: 0 };
+  $('diff-summary').innerHTML =
+    `<span class="sum-chip">${s.files} file${s.files === 1 ? '' : 's'}</span>` +
+    `<span class="sum-chip p">+${s.additions}</span>` +
+    `<span class="sum-chip m">−${s.deletions}</span>` +
+    (d.truncated ? '<span class="sum-chip" style="color:var(--yellow)">truncated</span>' : '');
+  const list = $('diff-file-list');
+  if (!files.length) {
+    list.innerHTML = '<div class="empty">No changes — working tree is clean.</div>';
+    $('diff-content').classList.add('empty');
+    $('diff-content').textContent = 'No changes in this mode. Try another mode above, or edit some files first.';
+    $('dv-path').textContent = '(nothing changed)';
+    return;
+  }
+  list.innerHTML = '';
+  files.forEach(f => {
+    const item = document.createElement('div');
+    item.className = 'df-item';
+    const stCls = f.status === '??' ? 'st-U' : 'st-' + (f.status[0] === 'R' ? 'M' : f.status[0]);
+    const label = f.status === '??' ? 'N' : f.status[0];
+    item.innerHTML =
+      `<span class="st ${stCls}">${esc(label)}</span>` +
+      `<span class="df-name">${esc(f.path)}</span>` +
+      `<span class="df-stats"><span class="plus">+${f.additions}</span> ` +
+      `<span class="minus">−${f.deletions}</span></span>`;
+    item.onclick = () => {
+      document.querySelectorAll('.df-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      wsShowFileDiff(f);
+    };
+    list.appendChild(item);
+  });
+  list.firstElementChild.classList.add('active');
+  wsShowFileDiff(files[0]);
+}
+function wsShowFileDiff(f) {
+  $('dv-path').textContent = f.path;
+  const c = $('diff-content');
+  c.classList.remove('empty');
+  c.innerHTML = '';
+  // line-number tracking for old/new sides
+  let oldNo = 0, newNo = 0;
+  (f.diff || '').split('\n').forEach(line => {
+    if (line.startsWith('@@')) {
+      const m = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)/);
+      if (m) { oldNo = parseInt(m[1], 10); newNo = parseInt(m[2], 10); }
+      const h = document.createElement('div');
+      h.className = 'dl-hunk'; h.textContent = line;
+      c.appendChild(h); return;
+    }
+    if (line.startsWith('diff --git') || line.startsWith('index ') ||
+        line.startsWith('--- ') || line.startsWith('+++ ') ||
+        line.startsWith('new file') || line.startsWith('deleted file') ||
+        line.startsWith('old mode') || line.startsWith('new mode') ||
+        line.startsWith('similarity') || line.startsWith('rename ')) {
+      const h = document.createElement('div');
+      h.className = 'dl-hdr'; h.textContent = line;
+      c.appendChild(h); return;
+    }
+    const div = document.createElement('div');
+    let cls = 'dl-ctx', txt = line, oldL = '', newL = '';
+    if (line.startsWith('+')) {
+      cls = 'dl-add'; txt = line.slice(1); newL = newNo++;
+    } else if (line.startsWith('-')) {
+      cls = 'dl-del'; txt = line.slice(1); oldL = oldNo++;
+    } else {
+      txt = line.replace(/^ /, ''); oldL = oldNo++; newL = newNo++;
+    }
+    div.className = 'dl ' + cls;
+    const lo = document.createElement('span'); lo.className = 'ln'; lo.textContent = oldL;
+    const ln = document.createElement('span'); ln.className = 'ln'; ln.textContent = newL;
+    const dt = document.createElement('span'); dt.className = 'dt'; dt.textContent = txt;
+    div.appendChild(lo); div.appendChild(ln); div.appendChild(dt);
+    c.appendChild(div);
+  });
+  if (!f.diff) {
+    c.classList.add('empty');
+    c.textContent = f.binary ? 'Binary file — no text diff.' : '(no textual changes)';
+  }
+}
 async function loadDir(path, el) {
   const d = await api(`/workspace/files?path=${encodeURIComponent(path || '.')}`);
   if (d.error) { el.innerHTML = `<div class="empty">${esc(d.error)}</div>`; return; }

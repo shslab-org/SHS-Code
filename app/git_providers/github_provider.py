@@ -26,6 +26,7 @@ from app.logger import logger
 
 from .agent_identity import (
     AgentIdentity, DEFAULT_IDENTITY, resolve_github_token, AGENT_PROFILE_URL,
+    agent_git_args, agent_git_env,
 )
 
 
@@ -148,9 +149,15 @@ class GitHubProvider:
 
     def commit(self, message: str, add_all: bool = True,
                credit_agent: bool = True) -> dict:
-        """Commit staged/all changes. The commit message automatically gets
-        the Co-Authored-By trailer — the GitHub-supported agent credit —
-        and a 'Generated with SHS-Code' footer pointing at the profile."""
+        """Commit staged/all changes attributed to SHS-Code-Agent.
+
+        v4.2.0 ("sab jagah" rule): the commit AUTHOR and COMMITTER are
+        forced to the agent identity via per-command ``-c`` overrides
+        (the user's global git config is never touched), so the commit
+        list and contributor graph on GitHub show SHS-Code-Agent. The
+        message additionally keeps the Co-Authored-By trailer and the
+        'Generated with SHS-Code' footer for visible credit everywhere.
+        """
         self._ensure_repo()
         if add_all:
             _git(["add", "-A"], cwd=self.repo_dir)
@@ -158,14 +165,22 @@ class GitHubProvider:
         if credit_agent:
             full_message += (
                 f"\n\nGenerated with SHS-Code\n{self.identity.co_author_trailer()}")
-        proc = _git(["commit", "-m", full_message], cwd=self.repo_dir)
+        proc = _git(agent_git_args() + ["commit", "-m", full_message],
+                    cwd=self.repo_dir)
         sha = ""
         try:
             sha = _git(["rev-parse", "HEAD"], cwd=self.repo_dir).stdout.strip()
         except Exception:
             pass
+        author = ""
+        try:
+            author = _git(["log", "-1", "--pretty=format:%an <%ae>"],
+                          cwd=self.repo_dir).stdout.strip()
+        except Exception:
+            pass
         return {"committed": True, "sha": sha[:12],
-                "message": full_message, "output": proc.stdout.strip()[:200]}
+                "message": full_message, "author": author,
+                "output": proc.stdout.strip()[:200]}
 
     def push(self, remote: str = "origin", branch: Optional[str] = None,
              set_upstream: bool = False) -> dict:
@@ -196,10 +211,16 @@ class GitHubProvider:
                 "output": (proc.stdout + proc.stderr).strip()[:300]}
 
     def pull(self, remote: str = "origin", branch: Optional[str] = None) -> dict:
+        """Pull remote changes. Any merge commit the pull creates is
+        attributed to SHS-Code-Agent (author + committer via -c flags
+        and the process env) — v4.2.0 "sab jagah" rule."""
         self._ensure_repo()
-        args = ["pull", remote] + ([branch] if branch else [])
-        proc = _git(args, cwd=self.repo_dir, timeout=300)
-        return {"pulled": True, "output": (proc.stdout + proc.stderr).strip()[:300]}
+        args = agent_git_args() + ["pull", remote] + ([branch] if branch else [])
+        proc = subprocess.run(
+            ["git"] + args, cwd=self.repo_dir, capture_output=True,
+            text=True, timeout=300, env={**os.environ, **agent_git_env()})
+        return {"pulled": proc.returncode == 0,
+                "output": (proc.stdout + proc.stderr).strip()[:300]}
 
     def stash(self, pop: bool = False) -> dict:
         self._ensure_repo()

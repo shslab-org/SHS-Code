@@ -201,9 +201,27 @@ concurrency, and checked by a QA gate. The panel shows the honest result:
 QA pass/fail, how many tasks, peak workers, conflicts, unresolved items.
 
 ### ▤ Workspace
-A file browser for the server's working folder. Click folders to expand,
-click a file to view its contents (large files are truncated for safety).
-You cannot escape the workspace folder — path traversal is blocked.
+Two tabs at the top:
+
+- **Files** — a browser for the server's working folder. Click folders to
+  expand, click a file to view its contents (large files are truncated
+  for safety). You cannot escape the workspace folder — path traversal
+  is blocked.
+- **Changes** — a diff-viewer (v4.2.0): it shows exactly *what changed*
+  in your project, like a before/after comparison. Every changed file is
+  listed with a colored letter — **M** (modified), **A** (added),
+  **D** (deleted), **N** (brand-new/untracked) — and how many lines were
+  added (+) or removed (−). Click a file to see its diff: green lines
+  were **added**, red lines were **removed**, and the blue `@@ … @@`
+  lines tell you *where* in the file the change is. Use the buttons on
+  the right to compare different moments: **Working tree** (unsaved-to-
+  git changes), **Staged** (changes prepared for the next commit), or
+  **vs HEAD** (everything different from the last commit). The little
+  number on the tab itself shows how many files changed — a quick
+  "is anything dirty?" indicator.
+
+*Why you'll love it:* instead of trusting that "the agent changed 3
+files", you can *see* every line it touched before you commit anything.
 
 ### ▸_ Terminal
 A real command line in the browser, running in the server's working directory.

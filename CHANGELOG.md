@@ -8,6 +8,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ---
 
+## [4.2.0] — 2026-10-03
+
+### Summary
+
+v4.2.0 delivers the four follow-up mission items: a **workspace
+diff-viewer in the GUI**, a **pytest CI workflow**, **every messaging
+stub completed** (Discord, Slack, Teams, Google Chat, Email), and the
+**SHS-Code-Agent identity enforced everywhere** — every commit, push,
+co-author and contributor attribution, from both CLI and GUI.
+
+### Added
+- **Workspace diff-viewer** (GUI Workspace panel): a *Changes* tab next
+  to *Files* — per-file status badges (M/A/D/N), +adds/−dels stats,
+  summary chips, line-numbered colorized unified diffs
+  (green added / red removed / blue hunks), and three comparison modes:
+  *Working tree* / *Staged* / *vs HEAD*. Served by the new
+  `GET /workspace/diff` endpoint (untracked files synthesized as
+  new-file diffs; graceful outside a git repo).
+- **CI pytest workflow** (`.github/workflows/tests.yml`): full suite on
+  Python 3.11 + 3.12 for every push/PR to main. The Pylint workflow
+  matrix was also fixed (it still targeted 3.8–3.10 while
+  `requires-python >= 3.11` — it could never install the package).
+- **Messaging adapters completed** (no stubs remain):
+  - *Discord*: real Gateway websocket protocol — HELLO/heartbeat,
+    IDENTIFY with intents, RESUME with session+seq, reconnect backoff,
+    MESSAGE_CREATE dispatch, REST send chunked to 2000 chars.
+  - *Slack*: real Socket Mode — `apps.connections.open` with the
+    app-level token, envelope ACKs, message-event dispatch, reconnect
+    with backoff; send-only mode when only `SLACK_BOT_TOKEN` is set.
+  - *Teams*: Bot Framework OAuth2 client-credentials token (cached),
+    activity send to the right regional `serviceUrl`, and inbound
+    activity parsing.
+  - *Google Chat*: service-account RS256 JWT (signed via `cryptography`)
+    exchanged for an access token, plus the **send-URL bug fix** (the
+    old code POSTed to the literal `{space}` placeholder and always
+    404'd) and inbound event parsing.
+  - *Email*: IMAP polling loop (UNSEEN search → RFC822 fetch → parse →
+    dispatch → mark seen) with configurable interval.
+  - New messaging webhook routes: `GET/POST
+    /messaging/webhooks/whatsapp`, `POST /messaging/webhooks/teams`,
+    `POST /messaging/webhooks/google-chat`, `GET /messaging/channels`.
+- **SHS-Code-Agent identity everywhere** ("sab jagah" rule):
+  `GitHubProvider.commit()` now forces **author + committer** to
+  `SHS-Code-Agent <SHS-Code-Agent@users.noreply.github.com>` via
+  per-command `-c` overrides (the user's git config is never touched),
+  keeps the `Co-Authored-By` trailer and `Generated with SHS-Code`
+  footer, and reports the effective author; `pull()` merge commits are
+  attributed the same way; CLI and server startup export
+  `GIT_AUTHOR_*` / `GIT_COMMITTER_*` so agent bash sessions and the
+  GUI terminal panel commit as the agent too. Opt-out:
+  `SHSCODE_AGENT_IDENTITY=0`.
+
+### Fixed
+- Deleted files were missing from the workspace diff (the unified-diff
+  parser only read paths from `+++ b/` headers; it now also handles
+  `--- a/` + `+++ /dev/null`).
+- Pylint CI matrix mismatch (see above).
+
+### Tests
+- `tests/test_v420_features.py` — 50 new regression tests: agent
+  identity (real-repo commit authorship, env export, opt-out),
+  `/workspace/diff` (all modes, untracked synthesis, summary math,
+  parser units), GUI diff-viewer static pins, CI workflow pins, Discord
+  gateway protocol (identify/resume/heartbeat/dispatch), Slack socket
+  mode (ack + dispatch + bot filtering), Teams OAuth + send + webhook,
+  Google Chat JWT signature verification + URL interpolation + webhook,
+  Email IMAP poll, and the messaging webhook routes.
+- Suite: 776 → 826 collected (823 passed, 3 documented environmental
+  skips).
+
+---
+---
+
 ## [4.1.0] — 2026-10-03
 
 ### Summary

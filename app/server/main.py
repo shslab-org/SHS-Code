@@ -52,6 +52,16 @@ async def _lifespan(application: FastAPI):
             "SHSCODE_API_KEY not set — all endpoints are UNAUTHENTICATED. "
             "Set SHSCODE_API_KEY in production."
         )
+    # v4.2.0 ("sab jagah" rule): every git commit made by this server —
+    # GUI GitHub panel, terminal panel, agent bash sessions — is
+    # attributed to the SHS-Code-Agent profile.
+    try:
+        from app.git_providers.agent_identity import apply_agent_git_env
+        if apply_agent_git_env():
+            logger.info("[Server] Git identity enforced: SHS-Code-Agent "
+                        "(set SHSCODE_AGENT_IDENTITY=0 to disable)")
+    except Exception as e:
+        logger.warning(f"[Server] Agent git-identity setup failed: {e}")
     logger.info("SHS Code Agent Server started.")
     application.state.background_tasks = set()
     application.state.session_tasks = {}   # session_id -> asyncio.Task
@@ -605,6 +615,162 @@ async def git_status():
     }
 
 
+# ─── Workspace diff-viewer (v4.2.0 — mission follow-up) ────────────────────
+
+_WS_DIFF_MODES = {
+    "unstaged": ["diff", "--no-color", "--unified=3"],
+    "staged":   ["diff", "--cached", "--no-color", "--unified=3"],
+    "head":     ["diff", "HEAD", "--no-color", "--unified=3"],
+}
+
+
+def _parse_unified_diff(raw: str) -> dict:
+    """Split a unified diff into per-file sections.
+
+    Returns {path_after: {"diff": str, "additions": int, "deletions": int,
+    "binary": bool}}. Paths come from the ``+++ b/<path>`` header lines,
+    which is also correct for renames and new/deleted files."""
+    files: dict = {}
+    current_path = None
+    current_lines: list = []
+    additions = deletions = 0
+    binary = False
+
+    def _flush():
+        nonlocal current_path, current_lines, additions, deletions, binary
+        if current_path is not None:
+            files[current_path] = {
+                "diff": "\n".join(current_lines),
+                "additions": additions,
+                "deletions": deletions,
+                "binary": binary,
+            }
+        current_path, current_lines = None, []
+        additions = deletions = 0
+        binary = False
+
+    for line in raw.splitlines():
+        if line.startswith("diff --git "):
+            _flush()
+            current_lines = [line]
+        elif line.startswith("+++ b/"):
+            # rename/copy targets show "+++ b/<new>"; plain files too
+            current_path = line[6:].strip() or current_path
+            current_lines.append(line)
+        elif line.startswith("+++ /dev/null"):
+            # deleted file: the path only appears in the "--- a/" header
+            current_lines.append(line)
+        elif line.startswith("--- a/"):
+            if current_path is None:
+                current_path = line[6:].strip()
+            current_lines.append(line)
+        elif current_path is not None or current_lines:
+            if line.startswith("Binary files") or line.startswith("GIT binary patch"):
+                binary = True
+            if line.startswith("+") and not line.startswith("+++"):
+                additions += 1
+            elif line.startswith("-") and not line.startswith("---"):
+                deletions += 1
+            current_lines.append(line)
+    _flush()
+    return files
+
+
+@app.get("/workspace/diff", dependencies=[Depends(require_api_key)])
+async def workspace_diff(mode: str = "unstaged", max_bytes: int = 200000):
+    """v4.2.0 (GUI workspace diff-viewer): structured diff of working-tree
+    changes. ``mode`` is ``unstaged`` (default), ``staged``, or ``head``
+    (staged + unstaged vs HEAD). Untracked files are included as synthetic
+    new-file diffs. Graceful when cwd is not a repository."""
+    import subprocess
+
+    if mode not in _WS_DIFF_MODES:
+        raise HTTPException(status_code=400,
+                            detail="mode must be unstaged|staged|head")
+
+    def _run(cmd) -> str | None:
+        try:
+            out = subprocess.run(cmd, capture_output=True, text=True,
+                                 timeout=15, cwd=".")
+            return out.stdout if out.returncode == 0 else None
+        except Exception:
+            return None
+
+    branch = _run(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    if branch is None:
+        return {"is_repo": False, "branch": "", "files": [],
+                "summary": {"files": 0, "additions": 0, "deletions": 0},
+                "mode": mode, "truncated": False}
+    branch = branch.strip()
+
+    # statuses via porcelain (XY codes) — untracked = "??"
+    statuses: dict = {}
+    porcelain = _run(["git", "status", "--porcelain"])
+    if porcelain is not None:
+        for line in porcelain.splitlines():
+            if len(line) >= 4:
+                statuses[line[3:].strip().strip('"')] = line[:2].strip()
+
+    raw = _run(["git"] + _WS_DIFF_MODES[mode]) or ""
+    parsed = _parse_unified_diff(raw)
+
+    # untracked files: synthesize new-file diffs (only for modes that
+    # show the working tree; `staged` legitimately excludes them)
+    if mode != "staged":
+        import os as _os
+        for path, st in statuses.items():
+            if st != "??":
+                continue
+            try:
+                if not _os.path.isfile(path) or _os.path.getsize(path) > 100_000:
+                    parsed[path] = {"diff": f"diff --git a/{path} b/{path}\n"
+                                    f"new file mode 100644\n--- /dev/null\n"
+                                    f"+++ b/{path}\n@@ -0,0 +1 @@\n"
+                                    "(untracked file — too large to inline)",
+                                    "additions": 0, "deletions": 0,
+                                    "binary": False}
+                    continue
+                with open(path, "r", errors="replace") as f:
+                    content = f.read(20000)
+                body = "".join(f"+{l}\n" for l in content.splitlines())
+                parsed[path] = {
+                    "diff": (f"diff --git a/{path} b/{path}\n"
+                             f"new file mode 100644\n--- /dev/null\n"
+                             f"+++ b/{path}\n@@ -0,0 +1,{content.count(chr(10)) + 1} @@\n"
+                             + body).rstrip("\n"),
+                    "additions": content.count("\n") + 1,
+                    "deletions": 0, "binary": False}
+            except OSError:
+                continue
+
+    files = []
+    total_add = total_del = 0
+    truncated = False
+    budget = max_bytes
+    for path in sorted(parsed):
+        info = parsed[path]
+        st = statuses.get(path, "M")
+        if info["additions"] or info["deletions"] or st == "??":
+            chunk = info["diff"][:budget]
+            budget -= len(chunk)
+            truncated = truncated or len(chunk) < len(info["diff"])
+            files.append({"path": path, "status": st,
+                          "additions": info["additions"],
+                          "deletions": info["deletions"],
+                          "binary": info["binary"], "diff": chunk})
+            total_add += info["additions"]
+            total_del += info["deletions"]
+        if budget <= 0:
+            truncated = True
+            break
+
+    return {"is_repo": True, "branch": branch, "mode": mode,
+            "files": files,
+            "summary": {"files": len(files), "additions": total_add,
+                        "deletions": total_del},
+            "truncated": truncated}
+
+
 @app.get("/config", dependencies=[Depends(require_api_key)])
 async def get_config():
     """v4.0.1 (mission §14 — GUI Settings panel): effective configuration.
@@ -1056,8 +1222,10 @@ if _STATIC_DIR.is_dir():
 
 # ─── Webhook router ─────────────────────────────────────────────────────────
 from app.server.webhook_router import router as webhook_router
+from app.server.messaging_routes import router as messaging_router
 from app import env
 app.include_router(webhook_router)
+app.include_router(messaging_router)
 try:
     from app.secrets.router import router as secrets_router
     app.include_router(secrets_router)
