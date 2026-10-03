@@ -315,3 +315,35 @@ import sys  # noqa: E402  (used by monkeypatch in TestBackgroundTaskFailure)
 
 def _skip():
     pass
+
+
+class TestEnvironmentInjection:
+    @pytest.mark.asyncio
+    async def test_cwd_injected_every_run(self, fresh_env, tmp_path, monkeypatch):
+        """v4.0.1 (live Agnes Test F finding): the model must see an
+        unmissable ENVIRONMENT system message with the absolute cwd —
+        previously it guessed paths ('cd /workspace' → 'cd ~') and did
+        all work in the HOME directory."""
+        import os
+        from app.agent.shscode import SHSCode
+        monkeypatch.chdir(tmp_path)
+        agent = SHSCode()
+        agent.journal = fresh_env
+        agent.llm = _scripted_llm([
+            ("text", "ok"), ("text", "ok"), ("text", "ok"), ("text", "ok"),
+        ])
+        agent._max_steps = 6
+        await agent.run("do something here")
+        env_msgs = [m for m in agent.memory.messages
+                    if m.role.value == "system"
+                    and (m.content or "").startswith("ENVIRONMENT —")]
+        assert env_msgs, "ENVIRONMENT system message must be injected"
+        assert str(tmp_path) in env_msgs[0].content
+        # replaced, never stacked, on a second run
+        from app.schema import AgentState
+        agent.state = AgentState.IDLE
+        await agent.run("and again")
+        env_msgs2 = [m for m in agent.memory.messages
+                     if m.role.value == "system"
+                     and (m.content or "").startswith("ENVIRONMENT —")]
+        assert len(env_msgs2) == 1, "ENVIRONMENT message must replace, not stack"

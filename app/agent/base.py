@@ -356,6 +356,24 @@ class BaseAgent(ABC):
         # finally is None-safe (self._session_id unset => nothing to close).
         results: list[str] = []
         try:
+            # v4.0.1 (live Agnes finding — mission §10 Test F): the model
+            # had NO working-directory awareness and guessed paths
+            # ('cd /workspace' → fell back to 'cd ~', doing all work in the
+            # HOME directory of the machine). An explicit, unmissable
+            # environment line is injected on EVERY run (replaced, not
+            # stacked, on multi-turn sessions): the absolute cwd and the
+            # rule that file operations belong there.
+            try:
+                _cwd = os.getcwd()
+                self._replace_tagged_system("ENVIRONMENT —", Message.system(
+                    f"ENVIRONMENT — Working directory: {_cwd}\n"
+                    f"All file and git operations must happen inside this "
+                    f"directory (or subdirectories) unless the user "
+                    f"explicitly asks otherwise. Do NOT 'cd' to other "
+                    f"locations. Platform: {os.sys.platform}."))
+            except Exception:
+                pass
+
             # FIX: Inject relevant skills only once per agent lifetime, not on every run.
             # Re-injecting on every run pollutes the context window with duplicate skill messages.
             # v3.0.1: chat requests get a clean context — no skill cards.
