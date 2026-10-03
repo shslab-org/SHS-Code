@@ -27,6 +27,10 @@ dependencies = [
     "fastapi>=0.111",
     "uvicorn>=0.30",
     "websockets>=12.0",
+    # v4.0.1 (fresh-install finding): the secrets store (Fernet encryption,
+    # app/security/cipher.py) silently degraded without cryptography —
+    # /secrets endpoints unmounted, CRUD returned 500. It is a core feature.
+    "cryptography>=42",
 ]
 
 [project.optional-dependencies]
