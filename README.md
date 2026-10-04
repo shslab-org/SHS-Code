@@ -4,25 +4,26 @@
 
 <h1 align="center">SHS-Code</h1>
 <h3 align="center">Persistent Autonomous AI Coding Agent — by SHS Lab</h3>
-<p align="center">Plan · Implement · Verify — with memory, tools, skills, MCP, and Team103 multi-agent execution.</p>
+<p align="center">Plan · Implement · Verify — with memory, tools, skills, MCP, Team103 multi-agent execution, real token streaming, and a first-class Web GUI.</p>
 
 <p align="center">
   <a href="https://github.com/shslab-org/shs-code"><img src="https://img.shields.io/badge/repo-shs--code-blue?style=flat-square&logo=github" alt="repo" /></a>
   <img src="https://img.shields.io/badge/python-%3E%3D3.11-blue?style=flat-square&logo=python" alt="python >=3.11" />
-  <img src="https://img.shields.io/badge/version-4.0.0-green?style=flat-square" alt="version 4.0.0" />
+  <img src="https://img.shields.io/badge/version-4.4.0-green?style=flat-square" alt="version 4.4.0" />
   <img src="https://img.shields.io/badge/license-Modified%20MIT-lightgrey?style=flat-square" alt="license" />
   <img src="https://img.shields.io/badge/tests-pytest-yellow?style=flat-square" alt="tests" />
+  <img src="https://img.shields.io/badge/GUI-14%20panels-8a2be2?style=flat-square" alt="GUI panels" />
 </p>
 
 > **📚 Full documentation lives in a separate repository.**
 >
-> The complete guides — **full documentation, installation guide, beginner guide, CLI reference, configuration, models, providers, tools, skills, MCP, memory, single agent, autonomous, multi-agent, Team103, architecture, troubleshooting, and more** — are maintained at:
+> The complete guides — full documentation, installation guide, beginner guide, CLI reference, GUI guide, configuration, models, providers, tools, skills, MCP, memory, single agent, autonomous, multi-agent, Team103, architecture, troubleshooting, and more — are maintained at:
 >
 > **👉 https://github.com/shslab-org/SHS-Code-Docs**
 >
 > This README is the official product homepage. The Docs repo is the complete manual. Start here, go deep there.
 
-**Code repository:** https://github.com/shslab-org/shs-code · **Version:** `4.0.0` · **Python:** `>=3.11` · **Package:** `shscode` (import package `app`) · **License:** Modified MIT (see `LICENSE`)
+**Code repository:** https://github.com/shslab-org/shs-code · **Version:** `4.4.0` · **Python:** `>=3.11` · **Package:** `shscode` (import package `app`) · **License:** Modified MIT (see `LICENSE`)
 
 ---
 
@@ -35,76 +36,92 @@
 - [5. What SHS-Code can do](#5-what-shs-code-can-do)
 - [6. Feature overview](#6-feature-overview)
 - [7. Architecture overview](#7-architecture-overview)
-- [8. Single-agent mode](#8-single-agent-mode)
-- [9. Autonomous mode](#9-autonomous-mode)
-- [10. Multi-agent mode](#10-multi-agent-mode)
+- [8. Web GUI — full-featured, first-class interface](#8-web-gui--full-featured-first-class-interface)
+  - [8.1 Design philosophy & runtime model](#81-design-philosophy--runtime-model)
+  - [8.2 Navigation, responsive layout & motion](#82-navigation-responsive-layout--motion)
+  - [8.3 Dashboard](#83-dashboard)
+  - [8.4 Agent workspace (live streaming)](#84-agent-workspace-live-streaming)
+  - [8.5 Tasks & Task-DAG visualisation](#85-tasks--task-dag-visualisation)
+  - [8.6 Team103 runner](#86-team103-runner)
+  - [8.7 Workspace browser & diff viewer](#87-workspace-browser--diff-viewer)
+  - [8.8 Terminal panel](#88-terminal-panel)
+  - [8.9 Git panel](#89-git-panel)
+  - [8.10 GitHub panel & agent identity](#810-github-panel--agent-identity)
+  - [8.11 QA panel](#811-qa-panel)
+  - [8.12 Sessions panel](#812-sessions-panel)
+  - [8.13 Logs panel](#813-logs-panel)
+  - [8.14 Memory panel](#814-memory-panel)
+  - [8.15 Settings panel](#815-settings-panel)
+  - [8.16 Help / Guide panel (onboarding)](#816-help--guide-panel-onboarding)
+  - [8.17 Design system — colour, status legend, motion, typography](#817-design-system--colour-status-legend-motion-typography)
+  - [8.18 Accessibility & keyboard shortcuts](#818-accessibility--keyboard-shortcuts)
+  - [8.19 UX principles in practice](#819-ux-principles-in-practice)
+- [9. CLI](#9-cli)
+- [10. Execution modes — single, autonomous, multi-agent](#10-execution-modes--single-autonomous-multi-agent)
 - [11. Team103](#11-team103)
 - [12. PM / Architect / Engineer / QA](#12-pm--architect--engineer--qa)
 - [13. Worker pool](#13-worker-pool)
 - [14. Task DAG](#14-task-dag)
 - [15. Dependency waves](#15-dependency-waves)
 - [16. AIMD concurrency](#16-aimd-concurrency)
-- [17. Conflict serialization](#17-conflict-serialization)
+- [17. Conflict serialisation](#17-conflict-serialisation)
 - [18. Work stealing](#18-work-stealing)
 - [19. Checkpoints](#19-checkpoints)
 - [20. Retry / recovery](#20-retry--recovery)
 - [21. Verification](#21-verification)
 - [22. Continuous QA](#22-continuous-qa)
-- [23. Memory](#23-memory)
-- [24. Context management](#24-context-management)
-- [25. Tools](#25-tools)
-- [26. Terminal](#26-terminal)
-- [27. File operations](#27-file-operations)
-- [28. Code intelligence](#28-code-intelligence)
-- [29. Project intelligence](#29-project-intelligence)
-- [30. Browser](#30-browser)
-- [31. Web search](#31-web-search)
-- [32. Git](#32-git)
-- [33. GitHub](#33-github)
-- [34. Other integrations](#34-other-integrations)
-- [35. Skills](#35-skills)
-- [36. Built-in skills](#36-built-in-skills)
-- [37. Custom skills](#37-custom-skills)
-- [38. Skill levels](#38-skill-levels)
-- [39. MCP](#39-mcp)
-- [40. MCP client](#40-mcp-client)
-- [41. MCP server](#41-mcp-server)
-- [42. Models](#42-models)
-- [43. Providers](#43-providers)
-- [44. Model switching](#44-model-switching)
-- [45. Provider switching](#45-provider-switching)
-- [46. Failover](#46-failover)
-- [47. Credential pools](#47-credential-pools)
-- [48. Smart routing](#48-smart-routing)
-- [49. Local / offline models](#49-local--offline-models)
-- [50. Ollama](#50-ollama)
-- [51. GGUF](#51-gguf)
-- [52. Hugging Face](#52-hugging-face)
-- [53. Sessions](#53-sessions)
-- [54. Resume](#54-resume)
-- [55. Doctor](#55-doctor)
-- [56. Diagnostics](#56-diagnostics)
-- [57. Configuration](#57-configuration)
-- [58. Environment variables](#58-environment-variables)
-- [59. Installation](#59-installation)
-- [60. Quickstart](#60-quickstart)
-- [61. First coding task](#61-first-coding-task)
-- [62. First autonomous task](#62-first-autonomous-task)
-- [63. First multi-agent task](#63-first-multi-agent-task)
-- [64. Team103 usage](#64-team103-usage)
-- [65. Troubleshooting](#65-troubleshooting)
-- [66. Security](#66-security)
-- [67. Development](#67-development)
-- [68. Contributing](#68-contributing)
-- [69. Full documentation](#69-full-documentation)
-- [70. Contact](#70-contact)
-- [71. GUI (v4.0.1)](#71-gui-v401)
-- [72. Task lifecycle integrity (v4.0.1)](#72-task-lifecycle-integrity-v401)
-- [73. SHS-Agent GitHub identity (v4.0.1, updated v4.4.0)](#73-shs-agent-github-identity-v401-updated-v440)
-- [74. Token streaming (v4.0.1)](#74-token-streaming-v401)
-- [75. Agnes API testing (v4.0.1)](#75-agnes-api-testing-v401)
-- [76. GUI guide & collapsible navigation (v4.1.0)](#76-gui-guide--collapsible-navigation-v410)
-- [77. Workspace diff-viewer, CI, messaging & agent identity everywhere (v4.2.0)](#77-workspace-diff-viewer-ci-messaging--agent-identity-everywhere-v420)
+- [23. Task lifecycle integrity](#23-task-lifecycle-integrity)
+- [24. Memory](#24-memory)
+- [25. Context management](#25-context-management)
+- [26. Tools](#26-tools)
+- [27. Terminal](#27-terminal)
+- [28. File operations](#28-file-operations)
+- [29. Code intelligence](#29-code-intelligence)
+- [30. Project intelligence](#30-project-intelligence)
+- [31. Browser](#31-browser)
+- [32. Web search](#32-web-search)
+- [33. Git](#33-git)
+- [34. GitHub and other forges](#34-github-and-other-forges)
+- [35. SHS-Agent automation identity](#35-shs-agent-automation-identity)
+- [36. Other integrations](#36-other-integrations)
+- [37. Skills](#37-skills)
+- [38. Built-in skills](#38-built-in-skills)
+- [39. Custom skills](#39-custom-skills)
+- [40. Skill levels](#40-skill-levels)
+- [41. MCP](#41-mcp)
+- [42. MCP client](#42-mcp-client)
+- [43. MCP server](#43-mcp-server)
+- [44. Models](#44-models)
+- [45. Providers](#45-providers)
+- [46. Model switching](#46-model-switching)
+- [47. Provider switching](#47-provider-switching)
+- [48. Failover](#48-failover)
+- [49. Credential pools](#49-credential-pools)
+- [50. Smart routing](#50-smart-routing)
+- [51. Local / offline models](#51-local--offline-models)
+- [52. Ollama](#52-ollama)
+- [53. GGUF](#53-gguf)
+- [54. Hugging Face](#54-hugging-face)
+- [55. Token streaming](#55-token-streaming)
+- [56. Sessions](#56-sessions)
+- [57. Resume](#57-resume)
+- [58. Detached runs](#58-detached-runs)
+- [59. Doctor](#59-doctor)
+- [60. Diagnostics](#60-diagnostics)
+- [61. Configuration](#61-configuration)
+- [62. Environment variables](#62-environment-variables)
+- [63. Installation](#63-installation)
+- [64. Quickstart](#64-quickstart)
+- [65. First coding task](#65-first-coding-task)
+- [66. First autonomous task](#66-first-autonomous-task)
+- [67. First multi-agent task](#67-first-multi-agent-task)
+- [68. Team103 usage](#68-team103-usage)
+- [69. Troubleshooting](#69-troubleshooting)
+- [70. Security](#70-security)
+- [71. Development](#71-development)
+- [72. Contributing](#72-contributing)
+- [73. Full documentation](#73-full-documentation)
+- [74. Contact](#74-contact)
 
 ---
 
@@ -112,9 +129,9 @@
 
 **SHS-Code** is the persistent autonomous AI coding agent by **SHS Lab (Sazzad Hussain Shobuj)** — https://github.com/shslab-org/shs-code.
 
-> Single product, single version: **`4.0.1`** (source of truth: `app/__init__.py::__version__` and `pyproject.toml`). Python `>=3.11`. Distribution name `shscode`; import package `app`.
+> Single product, single version: **`4.4.0`** (source of truth: `app/__init__.py::__version__` and `pyproject.toml`). Python `>=3.11`. Distribution name `shscode`; import package `app`.
 
-SHS-Code plans, implements, and verifies software tasks through tools — and remembers work across sessions. It ships with a CLI **and** a full web GUI (§71), both sitting on the same Python runtime.
+SHS-Code plans, implements, and verifies software tasks through tools — and remembers work across sessions. It ships with a **fully-featured Web GUI** *and* an interactive **CLI**, both running on the same Python runtime, the same journal, and the same memory.
 
 ---
 
@@ -122,15 +139,15 @@ SHS-Code plans, implements, and verifies software tasks through tools — and re
 
 SHS-Code is a **tool-using coding agent** with:
 
-- an interactive CLI (`shscode` / `SHSCode`), one-shot task mode, and background execution,
+- an interactive CLI (`shscode` / `SHSCode`), a one-shot task mode, and background/detached execution,
 - a FastAPI server with REST + WebSocket + webchat/canvas UIs (`shscode-server` / `python -m app.server`, default port `8765`),
-- a **full web GUI** at `/gui` (§71) — dashboard, agent chat with live token streaming, task DAG visualization, workspace, terminal, Git/GitHub panels, QA, sessions, memory, settings,
+- a **full web GUI at `/gui`** with 14 panels — dashboard, agent chat with live token streaming, task DAG visualisation, workspace + diff viewer, terminal, Git/GitHub panels, QA, sessions, memory, logs, settings, and an in-app Help/Guide,
 - a provider/model layer supporting cloud APIs and local/offline models, with **real SSE token streaming**,
 - persistent memory (short-term, long-term SQLite, tiered cache, journal, checkpoints),
 - 18 agent tools, 29 built-in skills, 4 skill levels, MCP client + server,
 - code/project intelligence over a persistent incremental index,
 - browser + web search + URL extraction,
-- Git + GitHub/GitLab/Azure DevOps/Bitbucket/Forgejo integrations with the dedicated **SHS-Agent** automation identity (§73, §79),
+- Git + GitHub/GitLab/Azure DevOps/Bitbucket/Forgejo integrations with the dedicated **SHS-Agent** automation identity,
 - messaging channels, cron scheduling, and webhooks,
 - single-agent, autonomous, and multi-agent (Team103) execution.
 
@@ -143,13 +160,15 @@ To start SHS-Code, install the package, configure one provider key, and run `shs
 Most chat assistants answer. SHS-Code **executes**:
 
 | Problem | SHS-Code provides |
-|---|---|---|
+|---|---|
 | One-shot answers lose context | Persistent sessions, journal, checkpoints, and long-term memory |
 | Manual file edits | `str_replace_editor`, `bash`, `python_execute`, verification gates |
 | Large-repo blindness | Incremental AST/symbol index, semantic + structural search, project profiles |
 | Model outages | Failover chains, credential pools, health tracking, smart routing, local models |
 | Solo-agent bottleneck | Team103: PM → Architect → Engineers → QA over a task DAG |
+| Opaque black-box agents | A transparent GUI with per-step activity, live streaming, and journal-backed evidence |
 | Glue code for automation | Server API, cron, webhooks, messaging channels, MCP |
+| Fake "done" claims | Explicit finish reasons, plan gate, `partial` state, verification gates |
 
 ---
 
@@ -158,25 +177,28 @@ Most chat assistants answer. SHS-Code **executes**:
 - **Plan → Implement → Verify.** Every task decomposes, executes through tools, and verifies before completion.
 - **Persistence first.** Sessions, journal (`~/.shscode/state/journal.db`), checkpoints (`~/.shscode/state/checkpoints/`), and memory (`workspace/.memory/long_term.db`) survive restarts.
 - **Evidence over claims.** Project intelligence, doctor checks, and verification read real state — never documentation claims.
-- **Safe autonomy.** Security analyzers, confirmation thresholds, secret redaction, and sandboxes gate risky actions.
+- **Safe autonomy.** Security analysers, confirmation thresholds, secret redaction, and sandboxes gate risky actions.
 - **Provider freedom.** Universal OpenAI-compatible endpoints plus native OpenAI/Anthropic/Google/Mistral/Bedrock/Ollama/GGUF/Hugging Face, with live switching and failover.
+- **Honest UI.** The interface never lies about task state — `partial`, `blocked`, `failed`, and `completed` are distinct and visible, and internal tool chatter is separated from user-facing messages by design.
+- **UI parity, not UI compromise.** Anything the CLI can do, the GUI does — on the same runtime, sharing the same state.
 
 ---
 
 ## 5. What SHS-Code can do
 
-To use SHS-Code, pick any of these:
+Pick any of these and SHS-Code handles it end-to-end:
 
-- Build, fix, refactor, test, and document code in your repo.
+- Build, fix, refactor, test, and document code in your repository.
 - Research a codebase (`code_search`, `project_intel`) and explain architecture.
 - Browse the web, search, and extract clean page text.
 - Manage Git branches, diffs, commits, and forge issues/PRs.
 - Run scheduled tasks (cron) and react to webhooks.
-- Chat from terminal, server webchat, canvas, or messaging channels.
-- Extend behavior with custom skills and MCP servers.
-- Run solo or as a Team103 multi-agent crew with QA gates.
+- Chat from the terminal, the web GUI, the webchat, the canvas, or messaging channels.
+- Extend behaviour with custom skills and MCP servers.
+- Run solo, autonomously, or as a Team103 multi-agent crew with QA gates.
 - Switch models/providers live without losing context.
 - Work fully offline with Ollama / LM Studio / GGUF / Hugging Face (with optional deps).
+- Launch long-horizon tasks detached from the terminal and attach later.
 
 ---
 
@@ -184,14 +206,15 @@ To use SHS-Code, pick any of these:
 
 | Area | What SHS-Code provides |
 |---|---|
-| Execution | Single-agent, autonomous, multi-agent, Team103, worker pool, task DAG |
-| Reliability | Checkpoints, retries, recovery, verification, continuous QA, loop detection |
-| Knowledge | Tiered memory, context condenser, skills (4 levels), MCP |
-| Understanding | AST index, semantic search, project profiles, environment detection |
-| Action | 18 tools: shell, Python/Node, editor, browser, search, verify |
-| Models | Universal + OpenAI/Anthropic/Google/Mistral/Bedrock/Ollama/GGUF/HF, failover, pools, routing |
-| Ops | Sessions/resume, doctor/diagnostics, cron, webhooks, SSH/sandbox, channels |
-| Interfaces | CLI, server REST/WS, webchat/canvas, `shscode-*` console scripts |
+| **Interfaces** | Web GUI (14 panels), interactive CLI, one-shot mode, REST + WebSocket server, webchat/canvas, messaging channels |
+| **Execution** | Single-agent, autonomous, multi-agent, Team103, worker pool, task DAG, detached daemon runs |
+| **Reliability** | Checkpoints, retries, recovery, verification, continuous QA, loop detection, tool-history sanitiser, plan gate |
+| **Knowledge** | Tiered memory, context condenser, skills (4 levels), MCP |
+| **Understanding** | AST index, semantic search, project profiles, environment detection |
+| **Action** | 18 tools: shell, Python/Node, editor, browser, search, verify, delegate |
+| **Models** | Universal + OpenAI/Anthropic/Google/Mistral/Bedrock/Ollama/GGUF/HF, failover, pools, routing |
+| **Ops** | Sessions/resume, detached runs, doctor/diagnostics, cron, webhooks, SSH/sandbox, channels |
+| **Attribution** | SHS-Agent identity, git shim, PR author, contributor-graph integrity |
 
 ---
 
@@ -200,7 +223,8 @@ To use SHS-Code, pick any of these:
 ```mermaid
 flowchart TB
   CLI[CLI shscode] --> Agent[Agent loop ReAct/orchestrator]
-  Server[Server FastAPI /run /ws] --> Agent
+  GUI[Web GUI /gui] --> Server[Server FastAPI /run /ws]
+  Server --> Agent
   Cron[Cron shscode-cron] --> Agent
   Webhook[Webhooks] --> Agent
   Agent --> Planner[Planner + Task DAG + Team103]
@@ -220,9 +244,187 @@ Key paths: `app/agent/` (loop), `app/planner.py`, `app/task_dag.py`, `app/team10
 
 ---
 
-## 8. Single-agent mode
+## 8. Web GUI — full-featured, first-class interface
 
-To run a single agent, use the interactive shell or one-shot prompt:
+The GUI is not a wrapper. It is a **first-class surface** that sits directly on the same Python runtime as the CLI — no separate backend, no duplicated business logic, no terminal-scraping.
+
+```
+GUI  →  REST + structured WebSocket events  →  SHS-Code runtime
+```
+
+Start the server and open `/gui`:
+
+```bash
+shscode-server              # default port 8765
+# then open http://localhost:8765/gui
+# (append ?api_key=… when SHSCODE_API_KEY is set)
+```
+
+Single-page app served from `app/server/static/gui.html`. CLI and GUI share the same state: a session started in the CLI can be continued in the GUI (Sessions → Continue), and both read the same journal, session DB, memory, and git state.
+
+### 8.1 Design philosophy & runtime model
+
+- **Same runtime, same data.** Every panel reads or writes the *canonical* state — the journal, session DB, workspace, git repo. There is no GUI-only shadow state.
+- **Structured events, not scraped text.** The agent loop emits typed events (`llm_delta`, `tool_call`, `tool_result`, `plan_step`, `task_state`, `tool_failure_diagnostic`, …) that the WebSocket bridges to the browser. The GUI renders them natively — it never parses terminal output.
+- **Separation of user channel and activity channel.** The user-facing assistant message contains **only the final answer**. Raw tool output, retry diagnostics, and terminate markers live in the structured activity feed (`agent.last_run_step_outputs`) and never leak into the conversation transcript.
+- **Parity with the CLI.** If a feature exists in the CLI, there is a GUI path for it. The GUI is the reference for visualised workflows (DAG, diff, journal), the CLI is the reference for scripted workflows.
+
+### 8.2 Navigation, responsive layout & motion
+
+- **Collapsible sidebar.** The whole navigation slides off-canvas with an animated transition. Toggle three ways: the ☰ top-bar button, the `☰ MENU` edge tab that appears while hidden, or `Ctrl`/`Cmd`+`B`. The preference persists in `localStorage`.
+- **Mobile drawer mode.** Below 820px the sidebar becomes a fixed overlay drawer — closed by default, dismissed by `Esc` or by tapping the backdrop, and auto-closes after picking a panel.
+- **Content-first layout.** When the sidebar is collapsed, panels expand to full width — no wasted gutter, no fixed-min-width clipping.
+- **Motion with purpose.** Transition timing is short and consistent; animations are suppressed under `prefers-reduced-motion`. Hover/focus states are visible and stable.
+- **Persistent panel state.** Scroll position, tab selection, and open-file state survive navigation between panels.
+
+### 8.3 Dashboard
+
+The landing panel — a one-glance status board:
+
+- Provider, model, and version at the top.
+- **GitHub identity** card — the active SHS-Agent identity and token/App status.
+- Local git state — branch, dirty files, recent commits.
+- Recent journal tasks with their finish reasons and lifecycle state.
+- Active sessions with quick-continue buttons.
+- Rate-limit and provider-health indicators.
+
+### 8.4 Agent workspace (live streaming)
+
+The primary interactive panel. Type a goal and watch SHS-Code work.
+
+- **Live token streaming.** Assistant content streams incrementally — the growing line you see is what the model is actually producing, not a post-hoc animation.
+- **Structured activity feed.** Tool calls, tool results, plan updates, and diagnostics render as discrete, collapsible events — visually separated from the user/assistant chat bubbles. You can expand a tool call to see exact arguments and output, without that noise polluting the transcript.
+- **Run progress.** Step count, tool count, current provider/model, and finish reason are visible throughout the run.
+- **Cancellation.** Stop a run cleanly — state is checkpointed, the session closes as `interrupted`, and `--continue` / `/resume` can pick it up.
+- **Session continuation.** Attach to an existing session and continue from where it left off, with the same history and memory.
+- **Detached-run checkbox.** Spawn the task as a detached process that survives the browser tab and the terminal; the Sessions panel tracks it live.
+- **Per-run step budget.** The "Steps" box lets you set `max_steps` for a single run without touching configuration.
+- **Empty states that teach.** With no session, the panel shows a short quick-start and a link to the Help/Guide.
+
+### 8.5 Tasks & Task-DAG visualisation
+
+Two complementary views inside the Tasks panel:
+
+- **Journal list.** Every task with its lifecycle status (`completed`, `partial`, `failed`, `blocked`) and finish reason, in real chronological order.
+- **Visual task DAG.** Wave-by-wave layout with per-state colouring — pending, active, completed, skipped, failed. Dependencies are drawn as edges; hovering a node shows its files, role, and acceptance criteria.
+- **Journal event tail.** The raw event stream, live, for operators who want to see what the orchestrator is doing between steps.
+
+### 8.6 Team103 runner
+
+- A single input for a large goal, posted to `POST /team103`.
+- Honest architecture caption: what Team103 actually is (1 PM + 1 Architect + up to 100 lightweight coroutine engineers sharing one LLM engine + 1 QA gate), how it decomposes, and where to look for logs.
+- Live wave/role visualisation as tasks move from PM → Architect → Engineers → QA.
+
+### 8.7 Workspace browser & diff viewer
+
+- **Files tab.** An expandable file tree, path-confined to the server workspace, with a viewer for text files. Symlinks that escape the workspace are refused.
+- **Changes tab.** Every changed file with a status badge (`M` modified, `A` added, `D` deleted, `N` new/untracked) and per-file `+adds/−dels` counts. The tab badge shows the total number of changed files.
+- **Line-numbered, colourised unified diff.** Green for additions, red for removals, blue for hunk headers. Untracked files are synthesised as new-file diffs.
+- **Three comparison modes.**
+  - *Working tree* — unstaged changes.
+  - *Staged* — index vs HEAD.
+  - *vs HEAD* — everything since the last commit.
+- **Graceful degradation.** Non-repo folders show a clear message instead of an error.
+- Served by `GET /workspace/diff`.
+
+### 8.8 Terminal panel
+
+Run commands in the server workspace with the same permissions and context the agent uses. Useful for spot checks (`pytest -q`, `git status`, `ls -la`) without leaving the browser. Output is streamed and preserved for scrollback.
+
+### 8.9 Git panel
+
+Status, branch, commit, push, pull, stash, diff, and log — all through the same **GitHubProvider** the CLI uses. Commits made here carry the SHS-Agent trailer (and, when the shim is active, the SHS-Agent author/committer identity).
+
+### 8.10 GitHub panel & agent identity
+
+- **Agent identity card** — shows which identity will be used for commits and API actions.
+- **PR creation** — open a pull request from a branch without leaving the panel.
+- **PR/issue lists** — browse open PRs and issues for the configured repository, with quick links to the forge.
+- All actions honour the same credential rules as the CLI (App installation token, PAT, or connector).
+
+### 8.11 QA panel
+
+- Runs the **same VerificationEngine** the agent uses, on demand.
+- Build/test/lint/typecheck gates with pass/fail per command, extracted errors, and suggested fixes.
+- The panel badge reflects the true boolean result — a real comparison, not a Python-vs-JS coercion.
+- Useful for re-verifying after manual edits from the Workspace or Terminal panels.
+
+### 8.12 Sessions panel
+
+- Lists every session with metadata (workspace, model, created/last-used).
+- **Message browser** with final/interim separation — the final answer is visually distinct from internal activity.
+- **One-click continue** to attach to a session and keep going.
+- **Detached-run registry** — every detached run appears here with live process liveness (running / finished / crashed) and a link to its `output.log`.
+
+### 8.13 Logs panel
+
+Live tail of the runtime log with auto-refresh. Kept **separate from the conversation** on purpose — logs are for operators, the conversation is for users.
+
+### 8.14 Memory panel
+
+Browse and inspect:
+
+- `MEMORY.md` — the agent's long-term working notes.
+- `USER.md` — the user-profile memory.
+- Long-term memory entries (SQLite + FTS5) with search.
+
+Useful for auditing what the agent remembers and for manual correction.
+
+### 8.15 Settings panel
+
+- **Effective configuration** with secrets masked.
+- **Model/provider switch** — change live without restarting the server or losing the session.
+- **Agent Step Budget** — the persisted `max_steps` used by new runs (overridable per run from the Agent panel).
+
+### 8.16 Help / Guide panel (onboarding)
+
+- Plain-language quick-start for first-time users.
+- Panel reference — what each of the 14 panels does.
+- Status legend — every lifecycle state and colour explained.
+- Keyboard shortcuts.
+- Troubleshooting checklist that mirrors `docs/GUI_GUIDE.md`.
+- Aimed at users with **zero programming knowledge**; the guide assumes no prior context.
+
+### 8.17 Design system — colour, status legend, motion, typography
+
+- **Tokenised colours.** One palette drives the whole app — surface, elevated surface, border, muted text, accent, and semantic status colours. Panels reuse the same tokens instead of inventing local variants.
+- **Status legend** (consistent everywhere — DAG nodes, journal list, activity feed):
+  - `completed` — green
+  - `partial` — amber (work stopped, not verified)
+  - `active` — blue (in flight)
+  - `pending` — grey
+  - `skipped` — slate
+  - `failed` / `blocked` — red
+  - `🟡 rate-limit` / `🔴 failure` — provider-health markers
+- **Diff colours.** Green add / red remove / blue hunk header, with line numbers.
+- **Typography.** Monospace for code, diff, logs, and identifiers; a humanist sans for prose and controls. Reading width is capped in long-form areas.
+- **Spacing & density.** A tight baseline grid for toolbars and lists, generous padding for prose. Tables and trees stay scannable at high density.
+- **Elevation.** Cards and overlays share one shadow scale; focus rings and hover states are visible and consistent.
+
+### 8.18 Accessibility & keyboard shortcuts
+
+- **Keyboard-first navigation.** Every panel reachable by keyboard; focus order follows visual order.
+- **Global shortcuts.**
+  - `Ctrl`/`Cmd` + `B` — toggle sidebar.
+  - `Esc` — close overlay/mobile drawer, cancel an in-flight prompt.
+  - `Enter` / `Shift`+`Enter` — send / newline in the agent chat.
+- **Motion preference respected.** `prefers-reduced-motion` disables the slide/hide animation.
+- **Colour is not the only signal.** Status is conveyed by label + colour, not colour alone.
+- **Contrast.** Text and icon colours meet accessible contrast on both light and dark surfaces.
+
+### 8.19 UX principles in practice
+
+- **Progressive disclosure.** The Agent panel shows a calm conversation; the activity feed hides detail behind expandable cards; the DAG reveals node metadata on hover.
+- **Truthful status.** `partial` and `blocked` are shown as distinct from `completed`. Nothing pretends a run finished when it did not.
+- **Recoverability.** Cancel is graceful; resume is one click; detached runs survive the browser; the diff viewer shows exactly what changed.
+- **Persistence of preference.** Sidebar state, per-run step budget, and last-open panel are remembered.
+- **Clear separation of concerns.** Logs ≠ conversation; activity ≠ answer; settings ≠ per-run overrides.
+
+---
+
+## 9. CLI
+
+The interactive shell and one-shot modes:
 
 ```bash
 shscode
@@ -230,31 +432,21 @@ shscode "add retry with backoff to app/llm/retry.py and add tests"
 python main.py "fix failing tests in tests/test_memory_layers.py"
 ```
 
-SHS-Code provides a ReAct-style loop: read goal → inspect project (`project_intel`, `code_search`) → plan (`planning`, `task_dag`) → edit (`str_replace_editor`, `bash`, `python_execute`) → verify (`verify`, tests) → record (journal + memory). Slash commands (`/plan`, `/mode`, `/model`, `/doctor`, `/sessions`) steer the run without restarting.
+SHS-Code provides a ReAct-style loop: read goal → inspect project (`project_intel`, `code_search`) → plan (`planning`, `task_dag`) → edit (`str_replace_editor`, `bash`, `python_execute`) → verify (`verify`, tests) → record (journal + memory). Slash commands (`/plan`, `/mode`, `/model`, `/doctor`, `/sessions`, `/team103`, `/github`, `/mcp`, `/skills`, `/tools`, `/project`, `/git`, `/verify`, `/compress`, `/resume`, `/tasks`, `/task`, `/pause`, `/stop`, `/continue`, `/bg`, `/new`, `/search`, `/status`, `/usage`, `/log`, `/debug`, `/env`, `/providers`, `/models`, `/profile`, `/config`, `/runs`, `/attach`) steer the run without restarting.
 
 ---
 
-## 9. Autonomous mode
+## 10. Execution modes — single, autonomous, multi-agent
 
-To run long-running autonomous execution, select the `autonomous` mode:
+**Single-agent.** The default. Interactive shell or one-shot prompt. A ReAct-style loop against a small, focused goal — ideal for bug fixes, single-file edits, and quick research.
+
+**Autonomous.** Select the `autonomous` mode (`/mode autonomous`) for long-horizon work: high step budget, planning on, thorough verification, minimal pauses. It continues through many steps, detects stuck loops, asks via `ask_human` only when truly blocked, and checkpoints so `/pause`, `/bg`, `--detach`, and resume always work. Use it for migrations, large refactors, and multi-file features.
 
 ```bash
 shscode "migrate the auth module to async with full test coverage"
 ```
 
-Inside the shell:
-
-```text
-/mode autonomous
-```
-
-The `autonomous` agent profile (see `app/modes.py`) provides a high step budget, planning on, thorough verification, and minimal pauses. It continues through many steps, detects stuck loops, asks via `ask_human` only when truly blocked, and checkpoints progress so `/pause`, `/bg`, and resume always work. Use it for migrations, large refactors, and multi-file features.
-
----
-
-## 10. Multi-agent mode
-
-To run multiple agents, use the multi-agent pipeline or delegation:
+**Multi-agent.** Two paths:
 
 ```bash
 python run_multi_agent.py --mode build "implement user profiles API with tests"
@@ -262,16 +454,17 @@ python run_multi_agent.py --mode plan "design sharding for the journal"
 shscode-multi --help
 ```
 
-SHS-Code supports two multi-agent paths: (1) the `run_multi_agent.py` build/plan pipeline (`app/multi_agent.py:run_cli`), and (2) in-task `delegate` subagents plus `task_dag` parallel execution. For full PM/Architect/Engineer/QA orchestration, use Team103 below.
+(1) the `run_multi_agent.py` build/plan pipeline (`app/multi_agent.py:run_cli`), and (2) in-task `delegate` subagents plus `task_dag` parallel execution. For full PM/Architect/Engineer/QA orchestration, use Team103.
 
+---
 
 ## 11. Team103
 
-Team103 is the multi-agent crew in `app/team103/scheduler.py`. To use it, give SHS-Code a large goal — the PM decomposes it, the Architect plans waves, Engineers implement in parallel, and QA gates the merge.
+Team103 is the multi-agent crew in `app/team103/scheduler.py`. Give SHS-Code a large goal — the PM decomposes it, the Architect plans waves, Engineers implement in parallel, and QA gates the merge.
 
-**Entry points (v4.0.1):** CLI `/team103 <goal>` and server `POST /team103 {"goal": …}` — plus the documented `run_team103` API for programmatic use.
+**Entry points:** CLI `/team103 <goal>` and server `POST /team103 {"goal": …}` — plus the documented `run_team103` API for programmatic use.
 
-> **Honest architecture note:** Team103 is 1 PM + 1 Architect + up to 100 **lightweight coroutine engineer workers sharing one LLM engine** + 1 QA gate — NOT 103 independent LLM instances. PM/Architect decomposition is heuristic (regex-based planning plus role specialization); the engineers are real journaled `SHSCode` agent runs.
+> **Honest architecture note:** Team103 is 1 PM + 1 Architect + up to 100 **lightweight coroutine engineer workers sharing one LLM engine** + 1 QA gate — NOT 103 independent LLM instances. PM/Architect decomposition is heuristic (regex-based planning plus role specialisation); the engineers are real journaled `SHSCode` agent runs.
 
 ```mermaid
 flowchart LR
@@ -282,7 +475,7 @@ flowchart LR
   QA --> Merge[Result merge]
 ```
 
-SHS-Code provides dynamic concurrency (AIMD), file-conflict serialization, work-stealing within waves, checkpoints, retries, and a final QA gate (v4.0.1: the gate fails on empty changed files, missing files, and low aggregate confidence — worker confidence is keyed off each worker's actual finish reason, not a hardcoded value). It is designed for multi-file features where solo execution would bottleneck.
+SHS-Code provides dynamic concurrency (AIMD), file-conflict serialisation, work-stealing within waves, checkpoints, retries, and a final QA gate that fails on empty changed files, missing files, and low aggregate confidence — worker confidence is keyed off each worker's actual finish reason, not a hardcoded value. Designed for multi-file features where solo execution would bottleneck.
 
 ---
 
@@ -292,10 +485,10 @@ Roles are defined in `app/v4/roles.py`:
 
 - **PM** — objective, acceptance criteria, decomposition, priority. `decompose_goal(goal, max_tasks=12)` produces `TaskSpec` items with title, files, priority, risk, subsystem, complexity, role hint, dependencies, and acceptance.
 - **Architect** — architecture, dependency graph, DAG, assignment, conflicts. Builds topological waves and a conflict plan.
-- **Engineer** — implementation, investigation, testing, local verification. Specializations: `backend`, `frontend`, `testing`, `documentation`, `devops`, `security`, `performance`, `database`.
+- **Engineer** — implementation, investigation, testing, local verification. Specialisations: `backend`, `frontend`, `testing`, `documentation`, `devops`, `security`, `performance`, `database`.
 - **QA** — integration, regression, correctness, completion gate. `qa.final_gate(confidence, conflicts, failed)` decides pass/fail.
 
-To use roles, run a Team103 or multi-agent task — SHS-Code assigns each `TaskSpec` a role hint and a task-specific context slice automatically.
+Run a Team103 or multi-agent task and SHS-Code assigns each `TaskSpec` a role hint and a task-specific context slice automatically.
 
 ---
 
@@ -305,8 +498,6 @@ SHS-Code provides two pools:
 
 - **Parallel executor** (`[parallel_executor]` in `config.toml`): `max_workers = 4`, `timeout_s = 300` per task. Used for parallel tool/DAG work.
 - **Team103 scheduler pool**: starts at `start_concurrency`, capped by `max_workers` and `max_concurrency`, adjusted live by AIMD.
-
-To configure, edit `config.toml`:
 
 ```toml
 [parallel_executor]
@@ -318,37 +509,37 @@ timeout_s   = 300
 
 ## 14. Task DAG
 
-The task DAG (`app/task_dag.py`, `task_dag` tool) models work as nodes with dependencies. To use it, ask SHS-Code to plan:
+The task DAG (`app/task_dag.py`, `task_dag` tool) models work as nodes with dependencies. Ask SHS-Code to plan:
 
 ```text
 /plan implement auth refresh tokens with tests
 ```
 
-SHS-Code creates nodes, links `depends_on` edges, schedules dependency waves, tracks state in the journal, and merges results. The `task_dag` tool exposes the graph to the agent; `app/v4/async_dag.py` provides async execution with observability.
+SHS-Code creates nodes, links `depends_on` edges, schedules dependency waves, tracks state in the journal, and merges results. The `task_dag` tool exposes the graph to the agent; `app/v4/async_dag.py` provides async execution with observability. A DAG node can only be marked completed when every dependency reached `completed` or was **explicitly skipped** — silent auto-completion of active dependencies is not possible.
 
 ---
 
 ## 15. Dependency waves
 
-Waves are computed by `_waves()` in `app/team103/scheduler.py`: topological grouping by `depends_on` titles, fallback to priority order. Within a wave tasks run in parallel; across waves they run serially (A → D). Example: Wave A (schema + API contract) → Wave B (endpoints + UI) → Wave C (tests + docs). To inspect waves, run a Team103 task — SHS-Code logs `N waves` with role assignments.
+Waves are computed by `_waves()` in `app/team103/scheduler.py`: topological grouping by `depends_on` titles, fallback to priority order. Within a wave tasks run in parallel; across waves they run serially (A → D). Example: Wave A (schema + API contract) → Wave B (endpoints + UI) → Wave C (tests + docs). Run a Team103 task and SHS-Code logs `N waves` with role assignments.
 
 ---
 
 ## 16. AIMD concurrency
 
-AIMD (Additive Increase / Multiplicative Decrease) lives in `app/team103/scheduler.py::_AIMD`. The scheduler waits until active tasks drop below the current AIMD limit, increases the limit additively on success, and decreases it multiplicatively on failure/timeout. Bounds: `start_concurrency` → `min(max_concurrency, max_workers)`. To benefit, run large Team103 batches — SHS-Code throttles automatically under errors and ramps back up when healthy.
+AIMD (Additive Increase / Multiplicative Decrease) lives in `app/team103/scheduler.py::_AIMD`. The scheduler waits until active tasks drop below the current AIMD limit, increases the limit additively on success, and decreases it multiplicatively on failure/timeout. Bounds: `start_concurrency` → `min(max_concurrency, max_workers)`. Large Team103 batches benefit automatically — SHS-Code throttles under errors and ramps back up when healthy.
 
 ---
 
-## 17. Conflict serialization
+## 17. Conflict serialisation
 
-When two tasks touch the same files, the Architect emits a conflict plan (`conflicts: Dict[str, List[str]]`). SHS-Code serializes file-conflicting tasks instead of running them concurrently, preventing clobbered edits. Non-conflicting tasks still run in parallel. The final merge reports `merged_files` and remaining `conflicts` for QA review.
+When two tasks touch the same files, the Architect emits a conflict plan (`conflicts: Dict[str, List[str]]`). SHS-Code serialises file-conflicting tasks instead of running them concurrently, preventing clobbered edits. Non-conflicting tasks still run in parallel. The final merge reports `merged_files` and remaining `conflicts` for QA review.
 
 ---
 
 ## 18. Work stealing
 
-Within a wave, Engineers execute via `asyncio.gather` — idle workers pick up pending tasks in the same wave (work-stealing via gather). If a worker fails, its siblings continue; retries and QA catch gaps. To use it, run any Team103 or parallel DAG task — no configuration needed.
+Within a wave, Engineers execute via `asyncio.gather` — idle workers pick up pending tasks in the same wave (work-stealing via gather). If a worker fails, its siblings continue; retries and QA catch gaps. No configuration needed.
 
 ---
 
@@ -360,26 +551,28 @@ Checkpoints persist memory snapshots so work survives crashes:
 - Writes: temp file + atomic `os.replace` — a crash cannot corrupt the previous checkpoint.
 - Journal: `~/.shscode/state/journal.db` (SQLite, WAL) stores tasks + event log.
 
-To resume after interruption, use `--continue`, `--session ID`, or `/resume` — SHS-Code restores from the latest checkpoint and journal.
+Resume after interruption with `--continue`, `--session ID`, or `/resume` — SHS-Code restores from the latest checkpoint and journal.
 
 ---
 
 ## 20. Retry / recovery
 
-SHS-Code provides layered recovery (`app/recovery.py`, `app/llm/retry.py`, `app/v4/recovery.py`):
+Layered recovery (`app/recovery.py`, `app/llm/retry.py`, `app/v4/recovery.py`):
 
 - **LLM retries**: `max_retries` (built-in default `15` in `app/config.py`; shipped `config.toml` sample sets `6`), backoff with rate-limit waits that leave state untouched.
 - **Tool/task retries**: timeout → retry → checkpoint → resume.
 - **Journal recovery**: `tests/test_journal_recovery.py` verifies task state survives restarts.
 - **Team103**: per-task timeout/retry/checkpoint with QA final gate.
+- **Tool-failure diagnostics**: structured records (tool, exception class, args, `tool_call_id`) plus a `tool_failure_diagnostic` activity event — failures are diagnosable and recoverable, never silently swallowed.
+- **Tool-history sanitisation**: `sanitize_tool_history()` enforces the assistant-`tool_calls` ↔ matching-`tool`-results invariant at the LLM request boundary, so a resumed session can never be rejected by a strict OpenAI-compatible provider.
 
-To configure LLM retries, set `max_retries` under `[llm]` in `config.toml` or `~/.shscode/config.yaml` (shipped sample: `max_tokens = 8192`, `max_retries = 6`, `timeout = 1800`).
+Configure LLM retries under `[llm]` in `config.toml` or `~/.shscode/config.yaml` (shipped sample: `max_tokens = 8192`, `max_retries = 6`, `timeout = 1800`).
 
 ---
 
 ## 21. Verification
 
-Verification (`app/verification.py`, `verify` tool) runs project-aware checks before SHS-Code claims completion: `python -m compileall`, `pytest`, plus risk-aware gates. To verify any task:
+Verification (`app/verification.py`, `verify` tool) runs project-aware checks before SHS-Code claims completion: `python -m compileall`, `pytest`, plus risk-aware gates.
 
 ```text
 /verify
@@ -395,7 +588,28 @@ Continuous QA (`app/v4/cont_qa.py`) checks quality during execution — not just
 
 ---
 
-## 23. Memory
+## 23. Task lifecycle integrity
+
+SHS-Code never claims a task completed when it was skipped, abandoned, or unverified. Every run tracks an explicit **finish reason**:
+
+| Reason | Meaning | Journal status |
+|---|---|---|
+| `final_answer` | text answer stood (plan finished / no plan) | `completed` |
+| `terminate` | terminate tool accepted (plan gate passed) | `completed` |
+| `done_pattern` | keyword "done" match (gated: only when the persisted plan has NO unfinished steps) | `completed` |
+| `max_steps` | step budget exhausted mid-work | **`partial`** |
+| `token_budget` | token budget + grace exhausted | **`partial`** |
+| `error` / `permission_denied` | run failed | `failed` / `blocked` |
+
+The `partial` state is the honest middle ground: work stopped without a verified final answer — the task is explicitly **not** completed, `/resume` can continue it from the checkpoint, and the user-facing response says so plainly.
+
+Dependency handling is strict: a DAG node can only be marked completed when every dependency reached `completed` or was **explicitly skipped**. The plan gate nudges the model to finish or explicitly skip remaining steps before a final answer is accepted; keyword "done" claims with unfinished plan steps no longer end runs.
+
+The user-facing response channel carries **only the final answer** — raw tool outputs, retry diagnostics, and terminate markers stay in `agent.last_run_step_outputs` for GUI/debug consumers, never in the assistant message.
+
+---
+
+## 24. Memory
 
 SHS-Code provides four memory layers:
 
@@ -406,23 +620,23 @@ SHS-Code provides four memory layers:
 | **Tiered** | LRU cache (cap 512) over DB + markdown | `app/v4/memory_tiers.py`, `intel_memory.py` | Automatic acceleration |
 | **Journal/worklog** | Tasks + event log, checkpoints | `~/.shscode/state/journal.db`, `checkpoints/` | `/tasks`, `/resume`, sessions |
 
-To store a fact: `memory` tool. To recall across sessions: `cross_session_search`. Limitations: long-term search is FTS5 + LIKE (no vector DB by default); embeddings are placeholder bytes.
+Store a fact: `memory` tool. Recall across sessions: `cross_session_search`. Limitations: long-term search is FTS5 + LIKE (no vector DB by default); embeddings are placeholder bytes.
 
 ---
 
-## 24. Context management
+## 25. Context management
 
 Context is managed by `app/context/` + `app/compaction.py` + `app/v4/context_mgmt.py`:
 
 - **Condenser**: `condenser_type = "rolling"` (also `noop`, `llm_summarizing`), triggers at `max_events = 200`, budget `max_tokens = 80000`.
-- **Compaction**: `/compress` summarizes history into a snapshot; `ShortTermMemory.snapshot()/restore()` preserves continuity.
+- **Compaction**: `/compress` summarises history into a snapshot; `ShortTermMemory.snapshot()/restore()` preserves continuity.
 - **View properties**: deduplication, observation uniqueness, tool-call matching, loop atomicity.
 
-To configure, edit `[context]` in `config.toml`. To compress manually, run `/compress` or `/clear` + `/new`.
+Configure `[context]` in `config.toml`. Compress manually with `/compress` or `/clear` + `/new`.
 
 ---
 
-## 25. Tools
+## 26. Tools
 
 SHS-Code provides **18 agent tools** (`app/tool/`):
 
@@ -447,30 +661,31 @@ SHS-Code provides **18 agent tools** (`app/tool/`):
 | `terminate` | Signal task completion |
 | `image_generate` | Generate images (FAL.ai or mock) |
 
-planning.py, data_viz.py and platform_control.py exist as tool modules in app/tool/ but are not exposed in the default agent tool collection.
+`planning.py`, `data_viz.py`, and `platform_control.py` exist as tool modules in `app/tool/` but are not exposed in the default agent tool collection.
 
-To list tools in the shell: `/tools`. Every tool emits an OpenAI-compatible schema for the model.
+List tools in the shell: `/tools`. Every tool emits an OpenAI-compatible schema for the model.
 
+---
 
-## 26. Terminal
+## 27. Terminal
 
-To run shell commands, SHS-Code provides the `bash` tool plus isolated runners:
+Shell commands through the `bash` tool plus isolated runners:
 
 - **`bash`** — persistent shell, full system access. Used for git, pytest, builds, file ops.
 - **`python_execute`** — isolated Python subprocess (any imports, filesystem, network permitted). Use `print()` for output.
 - **`node_execute`** — isolated Node.js subprocess.
 
-All three run until completion with optional timeouts. To use them, just ask — SHS-Code selects the right runner. Example: `python_execute` for data scripts, `bash` for `pytest tests/ -q`.
+All three run until completion with optional timeouts. Ask naturally — SHS-Code selects the right runner. Example: `python_execute` for data scripts, `bash` for `pytest tests/ -q`.
 
 ---
 
-## 27. File operations
+## 28. File operations
 
-To read, create, and edit files, SHS-Code provides `str_replace_editor` (view / create / str_replace / insert / undo_edit). It is the primary editing tool — precise string replacement with undo support. Complementary tools: `bash` (moves/copies), `project_intel` (locate files), `code_search` filename mode. To edit, tell SHS-Code the file and change — it views first, edits, then verifies.
+Read, create, and edit files with `str_replace_editor` (view / create / str_replace / insert / undo_edit). The primary editing tool — precise string replacement with undo support. Complementary tools: `bash` (moves/copies), `project_intel` (locate files), `code_search` filename mode. Tell SHS-Code the file and change — it views first, edits, then verifies.
 
 ---
 
-## 28. Code intelligence
+## 29. Code intelligence
 
 Code intelligence (`app/intelligence/`, `code_search` tool) indexes the project once into a persistent incremental index — no repeated full scans.
 
@@ -485,11 +700,11 @@ Code intelligence (`app/intelligence/`, `code_search` tool) indexes the project 
 | `usages` | Where symbol S is referenced |
 | `callers` | Files importing from a given file |
 
-To use it, ask SHS-Code to find code — it prefers `code_search` over `bash grep`. Results are context-aware cached (`app/v4/semantic_cache.py`). To force reindex: `project_intel` action `refresh`.
+Ask SHS-Code to find code — it prefers `code_search` over `bash grep`. Results are context-aware cached (`app/v4/semantic_cache.py`). Force reindex: `project_intel` action `refresh`.
 
 ---
 
-## 29. Project intelligence
+## 30. Project intelligence
 
 Project intelligence (`project_intel` tool, `app/intelligence/`) inspects real state:
 
@@ -500,13 +715,13 @@ Project intelligence (`project_intel` tool, `app/intelligence/`) inspects real s
 - **`git`** — branch, dirty files, conflicts, recent commits.
 - **`refresh`** — incremental reindex.
 
-To use it: `/project` in the shell, or ask "summarize this project". All output comes from real inspection — never from documentation claims.
+Use `/project` in the shell, or ask "summarise this project". All output comes from real inspection — never from documentation claims.
 
 ---
 
-## 30. Browser
+## 31. Browser
 
-To browse the web, SHS-Code provides `browser_use` (Playwright) + `crawl` (clean extraction) + `app/v4/browser_pool.py`:
+Browse the web with `browser_use` (Playwright) + `crawl` (clean extraction) + `app/v4/browser_pool.py`:
 
 ```toml
 [browser]
@@ -515,13 +730,13 @@ disable_security   = false
 max_content_length = 10000
 ```
 
-To use it, ask "fetch that URL" or "click through the docs". SHS-Code navigates, clicks, types, screenshots, extracts text, and executes page JS. Browser features require the optional `browser` extra (`playwright`, `crawl4ai`). Headless by default; pooling reuses contexts for speed.
+Ask "fetch that URL" or "click through the docs". SHS-Code navigates, clicks, types, screenshots, extracts text, and executes page JS. Browser features require the optional `browser` extra (`playwright`, `crawl4ai`). Headless by default; pooling reuses contexts for speed.
 
 ---
 
-## 31. Web search
+## 32. Web search
 
-To search the web, SHS-Code provides `web_search` (DuckDuckGo → Bing fallback) + `crawl` (aiohttp + HTML stripping fallback when `crawl4ai` is absent):
+Search the web with `web_search` (DuckDuckGo → Bing fallback) + `crawl` (aiohttp + HTML stripping fallback when `crawl4ai` is absent):
 
 ```toml
 [search]
@@ -529,13 +744,13 @@ engines     = ["duckduckgo", "bing"]
 max_results = 10
 ```
 
-To use it: `/search <query>` or "research X". Search requires the optional `search` extra (`duckduckgo-search`). Results return titles, URLs, and snippets; `crawl` then extracts clean readable text (up to `max_length`, default 8000 chars).
+Use `/search <query>` or "research X". Search requires the optional `search` extra (`duckduckgo-search`). Results return titles, URLs, and snippets; `crawl` then extracts clean readable text (up to `max_length`, default 8000 chars).
 
 ---
 
-## 32. Git
+## 33. Git
 
-To use Git, SHS-Code provides local git intelligence (`app/git_intel.py`, `project_intel` action `git`) plus the `bash` tool:
+Local git intelligence (`app/git_intel.py`, `project_intel` action `git`) plus the `bash` tool:
 
 - Branch, dirty files, conflicts, recent commits, diffs, snapshots.
 - `/git` in the shell for a status snapshot.
@@ -545,9 +760,9 @@ SHS-Code reads real repo state before every change and verifies after. It never 
 
 ---
 
-## 33. GitHub
+## 34. GitHub and other forges
 
-To work with GitHub (and other forges), SHS-Code provides `app/git_providers/`:
+`app/git_providers/` supports:
 
 | Forge | Module | Token env var |
 |---|---|---|
@@ -559,15 +774,50 @@ To work with GitHub (and other forges), SHS-Code provides `app/git_providers/`:
 
 Base features (`base.py`): repos, single repo, issues, PRs, rate-limit handling, retry with backoff, sync + async APIs. `suggested_tasks.py` proposes work from forge state. Tokens come from env vars or `~/.shscode/connectors` — never hardcoded. Requires optional `github`/`gitlab` extras (`PyGithub`, `python-gitlab`).
 
-**v4.0.1 — GitHubProvider + SHS-Agent identity (§73):** the centralized facade `app/git_providers/github_provider.py` adds local git operations (clone / branch / commit / push / pull / stash / diff / log) alongside the API operations, with agent-attributed commits and one-shot authenticated push URLs (tokens are never stored in remote URLs). Reachable from the CLI (`/github status|commit|branch|push|pull|stash|diff|log|prs|issues|pr`) and the GUI GitHub panel.
+**GitHubProvider** — the centralised facade `app/git_providers/github_provider.py` adds local git operations (clone / branch / commit / push / pull / stash / diff / log) alongside the API operations, with agent-attributed commits and one-shot authenticated push URLs (tokens are never stored in remote URLs). Reachable from the CLI (`/github status|commit|branch|push|pull|stash|diff|log|prs|issues|pr`) and the GUI GitHub panel.
 
 ---
 
-## 34. Other integrations
+## 35. SHS-Agent automation identity
 
-SHS-Code provides additional integrations — most are **optional** (require extras or external services):
+GitHub work performed by SHS-Code is attributed to the dedicated automation identity **[SHS-Agent](https://github.com/SHS-Agent)** — a personal user account created specifically for SHS Code — rather than pretending the human user did everything.
 
-- **Messaging channels** (`shscode-channels`, `app/messaging/`): `discord`, `telegram`, `slack`, `email`, `webchat`, `whatsapp`, `teams`, `google_chat`, `irc`, `matrix`, `signal`, `twitch`. Configure via connectors; deliver cron/webhook output to `platform:channel`.
+Identity:
+
+```
+SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>
+```
+
+The email is GitHub's reserved, unspoofable `<id>+<login>` noreply form for that exact account, so every commit SHS Code creates resolves to the profile — and because **SHS-Agent is a user account**, it is credited in the repository's **Contributors** section once the commits land on the default branch.
+
+**Mechanisms (priority order):**
+
+1. **GitHub App installation token** (official bot identity): set `SHSCODE_GITHUB_APP_ID`, `SHSCODE_GITHUB_APP_PRIVATE_KEY_PATH` (or `…_PRIVATE_KEY`), `SHSCODE_GITHUB_APP_INSTALLATION_ID` — SHS-Code mints the RS256 JWT and exchanges it for short-lived installation tokens (cached, auto-refreshed). Requires the `github-app` extra (`pip install 'shscode[github-app]'`).
+2. **Personal access token**: `SHSCODE_GITHUB_TOKEN` (preferred) or `GITHUB_TOKEN`, or a token in `~/.shscode/connectors`.
+
+**Attribution is mandatory and mechanically enforced.** Every commit created inside SHS Code — agent bash sessions, the GUI terminal, the GitHub panel, runtime paths — is attributed to SHS-Agent as **author, committer, and co-author**, with the `Generated with SHS-Code` footer:
+
+```
+Generated with SHS-Code
+
+Co-Authored-By: SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>
+```
+
+A **git shim** (`~/.shscode/shims/git`, first on the PATH of every SHS-Code child process) strips `--author`/`--reset-author` from `git commit` and forces the identity env vars, so prompt-level, flag-level, and env-level bypass attempts are all defeated. `GitHubProvider.commit()` forces the identity via per-command `-c` overrides, and CLI/server startup export `GIT_AUTHOR_*`/`GIT_COMMITTER_*` so child-process git operations inherit the same attribution. **Your own shells outside SHS-Code and your global git configuration are never touched.** Human work keeps the human's identity; work performed by SHS-Code is attributed to SHS-Agent as author, committer, pusher-of-record for its changes, branch creator, and PR author, on every surface (CLI, GUI, terminal panel, autonomous agent sessions, cron).
+
+---
+
+## 36. Other integrations
+
+Additional integrations — most are **optional** (require extras or external services):
+
+- **Messaging channels** (`shscode-channels`, `app/messaging/`): `discord`, `telegram`, `slack`, `email`, `webchat`, `whatsapp`, `teams`, `google_chat`, `irc`, `matrix`, `signal`, `twitch`. Deliver cron/webhook output to `platform:channel`. Notable implementations:
+  - **Discord** — real Gateway websocket protocol (HELLO → heartbeat → IDENTIFY → MESSAGE_CREATE, RESUME across reconnects).
+  - **Slack** — real Socket Mode (`apps.connections.open`, envelope ACKs, bot/subtype filtering).
+  - **Teams** — Bot Framework OAuth2 client-credentials flow with a cached access token and activity send.
+  - **Google Chat** — RS256 service-account JWT via `cryptography`, with correct space interpolation in the send URL.
+  - **Email** — IMAP polling for unread messages (UNSEEN → RFC822 → parse → dispatch → mark seen).
+  - **Inbound webhook routes** — `/messaging/webhooks/{whatsapp,teams,google-chat}` plus `GET /messaging/channels` for configuration status.
 - **Project tools** (`app/integrations/`): `jira.py`, `linear.py`, `slack.py`, `templates.py` (Jinja2), `webhook_handler.py`, `resolver.py`.
 - **Connectors** (`app/connectors.py`): token registry at `~/.shscode/connectors` with masking; `apply_to_git_providers` wires tokens automatically.
 - **Cron** (`shscode-cron`): standard 5-field expressions, `--add/--list/--remove/--trigger/--run`, webhook + channel delivery.
@@ -582,15 +832,15 @@ SHS-Code provides additional integrations — most are **optional** (require ext
 
 ---
 
-## 35. Skills
+## 37. Skills
 
-Skills are reusable Markdown workflows (`app/skills/skill_engine.py`). To use them, SHS-Code loads relevant skills automatically (`get_relevant(goal, max_skills=3)`) and suggests new ones after repeated tool calls (`should_suggest_skill`).
+Skills are reusable Markdown workflows (`app/skills/skill_engine.py`). SHS-Code loads relevant skills automatically (`get_relevant(goal, max_skills=3)`) and suggests new ones after repeated tool calls (`should_suggest_skill`).
 
-To manage skills in the shell: `/skills`, `/skill <name>`. Via tool: `skill_manager` (create / patch / delete / list). Skill files use frontmatter (`name`, `description`) + Markdown body. Disabled skills persist in `~/.shscode/skills_state.json`. Built-in skills are immutable — `remove`/`delete` only apply to user/project/installed skills.
+Manage skills in the shell: `/skills`, `/skill <name>`. Via tool: `skill_manager` (create / patch / delete / list). Skill files use frontmatter (`name`, `description`) + Markdown body. Disabled skills persist in `~/.shscode/skills_state.json`. Built-in skills are immutable — `remove`/`delete` only apply to user/project/installed skills.
 
 ---
 
-## 36. Built-in skills
+## 38. Built-in skills
 
 SHS-Code ships **29 built-in skills** (verified via `SkillEngine.list_skills()`; doctor reports `29 skill(s) loaded`):
 
@@ -600,9 +850,9 @@ Source files live in `app/skills/builtin/*.md` (29 files on disk, 29 loaded). Co
 
 ---
 
-## 37. Custom skills
+## 39. Custom skills
 
-To create a custom skill, use any of these:
+Create a custom skill in any of these ways:
 
 ```bash
 # Inside SHS-Code (agent tool)
@@ -632,7 +882,7 @@ Created skills default to `level="user"`. Project skills live in `<repo>/.shscod
 
 ---
 
-## 38. Skill levels
+## 40. Skill levels
 
 | Level | Location | Purpose |
 |---|---|---|
@@ -641,23 +891,24 @@ Created skills default to `level="user"`. Project skills live in `<repo>/.shscod
 | `project` | `<cwd>/.shscode/skills/` | Repo-specific workflows, shared via git |
 | `installed` | `<skills_dir>/installed/` | Third-party skills added via `install()` |
 
-To inspect levels: `skill_manager list`. SHS-Code loads builtin → user/installed → project, so project skills override for the current repo.
+Inspect levels: `skill_manager list`. SHS-Code loads builtin → user/installed → project, so project skills override for the current repo.
 
+---
 
-## 39. MCP
+## 41. MCP
 
 MCP (Model Context Protocol) connects SHS-Code to external tool servers over JSON-RPC (`app/mcp/`). SHS-Code provides **both sides**:
 
 - **MCP client** — SHS-Code calls tools on external MCP servers.
 - **MCP server** — external clients call SHS-Code's tools.
 
-Architecture: `app/mcp/client.py` (stdio/SSE transports, `initialize` handshake, `tools/list`, `tools/call`) ↔ external servers; `app/mcp/server.py` (FastAPI + CORS via `SHSCODE_ALLOWED_ORIGINS`) ↔ external clients; `app/agent/mcp.py` bridges MCP tools into the agent loop. To inspect: `/mcp` in the shell. With no servers configured, doctor reports `mcp: no MCP servers configured` — that is the normal default.
+Architecture: `app/mcp/client.py` (stdio/SSE transports, `initialize` handshake, `tools/list`, `tools/call`) ↔ external servers; `app/mcp/server.py` (FastAPI + CORS via `SHSCODE_ALLOWED_ORIGINS`) ↔ external clients; `app/agent/mcp.py` bridges MCP tools into the agent loop. Inspect: `/mcp` in the shell. With no servers configured, doctor reports `mcp: no MCP servers configured` — that is the normal default.
 
 ---
 
-## 40. MCP client
+## 42. MCP client
 
-To call external MCP servers, use the MCP agent entry:
+Call external MCP servers via the MCP agent entry:
 
 ```bash
 python run_mcp.py --connection stdio --interactive
@@ -665,13 +916,13 @@ python run_mcp.py --connection sse --server-url http://localhost:8001 --prompt "
 python run_mcp.py --help
 ```
 
-The client performs the `initialize` handshake (non-fatal on homemade servers), lists tools, and routes agent tool calls to the server over stdio pipes or SSE. Timeouts and pipe-buffer guards prevent deadlocks. To add a server, configure it per the Docs repo MCP guide — SHS-Code discovers tools automatically.
+The client performs the `initialize` handshake (non-fatal on homemade servers), lists tools, and routes agent tool calls to the server over stdio pipes or SSE. Timeouts and pipe-buffer guards prevent deadlocks. Add a server per the Docs repo MCP guide — SHS-Code discovers tools automatically.
 
 ---
 
-## 41. MCP server
+## 43. MCP server
 
-To expose SHS-Code's tools to external clients, run the MCP server:
+Expose SHS-Code's tools to external clients:
 
 ```bash
 python run_mcp_server.py --host 0.0.0.0 --port 8001
@@ -682,9 +933,9 @@ External MCP clients connect, handshake, list SHS-Code tools, and invoke them. C
 
 ---
 
-## 42. Models
+## 44. Models
 
-To configure the reasoning model, set `model` under `[llm]` or export `LLM_MODEL`:
+Configure the reasoning model via `model` under `[llm]` or `LLM_MODEL`:
 
 ```toml
 [llm]
@@ -698,13 +949,13 @@ export LLM_MODEL="openai/gpt-oss-20b"
 shscode --model "openai/gpt-oss-20b" "explain this repo"
 ```
 
-Built-in defaults are `provider = "mock"`, `model = "gpt-4o"` (safe for immediate use without keys). The shipped `config.toml` points at NVIDIA NIM (`openai/gpt-oss-20b`). Registry defaults per provider (`app/providers.py`): OpenAI (`gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o3-mini`, `o1`), Anthropic (`claude-sonnet-4-20250514`, ...), Ollama (`llama3.2:3b`, `qwen2.5-coder:7b`, `deepseek-r1:8b`). To list live: `/models` in the shell.
+Built-in defaults are `provider = "mock"`, `model = "gpt-4o"` (safe for immediate use without keys). The shipped `config.toml` points at NVIDIA NIM (`openai/gpt-oss-20b`). Registry defaults per provider (`app/providers.py`): OpenAI (`gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o3-mini`, `o1`), Anthropic (`claude-sonnet-4-20250514`, ...), Ollama (`llama3.2:3b`, `qwen2.5-coder:7b`, `deepseek-r1:8b`). List live: `/models` in the shell.
 
 ---
 
-## 43. Providers
+## 45. Providers
 
-SHS-Code supports these providers (verified in `app/config.py`, `app/llm/`, `app/providers.py`, `config.toml`):
+Supported providers (verified in `app/config.py`, `app/llm/`, `app/providers.py`, `config.toml`):
 
 | Provider value | Backend | Key env var |
 |---|---|---|
@@ -720,13 +971,13 @@ SHS-Code supports these providers (verified in `app/config.py`, `app/llm/`, `app
 | `gguf` | Direct GGUF via `llama-cpp-python` (fully offline) | none |
 | `huggingface` / `hf` | Hugging Face Inference API/Spaces | `HF_TOKEN` (where required) |
 
-Provider files in `providers/` (`7llm.toml`, `ollama.toml`, `ollama-cloud.toml`, `openrouter.toml`, `opencode.toml`, `pollinations.toml`) are registry samples. To list live: `/providers`. Unknown/empty providers without keys coerce to `mock` — valid providers are never silently downgraded.
+Provider files in `providers/` (`7llm.toml`, `ollama.toml`, `ollama-cloud.toml`, `openrouter.toml`, `opencode.toml`, `pollinations.toml`) are registry samples. List live: `/providers`. Unknown/empty providers without keys coerce to `mock` — valid providers are never silently downgraded.
 
 ---
 
-## 44. Model switching
+## 46. Model switching
 
-To switch models **live** without losing context, memory, files, or task progress:
+Switch models **live** without losing context, memory, files, or task progress:
 
 ```text
 /model openai/gpt-oss-20b
@@ -737,9 +988,9 @@ Or via CLI/env: `shscode --model <name>`, `LLM_MODEL=<name>`, `LLM_MODEL_OVERRID
 
 ---
 
-## 45. Provider switching
+## 47. Provider switching
 
-To switch providers live:
+Switch providers live:
 
 ```text
 /provider anthropic
@@ -750,7 +1001,7 @@ Switching updates the backend, re-resolves keys (`OPENAI_API_KEY`, `ANTHROPIC_AP
 
 ---
 
-## 46. Failover
+## 48. Failover
 
 Failover (`app/llm/fallback.py`, `[llm.fallback]` in `config.toml`) retries failed requests on backup models:
 
@@ -763,11 +1014,11 @@ cooldown_multiplier = 2.0
 max_cooldown_s      = 600.0
 ```
 
-Triggers: `rate_limit`, `service_unavailable`, `context_window`, `quota`. Cooldowns back off exponentially per failure. `app/llm/profile_rotation.py` adds cross-provider failover (e.g. OpenAI → Anthropic → Ollama) with priority ordering. **Disabled by default** — to enable, set `enabled = true` and define `chain`.
+Triggers: `rate_limit`, `service_unavailable`, `context_window`, `quota`. Cooldowns back off exponentially per failure. `app/llm/profile_rotation.py` adds cross-provider failover (e.g. OpenAI → Anthropic → Ollama) with priority ordering. **Disabled by default** — enable by setting `enabled = true` and defining `chain`.
 
 ---
 
-## 47. Credential pools
+## 49. Credential pools
 
 Credential pools (`app/llm/credential_pool.py`) rotate multiple keys for one provider:
 
@@ -775,11 +1026,11 @@ Credential pools (`app/llm/credential_pool.py`) rotate multiple keys for one pro
 - `CredentialPool`: `from_env(env_keys)`, `get()`, `mark_exhausted()`, `mark_success()`, `size()`, `available_count()`.
 - `LLMConfig.extra_api_keys: list[str]` holds the pool; per-request failover draws the next healthy key.
 
-To use pools, populate `extra_api_keys` (config or env). Exhausted keys cool down automatically; successes restore them. Combined with health tracking, pools survive single-key rate limits without failing the task.
+Populate `extra_api_keys` (config or env). Exhausted keys cool down automatically; successes restore them. Combined with health tracking, pools survive single-key rate limits without failing the task.
 
 ---
 
-## 48. Smart routing
+## 50. Smart routing
 
 Smart routing (`app/v4/model_router.py`, `app/llm/offline_router.py`, `app/provider_health.py`) picks the best backend per request:
 
@@ -788,19 +1039,19 @@ Smart routing (`app/v4/model_router.py`, `app/llm/offline_router.py`, `app/provi
 - **Offline router**: local-first routing to Ollama / LM Studio / text-gen-webui / GGUF / Hugging Face when cloud is unavailable or configured.
 - **Streaming**: backpressure buffer (`buffer_size = 4096`, `chunk_timeout = 30`).
 
-To inspect: `/status`, `/usage`, `/providers`. Routing is automatic — configure providers once and SHS-Code adapts.
+Inspect: `/status`, `/usage`, `/providers`. Routing is automatic — configure providers once and SHS-Code adapts.
 
 ---
 
-## 49. Local / offline models
+## 51. Local / offline models
 
-To work fully offline, SHS-Code routes to local backends (`app/llm/offline_router.py`). No API key needed; fully private. Supported: Ollama, LM Studio, text-generation-webui (OpenAI-compatible), Hugging Face Inference/Spaces, direct GGUF. To use, set `provider` to the local backend and `model`/`base_url` to the local endpoint. Local backends need their own runtimes installed (Ollama daemon, `llama-cpp-python`, etc.) — SHS-Code does not bundle model weights.
+To work fully offline, SHS-Code routes to local backends (`app/llm/offline_router.py`). No API key needed; fully private. Supported: Ollama, LM Studio, text-generation-webui (OpenAI-compatible), Hugging Face Inference/Spaces, direct GGUF. Set `provider` to the local backend and `model`/`base_url` to the local endpoint. Local backends need their own runtimes installed (Ollama daemon, `llama-cpp-python`, etc.) — SHS-Code does not bundle model weights.
 
 ---
 
-## 50. Ollama
+## 52. Ollama
 
-To use Ollama (local daemon, default `http://localhost:11434`):
+Use Ollama (local daemon, default `http://localhost:11434`):
 
 ```toml
 [llm]
@@ -812,9 +1063,9 @@ Registry defaults: `llama3.2:3b`, `qwen2.5-coder:7b`, `deepseek-r1:8b`. Requires
 
 ---
 
-## 51. GGUF
+## 53. GGUF
 
-To run GGUF weights directly (fully offline, no internet), SHS-Code loads them via `llama-cpp-python` (`GGUFRouter` in `app/llm/offline_router.py`):
+Run GGUF weights directly (fully offline, no internet) via `llama-cpp-python` (`GGUFRouter` in `app/llm/offline_router.py`):
 
 - Config: `provider = "gguf"`, `model` = path to the `.gguf` file.
 - Native tool calling is unavailable — SHS-Code parses tool calls from text (`_parse_tool_calls_from_text`).
@@ -824,9 +1075,9 @@ Label: advanced / optional — for air-gapped or GPU-less inference where Ollama
 
 ---
 
-## 52. Hugging Face
+## 54. Hugging Face
 
-To use Hugging Face (Inference API / Spaces):
+Use Hugging Face (Inference API / Spaces):
 
 ```toml
 [llm]
@@ -836,10 +1087,21 @@ model    = "<org>/<model>"
 
 SHS-Code routes through the offline router to HF endpoints. Set `HF_TOKEN` where the endpoint requires auth. Requires network (unless using a local Spaces runtime) and the relevant client libs. Label: optional — endpoint availability and quotas follow Hugging Face's terms.
 
+---
 
-## 53. Sessions
+## 55. Token streaming
 
-Sessions persist conversation history, tool calls, and task state. To manage them:
+The universal OpenAI-compatible client streams real SSE token deltas:
+
+- `UniversalClient.chat(..., on_delta=…)` — `stream: true` request, incremental content callbacks, tool-call fragments accumulated across chunks (id/name/arguments, indexed), final response identical in shape to the non-streaming call (retries/token accounting unchanged). Backends that reject streaming fall back transparently.
+- The agent loop forwards content deltas to the ActivityBus (`llm_delta`); the CLI renders them as a growing live line (without duplicating the final answer), and the server bridges them to WebSocket clients as structured `{event: "llm_delta", text}` frames for the GUI.
+- Tool-call argument fragments are never streamed — only conversational content reaches the user channel.
+
+---
+
+## 56. Sessions
+
+Sessions persist conversation history, tool calls, and task state. Manage them:
 
 ```bash
 shscode --session <ID> "continue prior work"
@@ -852,13 +1114,13 @@ shscode-sessions export <ID>
 shscode-sessions delete <ID>
 ```
 
-In-shell: `/sessions`, `/new`, `/bg` (background + resume). Storage: session DB + journal (`~/.shscode/state/journal.db`). `send` injects a message into a live session; `spawn` creates a session and runs a task. To continue the most recent session in the workspace, use `--continue`.
+In-shell: `/sessions`, `/new`, `/bg` (background + resume). Storage: session DB + journal (`~/.shscode/state/journal.db`). `send` injects a message into a live session; `spawn` creates a session and runs a task. Continue the most recent session in the workspace with `--continue`.
 
 ---
 
-## 54. Resume
+## 57. Resume
 
-To resume interrupted work, SHS-Code restores sessions, journal tasks, checkpoints, and memory:
+Resume interrupted work — sessions, journal tasks, checkpoints, and memory are all restored:
 
 ```bash
 shscode --continue
@@ -874,11 +1136,22 @@ shscode --session <ID>
 /continue
 ```
 
-Checkpoints (`~/.shscode/state/checkpoints/<task_id>.json`, atomic writes) plus the journal make pre-interruption state resumable. Rate-limit waits leave state untouched by design. To pause a run and resume later, use `/pause` then `/resume` or `--continue`.
+Checkpoints (`~/.shscode/state/checkpoints/<task_id>.json`, atomic writes) plus the journal make pre-interruption state resumable. Rate-limit waits leave state untouched by design. Pause with `/pause` then resume with `/resume` or `--continue`.
 
 ---
 
-## 55. Doctor
+## 58. Detached runs
+
+Long-running tasks no longer die with the session that started them.
+
+- **CLI:** `SHSCode --detach "<task>"` runs the task as a double-forked, `setsid`-detached daemon that survives the terminal, SSH disconnects, and process-tree cleanup.
+- **Registry:** every detached run writes `~/.shscode/runs/<id>/run.json` + `output.log`; listed by `SHSCode --runs` and streamed live by `SHSCode --attach <id>`.
+- **GUI:** the Agent panel's "detached" checkbox and `POST /run {"detach": true}` spawn the detached process; the Sessions panel shows the detached-run registry with live process liveness.
+- **Graceful cancellation:** `SIGTERM`/`SIGHUP` cancel runs gracefully — state is checkpointed, the session closes as `interrupted`, and `SHSCode --continue` (or `/resume`) picks it up cleanly.
+
+---
+
+## 59. Doctor
 
 Doctor (`/doctor`, `app/doctor.py`) checks the installation and reports pass/fail per area:
 
@@ -897,13 +1170,13 @@ Checks: Python version, core dependencies, provider/model resolution, state file
 All systems healthy. SHS Code is ready.
 ```
 
-To use it, run `/doctor` first whenever something looks wrong — it pinpoints the layer.
+Run `/doctor` first whenever something looks wrong — it pinpoints the layer.
 
 ---
 
-## 56. Diagnostics
+## 60. Diagnostics
 
-Beyond doctor, SHS-Code provides:
+Beyond doctor:
 
 - `/status` — active session, model/provider, step count.
 - `/log`, `/debug` — log detail; file log via `[logging]`, terminal via `console_level = "WARNING"` (set `INFO`/`DEBUG` for more).
@@ -912,11 +1185,11 @@ Beyond doctor, SHS-Code provides:
 - `SHSCODE_REDACT=true` — redact API keys from all log output (recommended for production).
 - Secret redaction (`app/llm/secret_redaction.py`) masks keys automatically.
 
-To diagnose, run `/doctor` → `/status` → `/log`. Logs live under `logs/` in the repo and `~/.shscode/`.
+Diagnose with `/doctor` → `/status` → `/log`. Logs live under `logs/` in the repo and `~/.shscode/`.
 
 ---
 
-## 57. Configuration
+## 61. Configuration
 
 Configuration loads in priority order (highest first) — verified in `app/config.py`:
 
@@ -928,7 +1201,7 @@ Configuration loads in priority order (highest first) — verified in `app/confi
 6. `./config.toml` (legacy; the shipped sample/reference)
 7. Built-in defaults (MockLLM — safe for immediate use)
 
-To configure, copy the sample and edit:
+Copy the sample and edit:
 
 ```bash
 cp config.toml ~/.shscode/config.yaml   # then edit (YAML syntax)
@@ -936,9 +1209,11 @@ cp config.toml ~/.shscode/config.yaml   # then edit (YAML syntax)
 
 Or edit `config.toml` in the repo for project-local defaults. Key sections: `[llm]`, `[llm.rate_limit]`, `[llm.streaming]`, `[llm.fallback]`, `[browser]`, `[search]`, `[sandbox]`, `[runflow]`, `[logging]`, `workspace_dir`, `max_steps`, `[ssh]`, `[security]`, `[hooks]`, `[context]`, `[conversation]`, `[observability]`, `[secrets]`, `[file_store]`, `[git_providers]`, `[integrations]`, `[parallel_executor]`, `[migrations]`. Profiles: `SHSCODE_PROFILE=<name>` loads `~/.shscode/profiles/<name>/`; `/profile` and `--profile` select it. Full key reference: Docs repo configuration guide + `CONFIG.md`.
 
+**Strict schema-placement validation.** A top-level setting found inside any section is a hard `ConfigError` telling you exactly where to move it (for example, `max_steps` must be top-level, not under `[logging]`). Unknown keys only warn; `SHSCODE_CONFIG_PERMISSIVE=1` downgrades for legacy files. `max_steps` is user-controlled on every surface — CLI (`--max-steps 150`), GUI Agent panel ("Steps" per run), GUI Settings panel ("Agent Step Budget", persisted), `SHSCODE_MAX_STEPS` env var, or top-level `max_steps` in any config layer — and the effective value **and its source** are always shown (`/config`, run-start log line, `GET /config`), so the runtime can never silently disagree with what you configured.
+
 ---
 
-## 58. Environment variables
+## 62. Environment variables
 
 Exact names verified in `app/config.py` / `app/env.py` / `app/server/main.py` / `.env.example`. Canonical prefix: `SHSCODE_*` (legacy `MANUSCLAW_*` mapped automatically).
 
@@ -953,9 +1228,11 @@ Exact names verified in `app/config.py` / `app/env.py` / `app/server/main.py` / 
 | `GOOGLE_API_KEY` | Google/Gemini key (auto-selects `google`) |
 | `NVIDIA_API_KEY` | NVIDIA NIM key (with `LLM_BASE_URL`) |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Bedrock (auto-selects `bedrock`) |
-| `GITHUB_TOKEN` / `GITLAB_TOKEN` / `GITLAB_URL` / `AZURE_DEVOPS_TOKEN` / `FORGEJO_TOKEN` | Forge tokens |
+| `GITHUB_TOKEN` / `SHSCODE_GITHUB_TOKEN` / `GITLAB_TOKEN` / `GITLAB_URL` / `AZURE_DEVOPS_TOKEN` / `FORGEJO_TOKEN` | Forge tokens |
+| `SHSCODE_GITHUB_APP_ID` / `SHSCODE_GITHUB_APP_PRIVATE_KEY_PATH` / `SHSCODE_GITHUB_APP_INSTALLATION_ID` | GitHub App installation-token flow |
 | `SHSCODE_PROFILE` / `PROFILE` | Config profile name |
 | `SHSCODE_HOME` / `SHSCODE_WORKSPACE` / `SHSCODE_API_KEY` | Home dir / workspace / server auth |
+| `SHSCODE_MAX_STEPS` | Effective agent step budget |
 | `SHSCODE_REDACT` | Redact keys from logs (`true` recommended) |
 | `SHSCODE_SSH_ENABLED/PORT/HOST` | SSH gateway (default off) |
 | `SANDBOX_BACKEND` | `docker` / `ssh` / `openshell` (default `docker`) |
@@ -968,7 +1245,7 @@ Provider examples use placeholder keys only (`sk-...`, `...`). Never commit real
 
 ---
 
-## 59. Installation
+## 63. Installation
 
 **Requirements:** Python `>=3.11`, git. pip / venv. Optional: Docker (sandbox/server), Node.js (node tools), Ollama (local models).
 
@@ -987,6 +1264,7 @@ pip install -e ".[browser]"    # playwright + crawl4ai
 pip install -e ".[search]"     # duckduckgo-search
 pip install -e ".[ollama]"     # local Ollama client
 pip install -e ".[cron]"       # croniter
+pip install -e ".[github-app]" # GitHub App installation-token flow
 pip install -e ".[all]"        # everything standard
 ```
 
@@ -996,13 +1274,22 @@ Platform extras: `pip install -e ".[voice]"`, `".[ssh]"`, `".[gmail]"`, `".[matr
 
 ---
 
-## 60. Quickstart
+## 64. Quickstart
 
-To start SHS-Code in under two minutes:
+Start SHS-Code in under two minutes:
 
 ```bash
 shscode
 ```
+
+Or use the GUI:
+
+```bash
+shscode-server              # default port 8765
+# then open http://localhost:8765/gui
+```
+
+With a universal/OpenAI-compatible endpoint:
 
 ```bash
 export LLM_API_KEY="sk-..."
@@ -1018,25 +1305,27 @@ export OPENAI_API_KEY="sk-..."
 shscode "add tests for app/task_dag.py"
 ```
 
-To check health first: `/doctor`. To pick a model live: `/models`, `/model <name>`. Full walkthrough: Docs repo beginner + installation guides.
+Check health first: `/doctor`. Pick a model live: `/models`, `/model <name>`. Full walkthrough: Docs repo beginner + installation guides.
 
 ---
 
-## 61. First coding task
-
-To run the first coding task:
+## 65. First coding task
 
 ```bash
 shscode "add a --dry-run flag to run_server.py with tests"
 ```
 
-SHS-Code will: inspect the project (`project_intel`), locate the file (`code_search`), plan (`planning`), edit (`str_replace_editor`), run tests (`verify` / `pytest`), and report. To review: `git diff`, `git status`. To verify manually: `python3 -m pytest tests/ -q -o addopts="" -p no:cacheprovider`. Keep tasks small first; grow to multi-file features once comfortable.
+SHS-Code will: inspect the project (`project_intel`), locate the file (`code_search`), plan (`planning`), edit (`str_replace_editor`), run tests (`verify` / `pytest`), and report. Review with `git diff` / `git status`. Verify manually:
+
+```bash
+python3 -m pytest tests/ -q -o addopts="" -p no:cacheprovider
+```
+
+Keep tasks small first; grow to multi-file features once comfortable. Watch the run in the GUI Agent panel to see exactly what the agent is doing.
 
 ---
 
-## 62. First autonomous task
-
-To run the first autonomous task:
+## 66. First autonomous task
 
 ```bash
 shscode "refactor app/messaging/ adapters to share retry logic; keep all tests green"
@@ -1046,36 +1335,43 @@ shscode "refactor app/messaging/ adapters to share retry logic; keep all tests g
 /mode autonomous
 ```
 
-SHS-Code plans the full refactor, works through files with checkpoints, runs verification, and pauses only for genuine blocks (`ask_human`). To monitor: `/status`, `/tasks`. To pause/resume: `/pause`, `/bg`, `shscode --continue`. Use autonomous mode for migrations and large refactors — not for one-line fixes.
+SHS-Code plans the full refactor, works through files with checkpoints, runs verification, and pauses only for genuine blocks (`ask_human`). Monitor with `/status`, `/tasks`, or the GUI Tasks panel. Pause/resume with `/pause`, `/bg`, `--continue`, or `--detach` for long-horizon work. Use autonomous mode for migrations and large refactors — not for one-line fixes.
 
 ---
 
-## 63. First multi-agent task
-
-To run the first multi-agent task:
+## 67. First multi-agent task
 
 ```bash
 python run_multi_agent.py --mode build "implement session export to Markdown with tests"
 ```
 
-SHS-Code decomposes the goal, assigns role-specialized workers, executes dependency waves in parallel, serializes file conflicts, and QA-gates the merge. To plan without building: `--mode plan`. To continue a session: `--session <ID>`. For the full crew experience, use a Team103-scale goal (multi-file feature).
+SHS-Code decomposes the goal, assigns role-specialised workers, executes dependency waves in parallel, serialises file conflicts, and QA-gates the merge. Plan without building: `--mode plan`. Continue a session: `--session <ID>`. For the full crew experience, use a Team103-scale goal.
 
 ---
 
-## 64. Team103 usage
+## 68. Team103 usage
 
-To use Team103, give SHS-Code a large multi-file goal — scheduling is automatic (`app/team103/scheduler.py`):
+Give SHS-Code a large multi-file goal — scheduling is automatic (`app/team103/scheduler.py`):
 
 ```bash
 shscode "build user notification preferences: API + DB migration + UI + tests + docs"
 ```
 
-What happens: PM decomposes (≤12 `TaskSpec`s) → Architect builds DAG waves + conflict plan + role assignments + context slices → Engineers implement wave-by-wave with AIMD concurrency and work-stealing → QA final-gates → results merge (`merged_files`, `conflicts`, confidence). To tune: `[parallel_executor]` (`max_workers`, `timeout_s`). Team103 shines on 5+ file features; for single-file edits the solo agent is faster.
+What happens:
 
+1. **PM decomposes** (≤12 `TaskSpec`s).
+2. **Architect** builds DAG waves + conflict plan + role assignments + context slices.
+3. **Engineers** implement wave-by-wave with AIMD concurrency and work-stealing.
+4. **QA final-gates** — fails on empty changed files, missing files, and low aggregate confidence.
+5. Results merge (`merged_files`, `conflicts`, confidence).
 
-## 65. Troubleshooting
+Tune via `[parallel_executor]` (`max_workers`, `timeout_s`). Team103 shines on 5+ file features; for single-file edits the solo agent is faster. Run it from the CLI (`/team103`) or the GUI Team103 panel.
 
-To troubleshoot, start with doctor, then narrow:
+---
+
+## 69. Troubleshooting
+
+Start with doctor, then narrow:
 
 | Symptom | What to do |
 |---|---|
@@ -1089,14 +1385,17 @@ To troubleshoot, start with doctor, then narrow:
 | Server unauthenticated warning | Set `SHSCODE_API_KEY` in production |
 | Sandbox failures | Check Docker daemon / `SANDBOX_BACKEND`; sandbox is disabled by default |
 | Noisy logs | Set `console_level = "WARNING"`; `SHSCODE_REDACT=true` |
+| GUI sidebar hidden by mistake | `Ctrl`/`Cmd`+`B` or the `☰ MENU` edge tab to bring it back |
+| Detached run appears stuck | `SHSCode --runs` to list, `SHSCode --attach <id>` to stream output, `~/.shscode/runs/<id>/output.log` for the raw log |
+| Config key ignored | Run `/config` — SHS-Code shows the effective value and its source; check strict schema-placement errors |
 
 If doctor passes but a task fails, run `/status` → `/log` → `/verify` and re-ask with the error output. Full guide: Docs repo troubleshooting.
 
 ---
 
-## 66. Security
+## 70. Security
 
-SHS-Code provides defense in depth (`app/security/`, `[security]`, secrets store):
+Defense in depth (`app/security/`, `[security]`, secrets store):
 
 ```toml
 [security]
@@ -1105,20 +1404,22 @@ analyzers = ["pattern", "rails"]
 confirmation_threshold = "medium"   # "never" | "low" | "medium" | "high"
 ```
 
-- **Analyzers**: `pattern`, `rails`, `llm`, `ensemble` — scan risky actions before execution.
+- **Analysers**: `pattern`, `rails`, `llm`, `ensemble` — scan risky actions before execution.
 - **Confirmation**: `confirm_risky` (default) vs `never_confirm` in `[conversation] confirmation_mode`. High-risk ops pause for approval.
-- **Secrets**: `[secrets] backend = "file"`, `encryption_enabled = true`; keys via env vars, never in repo. `SHSCODE_REDACT=true` redacts keys from logs; `secret_redaction.py` masks automatically.
+- **Secrets**: `[secrets] backend = "file"`, `encryption_enabled = true`; keys via env vars, never in the repo. `SHSCODE_REDACT=true` redacts keys from logs; `secret_redaction.py` masks automatically.
 - **Server auth**: optional `SHSCODE_API_KEY`; webhooks HMAC-verified; CORS via `SHSCODE_ALLOWED_ORIGINS`.
 - **Sandbox**: untrusted code runs in Docker/SSH/openshell backends when enabled (default off).
 - **SSH gateway**: disabled by default; enable only operator-managed with keys.
+- **Attribution enforced, credentials untouched**: the SHS-Agent git shim rewrites *its own* commits' identity, but never touches user shell git config or credentials.
+- **Path confinement**: the GUI workspace browser and file APIs refuse paths outside the server workspace.
 
-To report a vulnerability, see `SECURITY.md` — do not open public issues for sensitive reports.
+Report a vulnerability — see `SECURITY.md`. Do not open public issues for sensitive reports.
 
 ---
 
-## 67. Development
+## 71. Development
 
-To develop SHS-Code, use Python `>=3.11` and pytest:
+Use Python `>=3.11` and pytest:
 
 ```bash
 git clone https://github.com/shslab-org/shs-code
@@ -1129,16 +1430,18 @@ python3 -m pytest tests/ -q -o addopts="" -p no:cacheprovider
 python3 -m pytest tests/v4/ -q -o addopts="" -p no:cacheprovider
 ```
 
-Layout: `app/` (product), `app/agent/`, `app/tool/`, `app/skills/`, `app/mcp/`, `app/memory/`, `app/llm/`, `app/v4/`, `app/server/`, `app/team103/`, `tests/` (42 files) + `tests/v4/` (5 files), `docs/`, `providers/`, `scripts/`, `demo/`, `workspace/`. Entry points: `main.py`, `run_server.py`, `run_multi_agent.py`, `run_flow.py`, `run_mcp.py`, `run_mcp_server.py`. Version source of truth: `app/__init__.py::__version__` (`4.0.0`) — every surface must import from there. Notes: `IMPLEMENTATION_NOTES.md`, `SHS_CODE_IMPLEMENTATION_STATE.md`, `docs/ARCHITECTURE.md`, `docs/CONFIG.md`.
+Layout: `app/` (product), `app/agent/`, `app/tool/`, `app/skills/`, `app/mcp/`, `app/memory/`, `app/llm/`, `app/v4/`, `app/server/`, `app/team103/`, `tests/` + `tests/v4/`, `docs/`, `providers/`, `scripts/`, `demo/`, `workspace/`. Entry points: `main.py`, `run_server.py`, `run_multi_agent.py`, `run_flow.py`, `run_mcp.py`, `run_mcp_server.py`. Version source of truth: `app/__init__.py::__version__`. Notes: `IMPLEMENTATION_NOTES.md`, `SHS_CODE_IMPLEMENTATION_STATE.md`, `docs/ARCHITECTURE.md`, `docs/CONFIG.md`, `docs/GUI_GUIDE.md`.
+
+**CI.** `.github/workflows/tests.yml` runs the full pytest suite on Python 3.11 + 3.12 for every push/PR to `main`. The Pylint workflow matrix tracks the same Python range.
 
 ---
 
-## 68. Contributing
+## 72. Contributing
 
-To contribute, see `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`:
+See `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`:
 
 1. Fork https://github.com/shslab-org/shs-code and create a feature branch.
-2. Keep version at `4.0.0` — do not bump without maintainer approval.
+2. Keep the version at its current value — do not bump without maintainer approval.
 3. Add/extend tests under `tests/`; run pytest before pushing.
 4. Update docs (`docs/`) for user-facing changes.
 5. Open a PR with evidence: commands run, tests, doctor output.
@@ -1147,291 +1450,26 @@ By contributing you agree to the Modified MIT License terms (see `LICENSE`).
 
 ---
 
-## 69. Full documentation
+## 73. Full documentation
 
 The complete manual lives in the separate documentation repository:
 
 **👉 https://github.com/shslab-org/SHS-Code-Docs**
 
-It covers: full documentation, installation guide, beginner guide, CLI reference, configuration, models, providers, tools, skills, MCP, memory, single agent, autonomous, multi-agent, Team103, architecture, troubleshooting, and more. In-repo references: `docs/` (`ARCHITECTURE.md`, `CONFIG.md`, `FEATURES.md`, `PROVIDERS.md`, `features/`, `v4/`), `CONFIG.md` equivalents, `providers/README.md`, `docs/skills/`, `IMPLEMENTATION_NOTES.md`.
+Covers: full documentation, installation guide, beginner guide, CLI reference, GUI guide, configuration, models, providers, tools, skills, MCP, memory, single agent, autonomous, multi-agent, Team103, architecture, troubleshooting, and more. In-repo references: `docs/` (`ARCHITECTURE.md`, `CONFIG.md`, `FEATURES.md`, `PROVIDERS.md`, `GUI_GUIDE.md`, `features/`, `v4/`), `providers/README.md`, `docs/skills/`, `IMPLEMENTATION_NOTES.md`.
 
 ---
 
-## 70. Contact
+## 74. Contact
 
 - **Author**: SHS Lab — Sazzad Hussain Shobuj
 - **Code**: https://github.com/shslab-org/shs-code
 - **Docs**: https://github.com/shslab-org/SHS-Code-Docs
+- **Agent identity**: https://github.com/SHS-Agent
 - **Issues / PRs**: use the code repository issue tracker
 - **Security reports**: see `SECURITY.md` (private channel, no public issues)
 - **Community**: see `docs/` and the Docs repo for channels and guides
 
 ---
 
-## 71. GUI (v4.0.1)
-
-The full web GUI ships with the package — start the server and open `/gui`:
-
-```bash
-shscode-server              # default port 8765
-# then open http://localhost:8765/gui
-# (append ?api_key=… when SHSCODE_API_KEY is set)
-```
-
-The GUI is a single-page app (`app/server/static/gui.html`) that sits **directly on the same Python runtime as the CLI** — no separate backend, no duplicated business logic, no terminal-scraping:
-
-```
-GUI  →  REST + structured WebSocket events  →  SHS-Code runtime
-```
-
-Panels (full CLI parity):
-
-| Panel | What it shows / does |
-|---|---|
-| **Dashboard** | provider/model/version, GitHub identity, local git state, recent journal tasks, sessions |
-| **Agent** | chat with LIVE token streaming, structured activity feed (internal events — separated from user messages by design), run progress (step/tool count/finish reason), cancellation, session continuation |
-| **Tasks** | journal task lifecycle list + visual task DAG (wave layout, per-state coloring) + journal event tail |
-| **Team103** | goal runner via `POST /team103` with the honest architecture description |
-| **Workspace** | expandable file tree + file viewer (path-confined to the server workspace) |
-| **Terminal** | command execution in the server workspace |
-| **Git** | status / branch / commit / push / pull / stash / diff / log — commits carry the SHS-Agent trailer |
-| **GitHub** | agent identity card, PR creation, PR/issue lists |
-| **QA** | VerificationEngine runner (the same engine the agent uses) |
-| **Sessions** | list + message browser with final/interim separation + one-click continue |
-| **Logs** | live tail (auto-refresh) — separate from the conversation |
-| **Memory** | MEMORY.md / USER.md / long-term memory entries |
-| **Settings** | effective config (secrets masked) + model/provider switch |
-| **Help / Guide** | plain-language quick-start, panel reference, status legend, shortcuts, troubleshooting — a condensed `docs/GUI_GUIDE.md` inside the GUI |
-
-**Collapsible navigation (v4.1.0):** the sidebar slides out of the way for full-width content — toggle with the ☰ top-bar button, the `☰ MENU` edge tab that appears while hidden, or `Ctrl`/`Cmd`+`B`. The preference persists (`localStorage`); on small screens (≤820px) the sidebar becomes an overlay drawer (closed by default, Esc/backdrop closes, auto-closes after picking a panel).
-
-CLI and GUI share the same state: a session started from the CLI can be continued in the GUI (Sessions → Continue), and both read the same journal, session DB, memory, and git state.
-
----
-
-## 76. GUI guide & collapsible navigation (v4.1.0)
-
-Two user-facing additions:
-
-1. **Collapsible sidebar (slide/hide navigation)** — requested UX feature. The whole
-   navigation slides off-canvas with an animated transition; three ways to toggle
-   (☰ button / edge tab / `Ctrl`+`B`), state persisted in `localStorage`, and a
-   mobile drawer mode (`position: fixed` overlay + backdrop + Esc/backdrop close +
-   auto-close after panel pick) below 820px. Pinned by `tests/test_gui_nav_v410.py`.
-2. **Beginner-friendly GUI guide** — `docs/GUI_GUIDE.md` (15 chapters, plain language,
-   zero programming knowledge assumed) plus an in-app **Help / Guide** panel
-   (14th panel) with quick-start, panel reference, status legend, shortcuts and
-   troubleshooting. Mirrored to shs-code-docs.
-
-Also fixed in passing: the QA panel badge compared against Python `True`
-(`rep.ok === True` — always `unknown` in JS); now a real boolean comparison.
-
----
-
-## 72. Task lifecycle integrity (v4.0.1)
-
-SHS-Code never claims a task completed when it was skipped, abandoned, or unverified. Every run tracks an explicit **finish reason**:
-
-| Reason | Meaning | Journal status |
-|---|---|---|
-| `final_answer` | text answer stood (plan finished / no plan) | `completed` |
-| `terminate` | terminate tool accepted (plan gate passed) | `completed` |
-| `done_pattern` | keyword "done" match (gated: only when the persisted plan has NO unfinished steps) | `completed` |
-| `max_steps` | step budget exhausted mid-work | **`partial`** |
-| `token_budget` | token budget + grace exhausted | **`partial`** |
-| `error` / `permission_denied` | run failed | `failed` / `blocked` |
-
-The `partial` state (new in v4.0.1) is the honest middle ground: work stopped without a verified final answer — the task is explicitly NOT completed, `/resume` can continue it from the checkpoint, and the user-facing response says so plainly.
-
-Dependency handling is strict: a DAG node can only be marked completed when every dependency reached `completed` or was **explicitly skipped** (the old code silently auto-completed active dependencies — removed). The plan gate nudges the model to finish or explicitly skip remaining steps before a final answer is accepted; keyword "done" claims with unfinished plan steps no longer end runs.
-
-The user-facing response channel carries **only the final answer** — raw tool outputs, retry diagnostics, and terminate markers stay in `agent.last_run_step_outputs` (GUI/debug consumers), never in the assistant message.
-
----
-
-## 73. SHS-Agent GitHub identity (v4.0.1, updated v4.4.0)
-
-GitHub work performed by SHS-Code is attributed to the dedicated automation identity **[SHS-Agent](https://github.com/SHS-Agent)** — a personal user account created specifically for SHS Code — rather than pretending the human user did everything.
-
-Mechanisms (priority order):
-
-1. **GitHub App installation token** (official bot identity): set `SHSCODE_GITHUB_APP_ID`, `SHSCODE_GITHUB_APP_PRIVATE_KEY_PATH` (or `…_PRIVATE_KEY`), `SHSCODE_GITHUB_APP_INSTALLATION_ID` — SHS-Code mints the RS256 JWT and exchanges it for short-lived installation tokens (cached, auto-refreshed). Requires the `github-app` extra (`pip install 'shscode[github-app]'`).
-2. **Personal access token**: `SHSCODE_GITHUB_TOKEN` (preferred) or `GITHUB_TOKEN`, or a token in `~/.shscode/connectors`.
-
-Every commit made through the GitHubProvider (CLI `/github commit`, GUI Git panel) carries the GitHub-supported trailer:
-
-```
-Generated with SHS-Code
-
-Co-Authored-By: SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>
-```
-
-Attribution follows GitHub's actual model: since v4.3.0 the commit's **author and committer themselves** are the SHS-Agent identity (not just a trailer), so GitHub resolves every commit to https://github.com/SHS-Agent and — because the account is a *user* account — credits it in the repository's **Contributors** section. Pushes authenticate via one-shot URLs — tokens are never stored in remote URLs. **Update (v4.2.0):** commits the agent makes directly via `bash git commit` are attributed too — CLI and server startup export `GIT_AUTHOR_*`/`GIT_COMMITTER_*` for the SHS-Agent profile (see section 77).
-
----
-
-## 74. Token streaming (v4.0.1)
-
-The universal OpenAI-compatible client streams real SSE token deltas:
-
-- `UniversalClient.chat(..., on_delta=…)` — `stream: true` request, incremental content callbacks, tool-call fragments accumulated across chunks (id/name/arguments, indexed), final response identical in shape to the non-streaming call (retries/token accounting unchanged). Backends that reject streaming fall back transparently.
-- The agent loop forwards content deltas to the ActivityBus (`llm_delta`); the CLI renders them as a growing live line (without duplicating the final answer), and the server bridges them to WebSocket clients as structured `{event: "llm_delta", text}` frames for the GUI.
-- Tool-call argument fragments are never streamed — only conversational content reaches the user channel.
-
----
-
-## 75. Agnes API testing (v4.0.1)
-
-SHS-Code v4.0.1 was stabilization-tested against a real third-party OpenAI-compatible provider — the **Agnes API** (`agnes-3.0-flash`):
-
-```bash
-export LLM_BASE_URL="https://apihub.agnes-ai.com/v1"
-export LLM_API_KEY="…"
-export LLM_MODEL="agnes-3.0-flash"
-shscode
-```
-
-Verified live (fresh `pip install`, run from outside the repo): token streaming over WebSocket, a repo-understanding task, multi-file implementation (18/18 tests), bug fixing, multi-task execution, failure recovery, a full git workflow (branch → changes → tests → commit → push), and a long-horizon todo-application build (26 steps, honest plan-gate rejection of premature termination observed). Two real bugs found in this testing were fixed with regression tests: tool-call arguments must always serialize as valid JSON (strict providers 400 otherwise), and working-directory awareness (the ENVIRONMENT system message). The Agnes endpoint's tight rate limits are handled by the existing rolling-window limiter with state-preserving waits.
-
----
-
-## 77. Workspace diff-viewer, CI, messaging & agent identity everywhere (v4.2.0)
-
-Four follow-up mission items shipped together:
-
-**Workspace diff-viewer (GUI).** The Workspace panel gains a *Changes* tab
-next to *Files*. It lists every changed file with a status badge
-(M modified, A added, D deleted, N new/untracked) and per-file
-+adds/−dels; clicking a file renders a line-numbered, colorized unified
-diff (green = added, red = removed, blue = hunk header). Three modes
-compare different snapshots: *Working tree* (unstaged), *Staged*, and
-*vs HEAD* (everything). The tab badge shows the number of changed
-files. Served by `GET /workspace/diff` — untracked files are
-synthesized as new-file diffs, and non-repo folders degrade gracefully.
-
-**CI.** `.github/workflows/tests.yml` runs the full pytest suite on
-Python 3.11 + 3.12 for every push/PR to `main`. The Pylint workflow
-matrix was fixed in passing — it still targeted 3.8–3.10 while the
-package requires ≥3.11, so it could never even install.
-
-**Messaging stubs completed (no stubs remain).** Discord speaks the real
-Gateway websocket protocol (HELLO → heartbeat → IDENTIFY →
-MESSAGE_CREATE, RESUME across reconnects); Slack runs real Socket Mode
-(`apps.connections.open`, envelope ACKs, bot/subtype filtering); Teams
-implements the Bot Framework OAuth2 client-credentials flow with a
-cached access token and activity send; Google Chat signs a proper RS256
-service-account JWT via `cryptography` and — bug fix — now actually
-interpolates the space into the send URL (the old code POSTed to the
-literal `{space}` placeholder and always 404'd); Email polls IMAP for
-unread messages (UNSEEN → RFC822 → parse → dispatch → mark seen). New
-inbound webhook routes: `/messaging/webhooks/{whatsapp,teams,google-chat}`
-plus `GET /messaging/channels` for configuration status.
-
-**SHS-Agent identity everywhere ("sab jagah" rule).** Every commit
-made by SHS-Code — CLI or GUI, `/github commit`, the GUI GitHub panel,
-the terminal panel, or an autonomous agent's `git commit` in bash — is
-attributed to the agent profile
-`SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>` as **author,
-committer, and co-author**, with the `Generated with SHS-Code` footer.
-`GitHubProvider.commit()` forces the identity via per-command `-c`
-overrides (your global git config is never touched), and CLI/server
-startup export `GIT_AUTHOR_*`/`GIT_COMMITTER_*` so child-process git
-operations inherit the same attribution. (The old
-`SHSCODE_AGENT_IDENTITY=0` opt-out was removed in v4.3.0 — attribution
-for SHS-Code's own work is mandatory.)
-
----
-
-<p align="center"><b>SHS-Code 4.4.0 — Persistent Autonomous AI Coding Agent · SHS Lab</b><br/>Plan · Implement · Verify — with memory, tools, skills, MCP, Team103, streaming, GUI, and the SHS-Agent identity.</p>
-
-## 78. v4.3.0 — max_steps architecture, mandatory attribution, detached runs, resume fix
-
-**max_steps is user-controlled and can no longer be silently replaced.**
-The shipped example `config.toml` used to place `max_steps` inside the
-`[logging]` section — TOML section placement made the loader silently
-ignore it, so a configured `80` never took effect (the exact bug found in
-the real test run). The loader now performs **strict schema-placement
-validation**: a top-level setting found inside any section is a hard
-`ConfigError` telling you exactly where to move it; unknown keys only
-warn (`SHSCODE_CONFIG_PERMISSIVE=1` downgrades for legacy files). Three
-further silent-replacement bugs were fixed along the same line (hardcoded
-`30` in the API run request, hardcoded `30` in the conversation layer,
-and the mode-scaling `max(5,…)` floor overwriting a configured 3). You
-control the budget from the CLI (`--max-steps 150`), the GUI Agent panel
-("Steps" box, per run), the GUI Settings panel ("Agent Step Budget",
-persisted), the `SHSCODE_MAX_STEPS` env var, or `max_steps` at the top of
-any config layer — and every surface (CLI `/config`, the run-start log
-line, `GET /config`) shows the **effective value and its source**, so the
-runtime can never silently disagree with what you configured.
-
-**GitHub attribution is now mandatory and mechanically enforced.** Every
-commit created inside SHS Code — agent bash sessions, the GUI terminal,
-the GitHub panel, runtime paths — is attributed to
-`SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>` as author and
-committer plus the Co-Authored-By trailer. A **git shim**
-(`~/.shscode/shims/git`, first on the PATH of every SHS-Code child
-process) strips `--author`/`--reset-author` from `git commit` and forces
-the identity env vars, so prompt-level, flag-level and env-level bypass
-attempts are all defeated; all opt-outs (including the old
-`SHSCODE_AGENT_IDENTITY=0`) are removed. Your own shells outside SHS Code
-and your git configuration are never touched. The platform limitation
-documented at v4.3.0 (the then-identity was an Organization, excluded
-from GitHub's *Contributors* aggregation) is **resolved in v4.4.0** —
-see section 79.
-
-**Long-running tasks no longer die with the session that started them.**
-`SHSCode --detach "<task>"` runs the task as a double-forked,
-`setsid`-detached daemon that survives the terminal, SSH disconnects and
-process-tree cleanup; its registry entry (`~/.shscode/runs/<id>/run.json`
-+ `output.log`) is listed by `SHSCode --runs` and streamed by
-`SHSCode --attach <id>`. The GUI gets the same power: the Agent panel's
-"detached" checkbox and `POST /run {"detach": true}` spawn the detached
-process, and the Sessions panel shows the detached-run registry with live
-process liveness. `SIGTERM`/`SIGHUP` now cancel runs **gracefully** —
-state is checkpointed, the session closes as `interrupted`, and
-`SHSCode --continue` (or `/resume`) picks it up cleanly.
-
-**The resumed-session tool-call error is fixed at the root.** Strict
-OpenAI-compatible providers reject any request whose history contains an
-assistant `tool_calls` block without matching `tool` results (HTTP 400) —
-and both a cancelled-mid-tool run and one error path could produce
-exactly that. Every producer path now appends the tool result, and
-`sanitize_tool_history()` enforces the protocol invariant at the LLM
-request boundary no matter how the memory was produced. Tool failures
-record structured diagnostics (tool, exception class, args,
-`tool_call_id`) plus a `tool_failure_diagnostic` activity event, so
-failures are diagnosable and recoverable instead of just "handled".
-
-**Preserved:** the Agnes/API rate-limit retry and recovery behavior is
-untouched and guarded by the existing suites (868 tests green).
-
----
-
-## 79. v4.4.0 — SHS-Agent identity migration (real GitHub contributor)
-
-The dedicated GitHub identity for SHS-Code's own work moved to the
-personal user account **[SHS-Agent](https://github.com/SHS-Agent)**
-(id `337454460`). Every active code path — `agent_identity.py`
-constants, the git shim, `GitHubProvider.commit/pull`, CLI help, server
-startup, the agent system prompt, the shipped GUI — now uses:
-
-```
-SHS-Agent <337454460+SHS-Agent@users.noreply.github.com>
-```
-
-The email is GitHub's reserved, unspoofable `<id>+<login>` noreply form
-for that exact account, so every commit SHS Code creates resolves to
-the profile AND — because **SHS-Agent is a user account** — is credited
-in the repository's **Contributors** section once the commits land on
-the default branch (verified end-to-end on a live repository: the
-commit API reports `author.login = "SHS-Agent"`, and the repository's
-contributors list shows `SHS-Agent`). The previous organization-based
-identity is fully retired: repository-wide scans assert no trace of it
-remains in any active code path (`tests/test_v440_identity.py`). The
-rule is unchanged and still non-bypassable: human work keeps the
-human's identity (their shells outside SHS-Code are never touched);
-work performed by SHS-Code is attributed to SHS-Agent as author,
-committer, pusher-of-record for its changes, branch creator, and PR
-author, on every surface (CLI, GUI, terminal panel, autonomous agent
-sessions, cron).
-
+<p align="center"><b>SHS-Code 4.4.0 — Persistent Autonomous AI Coding Agent · SHS Lab</b><br/>Plan · Implement · Verify — with a first-class Web GUI, memory, tools, skills, MCP, Team103, real token streaming, and the SHS-Agent identity.</p>
