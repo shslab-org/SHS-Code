@@ -88,7 +88,10 @@ class SemanticCache:
                 # reuses the precomputed per-entry Counter: ~10x cheaper
                 # than building a SequenceMatcher per candidate).
                 cc = ent.counter or Counter(q)
-                overlap = sum((qcounter & cc).values())
+                overlap = 0
+                for char, count in qcounter.items():
+                    if char in cc:
+                        overlap += count if count < cc[char] else cc[char]
                 if (2 * overlap / (lq + (ent.qlen or len(q)))) < self.threshold:
                     continue
                 s = self._sim(query, q)
